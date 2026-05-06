@@ -34,13 +34,13 @@ STATSCAN_SERIES = {
 }
 
 BOC_VALET_SERIES = {
-    "yield_2yr": ("BD.CDN.2YR.DQ.YLD", "2018-01-01"),  # 2-yr GoC benchmark bond yield, daily
+    "yield_2yr": ("BD.CDN.2YR.DQ.YLD", "1990-01-01"),  # 2-yr GoC benchmark bond yield, daily
 }
 
 
 # ── Fetchers ──────────────────────────────────────────────────────────────────
 
-def fetch_statscan(vector_id: int, n_periods: int = 120) -> pd.DataFrame:
+def fetch_statscan(vector_id: int, n_periods: int = 10000) -> pd.DataFrame:
     url = "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromVectorsAndLatestNPeriods"
     r = requests.post(
         url,

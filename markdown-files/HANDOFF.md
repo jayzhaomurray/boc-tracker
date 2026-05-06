@@ -30,13 +30,14 @@ boc-tracker/
 │   ├── cpi_all_items.csv
 │   ├── unemployment_rate.csv
 │   └── yield_2yr.csv
-└── markdown-files/       ← reference docs; local only, not committed to GitHub
+└── markdown-files/       ← reference docs and this handoff
+    ├── HANDOFF.md
     ├── boc_mpr_charts_inventory.md
     ├── boc_mpr_tracking_priority.md
     └── boc_mpr_data_methodology.md
 ```
 
-The `markdown-files/` folder contains three reference documents prepared by the user before the build started:
+The `markdown-files/` folder contains three reference documents prepared before the build started, plus this handoff:
 - **charts_inventory**: Full inventory of ~120 charts from the past 4 MPRs, tiered by replicability (Tier 1–4)
 - **tracking_priority**: A/B/C/D priority ranking for between-MPR tracking; includes a 10-chart slim list and a 21-chart full list
 - **data_methodology**: Per-chart data source, methodology difficulty (1–5), and API accessibility
@@ -272,13 +273,12 @@ Using `include_plotlyjs="cdn"` keeps the HTML file small (~50KB vs ~3MB with emb
 ## What has NOT been implemented
 
 - [ ] **GitHub Actions workflow** — daily automated refresh. The file `.github/workflows/update.yml` does not exist yet. Data must be refreshed manually by running `fetch.py` and `build.py` and pushing.
-- [ ] **More charts** — the dashboard has 3 charts. The A-tier priority list (from `markdown-files/boc_mpr_tracking_priority.md`) has 13. See "Next charts to add" below.
+- [ ] **More charts** — the dashboard has 3 charts. The A-tier priority list has 13. See expansion roadmap below.
 - [ ] **Multiple pages** — the PAGES list has one entry. Infrastructure is ready.
 - [ ] **Navigation bar** — if multiple pages are added, there's no nav between them yet.
 - [ ] **Custom domain** — planned for later; GitHub Pages URL is currently the public URL.
 - [ ] **`hover_format` field on ChartSpec** — intentionally deferred. The current hover template is inferred from transform and frequency (`:.2f` with `%` suffix for change transforms, no suffix for levels). If a specific chart looks wrong, add `hover_format: str = ""` to ChartSpec and pass it through `_hover_template()`.
 - [ ] **Reference lines** — the 2% BoC inflation target line was in an early prototype but was not carried into the current build. Easy to add: `fig.add_hline(y=2, row=1, col=1, ...)` inside `build_figure()`.
-- [ ] **Local git state** — the restructured code (fetch.py, build.py, removal of fetch_data.py, .gitignore, data/ folder) has not been committed and pushed to GitHub. The live GitHub Pages URL is serving the old single-file version.
 
 ---
 
@@ -286,50 +286,22 @@ Using `include_plotlyjs="cdn"` keeps the HTML file small (~50KB vs ~3MB with emb
 
 ### 1. Push the restructured code to GitHub
 
-The local repo is ahead of what GitHub has. The initial commit had `fetch_data.py` (now deleted and replaced by `fetch.py` + `build.py`). Commit and push:
+Run these commands in the boc-tracker directory:
 
 ```bash
-git add fetch.py build.py .gitignore data/ HANDOFF.md
-git rm fetch_data.py        # tell git the old file is gone
+git rm fetch_data.py
+git add fetch.py build.py .gitignore index.html data/ markdown-files/
 git commit -m "Restructure: split fetch/build, add CSV persistence and transform toggles"
 git push
 ```
 
-After pushing, GitHub Pages will serve the updated `index.html` automatically (it's already in the repo from the initial push; the new one just needs to replace it).
+After pushing, GitHub Pages will serve the updated `index.html` automatically.
 
 ### 2. Verify toggle button positioning
 
 The buttons are placed using `fig.layout[yaxis_key].domain[1]` (top of each subplot's y-domain) with `yanchor="bottom"`. This should place them just above the chart area, below the subplot title. Check visually — if they overlap with the title text or look misaligned, adjust `pad` or `y` offset in the `updatemenus` block in `build_figure()`.
 
-### 3. Add more A-tier charts
-
-Priority order from `markdown-files/boc_mpr_tracking_priority.md`. The easiest ones first (all free API, no complex calculations):
-
-**Batch 1 — add series to fetch.py, add ChartSpec to build.py:**
-
-| Chart | Source | Series ID | Frequency | Notes |
-|---|---|---|---|---|
-| CPI-trim | BoC Valet | Look up in Valet list — search "trim" | Monthly | BoC's preferred core measure |
-| CPI-median | BoC Valet | Look up in Valet list — search "median" | Monthly | BoC's preferred core measure |
-| Overnight rate (policy rate) | BoC Valet | `V39079` or search "overnight" | Irregular | BoC decision dates only |
-| Brent crude oil | EIA API | Series `PET.RBRTE.D` | Daily | Requires EIA API (free registration) |
-| WTI crude oil | EIA API | Series `PET.RCLC1.D` | Daily | Same EIA registration |
-
-**Batch 2 — require calculations in build.py:**
-
-| Chart | Calculation needed |
-|---|---|
-| Share of CPI components above 3% / below 1% | Fetch all ~150 CPI subcomponents (StatsCan Table 18-10-0006-01), apply thresholds monthly. `static=True` — no toggles. |
-| Goods exports excluding gold | StatsCan Table 12-10-0011-01, strip HS code 7108 (gold). Standard transforms apply. |
-
-**Batch 3 — more involved:**
-
-| Chart | Notes |
-|---|---|
-| Wage growth (LFS + SEPH) | StatsCan Tables 14-10-0064-01 and 14-10-0203-01 |
-| Inflation expectations (BOS/BLP) | BoC publications, no REST API — requires downloading CSV releases |
-
-### 4. Set up GitHub Actions for daily refresh
+### 3. Set up GitHub Actions for daily refresh
 
 Create `.github/workflows/update.yml`:
 
@@ -359,9 +331,37 @@ jobs:
 
 This runs `fetch.py` and `build.py` on a schedule and auto-commits the updated CSVs and `index.html`. GitHub Pages then serves the new file automatically.
 
+### 4. Add charts — in recommended build order
+
+See the full expansion roadmap section below for the complete chart list. The recommended order:
+
+**Step A — StatsCan CPI fetch (already done for headline; extend it)**
+
+Everything in the inflation theme comes from the same StatsCan Table 18-10-0006-01. Adding the four core measures (CPI-trim, CPI-median, CPIX, CPIXFET) and the share-of-components-above-3% chart are all unlocked once you have that fetch wired up.
+
+**Step B — BoC Valet additions**
+
+CPI-trim and CPI-median are actually published directly by the BoC on Valet — no calculation needed. Look them up at https://www.bankofcanada.ca/valet/lists/series/json (search "trim" and "median"). The overnight policy rate and BCNEx (non-energy commodity index) are also on Valet.
+
+**Step C — StatsCan Labour Force Survey**
+
+Table 14-10-0064 (wage growth) and Table 14-10-0023 (employment by industry) come from the LFS. The pace-to-keep-employment-rate-constant is a calculation on top of LFS data.
+
+**Step D — EIA and FRED**
+
+Oil prices (Brent, WTI) via the EIA API require a free API key from eia.gov. US unemployment and payrolls via FRED also require a free key from fred.stlouisfed.org. Both take 10 minutes to register.
+
+**Step E — BoC survey publications (BOS, BLP, CSCE)**
+
+No REST API. The BoC publishes results as PDFs with companion CSV files at predictable URL patterns on bankofcanada.ca. Quarterly for BOS and CSCE; monthly for BLP.
+
+**Step F — StatsCan trade data by HS code**
+
+Table 12-10-0011 for goods exports. Stripping HS 7108 (gold) gives exports ex-gold. Grouping by HS codes for steel, aluminum, copper, lumber, motor vehicles gives sectoral exports.
+
 ### 5. Multi-page split (when chart count warrants it)
 
-Planned theme split based on `markdown-files/boc_mpr_tracking_priority.md`:
+Planned theme split:
 - `index.html` — inflation (CPI, core measures, breadth, expectations)
 - `labour.html` — labour market (unemployment, wages, employment by sector)
 - `trade.html` — trade (exports ex-gold, tariff rate, imports)
@@ -371,14 +371,71 @@ When ready: add three more `PageSpec` entries to `PAGES` in `build.py`, distribu
 
 ---
 
+## Full expansion roadmap
+
+Drawn from `boc_mpr_tracking_priority.md` and `boc_mpr_data_methodology.md`. Charts are listed in A-tier (essential) and B-tier (useful) order. Difficulty is 1–5 (1 = plot a published series; 5 = proprietary model). Data access is: Free API / Free release / Free with effort / Paid.
+
+### A-tier: must-track (13 charts)
+
+| Chart | Theme | Difficulty | Data access | Source | Notes |
+|---|---|---|---|---|---|
+| Headline CPI + CPI ex-indirect-taxes | Inflation | 1 | Free API | StatsCan WDS Table 18-10-0004; BoC Valet | Both series are pre-published. Headline CPI is already in the dashboard. |
+| Core inflation: CPI-trim, CPI-median, CPIX, CPIXFET | Inflation | 1 | Free API | BoC Valet (trim, median); StatsCan (CPIX, CPIXFET) | All four are computed and published. BoC Valet series keys: search "trim" and "median" at the Valet series list. |
+| Share of CPI components above 3% / below 1% | Inflation | 2 | Free API | StatsCan WDS Table 18-10-0006 | Fetch all ~150 subcomponents; count those above 3% and below 1% each month. Use `static=True` — the output is a single derived series, no toggles needed. |
+| Inflation expectations (BOS, BLP, CSCE) | Inflation | 2 | Free release | BoC publications page | BoC publishes CSVs alongside PDFs. No REST API. BLP is monthly; BOS and CSCE are quarterly. Consensus Economics (paid) is substitutable with these three free BoC surveys. |
+| Oil prices: Brent / WTI | Costs/commodities | 1 | Free API | EIA API | Free registration at eia.gov required. Series: `PET.RBRTE.D` (Brent), `PET.RCLC1.D` (WTI). Daily. |
+| WCS (Western Canada Select) oil price | Costs/commodities | 1 | Free release | Government of Alberta daily price page | No clean API; scrape or download manually. WCS trades at a discount to WTI and matters for Canadian terms of trade specifically. |
+| 2-year government bond yields (Canada vs US) | Financial | 1 | Free API | BoC Valet (Canada); FRED (US) | Canada is already in the dashboard. US 2-year: FRED series `DGS2`. |
+| GDP growth contributions, quarterly | Real activity | 2 | Free API | StatsCan WDS Table 36-10-0104 | Compute chained-volume contributions and annualize. Quarterly frequency — use `frequency="quarterly"` in ChartSpec. |
+| Wage growth (LFS average, SEPH) | Labour | 2 | Free API | StatsCan WDS Table 14-10-0064 (LFS wages), 14-10-0203 (SEPH wages) | Headline LFS and SEPH series are straight pulls. The Bank's microdata-quality-adjusted version requires running a regression on the public-use microdata file — skip that for now; headline tells most of the story. |
+| Employment by sector reliant on US exports | Labour | 3 | Free API | StatsCan LFS Table 14-10-0023 + StatsCan IO tables | Identify which NAICS industries have ≥35% US-demand reliance using IO tables (one-time setup). Then plot LFS employment in those industries vs the rest. |
+| Goods exports excluding gold | Trade | 2 | Free API | StatsCan WDS Table 12-10-0011 (by HS code) | Strip HS 7108 (gold bullion) from totals. Standard monthly transforms apply. |
+| Hiring intentions (BOS) | Labour | 1 | Free release | BoC quarterly BOS publication | Direct chart from the BOS release. No transformation. Use `static=True` or `frequency="quarterly"`. |
+| Pass-through and price-change expectations (BOS) | Trade | 1 | Free release | BoC quarterly BOS publication | Direct chart from BOS. Tracks share of firms saying they're fully passing through tariff costs. `static=True` or `frequency="quarterly"`. |
+
+### B-tier: useful context (16 charts)
+
+| Chart | Theme | Difficulty | Data access | Source | Notes |
+|---|---|---|---|---|---|
+| CPI components heatmap | Inflation | 3 | Free API | StatsCan WDS Table 18-10-0006 | Standardize each of the ~25 main categories by 1996–2019 mean/std. Methodology in MPR notes. Use `static=True`. |
+| Labour market heatmap | Labour | 3 | Free API | StatsCan LFS, Job Vacancy and Wage Survey, productivity tables | Six indicators standardized over benchmark windows (Staff Note 2023-07). Use `static=True`. |
+| Cost pressures heatmap | Costs | 4 | Free with effort | StatsCan IPPIs, EIA, Baltic Exchange / Freightos FBX | Multiple sources, some paid (shipping detail). Use Freightos FBX for a free shipping headline. Use `static=True`. |
+| Sectoral exports (steel, aluminum, lumber, autos) | Trade | 2 | Free API | StatsCan Table 12-10-0011 by HS code | Index tariffed-sector export volumes to a pre-tariff base period. |
+| Equity indexes (S&P/TSX, S&P 500) | Financial | 1 | Free API | `yfinance` Python library; or FRED for daily closes | `^GSPTSE` and `^GSPC` via yfinance. Daily. |
+| Pace that keeps the employment rate constant | Labour | 2 | Free API | StatsCan LFS | Population growth × prior-month employment rate. Mechanical calculation on top of LFS. |
+| Non-energy commodity prices (BCNEx) | Costs/commodities | 1 | Free API | BoC Valet | BoC publishes its own commodity index daily on Valet. |
+| Housing starts and resales | Real activity | 1 | Free API / Free release | CMHC for starts (API); CREA for resales (no API) | CMHC has a clean monthly data release. CREA national stats are public but require manual download. |
+| Consumer spending per person by category | Real activity | 2 | Free API | StatsCan Table 36-10-0124 (consumption) + Table 17-10-0009 (population) | Quarterly with the GDP release. |
+| US labour market (unemployment + non-farm payrolls) | External | 1 | Free API | BLS API or FRED | Free registration. FRED series `UNRATE` (unemployment) and `PAYEMS` (payrolls). |
+| US imports by origin | External/trade | 1 | Free API | US Census Bureau API or FRED | Tracks trade reconfiguration away from Canada. |
+| Global / euro area PMI | External | 1 | Free release | S&P Global press releases (headline only) | Headlines are free in press releases; detailed sub-indices are paid. ISM (US) is free. |
+| Cumulative change in exports by destination | Trade | 2 | Free API | StatsCan trade data by partner country | Sum trade values; subtract base period. Shows export-diversification story. |
+| Share of non-US imports re-routed through US | Trade | 4 | Free with effort | StatsCan import data + US Census export data | Reconciling the two datasets at commodity level is non-trivial. Slow-moving; infrequent updates. |
+| Brent spot vs front-month futures spread | Costs/commodities | 2 | Free API | EIA spot + CME front-month | Subtract. Only matters in stress periods (e.g., April 2026 oil shock). |
+| US policy uncertainty index | Financial | 1 | Free release | policyuncertainty.com | Free CSV download. URL structure is stable. No REST API. |
+
+### Notes on `static=True` charts
+
+Several of the above charts output a derived number per period (a percentage, a count, a standardized score) rather than a raw economic series. Toggles like "Level vs Y/Y" don't add value because the derived value is already the point. Set `static=True` for:
+- Share of CPI components above 3% / below 1%
+- CPI components heatmap
+- Labour market heatmap
+- Cost pressures heatmap
+- Hiring intentions (BOS) — the value is already an index or net balance
+- Pass-through expectations (BOS)
+
+---
+
 ## Known issues and open questions
 
 1. **Author display name** — `AUTHOR_DISPLAY_NAME = "jayzhaomurray"` in `build.py`. Update to a real name if desired.
 
-2. **Hover format for level series** — unemployment rate level shows "6.70" with no `%` sign. This is slightly wrong (the value is a percent). Without a `unit` or `hover_format` field on ChartSpec, there's no clean way to distinguish "this level value happens to be a percent" from "this level value is an index." Adding `hover_format: str = ""` to ChartSpec and threading it through `_hover_template()` is the right fix — deferred until a chart actually looks bad.
+2. **Hover format for level series** — unemployment rate level shows "6.70" with no `%` sign. The value is a percent but the chart doesn't know that. Without a `unit` or `hover_format` field on ChartSpec, there's no clean way to distinguish "this level value happens to be a percent" from "this level value is an index." Adding `hover_format: str = ""` to ChartSpec and threading it through `_hover_template()` is the right fix — deferred until a chart actually looks bad.
 
 3. **StatsCan `n_periods=120`** — `fetch.py` fetches 120 periods for all StatsCan series. For monthly series this is 10 years of history. For quarterly series it would be 30 years. When quarterly series are added, consider a separate `n_periods` per series or a frequency-aware default.
 
 4. **EIA API registration** — the EIA API (for oil prices) requires a free API key from eia.gov. When adding oil charts, `fetch.py` will need to read the key from an environment variable (`EIA_API_KEY`) and the GitHub Actions workflow will need it as a secret.
 
 5. **BoC survey data (BOS, BLP, CSCE)** — these are published as PDFs with companion CSV files at predictable URL patterns on bankofcanada.ca. There is no REST API. Fetching them requires downloading the CSV directly. This is classified as "free with effort" in the methodology doc.
+
+6. **Consensus Economics** — the only meaningful paid data source in the A-tier list. The BoC's own three surveys (BOS, BLP, CSCE) are a sufficient free substitute for tracking inflation expectations.

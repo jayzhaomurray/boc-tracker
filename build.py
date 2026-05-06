@@ -204,7 +204,7 @@ def build_figure(page: PageSpec, data: dict[str, pd.DataFrame]) -> go.Figure:
         ))
 
     fig.update_layout(
-        height=280 * n_rows + 60,
+        height=400 * n_rows + 60,
         showlegend=False,
         paper_bgcolor="#ffffff",
         plot_bgcolor="#fafafa",
@@ -214,6 +214,24 @@ def build_figure(page: PageSpec, data: dict[str, pd.DataFrame]) -> go.Figure:
     )
     fig.update_xaxes(showgrid=False, zeroline=False)
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False)
+
+    # Per-chart range selectors — each chart is fully independent
+    _rs = dict(
+        buttons=[
+            dict(count=2,  label="2Y",  step="year", stepmode="backward"),
+            dict(count=5,  label="5Y",  step="year", stepmode="backward"),
+            dict(count=10, label="10Y", step="year", stepmode="backward"),
+            dict(step="all", label="Max"),
+        ],
+        bgcolor="#f5f5f5",
+        activecolor="#dce9f7",
+        bordercolor="#ddd",
+        borderwidth=1,
+        font=dict(size=11, color="#333"),
+    )
+    for chart_idx in range(n_rows):
+        xaxis_key = "xaxis" if chart_idx == 0 else f"xaxis{chart_idx + 1}"
+        fig.layout[xaxis_key].rangeselector = _rs
 
     return fig
 
@@ -229,10 +247,18 @@ _CSS = """\
     background: #ffffff;
     color: #1a1a1a;
   }
-  .site-header { margin-bottom: 28px; }
+  .site-header { margin-bottom: 12px; }
   .site-header h1 { font-size: 1.45rem; font-weight: 700; margin: 0 0 6px; }
   .site-header .tagline { font-size: 0.88rem; color: #666; margin: 0 0 4px; }
   .site-header .updated { font-size: 0.78rem; color: #bbb; margin: 0; }
+  .global-controls { margin-bottom: 20px; display: flex; align-items: center; gap: 5px; }
+  .gc-label { font-size: 0.78rem; color: #999; margin-right: 2px; }
+  .gc-btn {
+    font-size: 11px; padding: 2px 8px; border: 1px solid #ddd; border-radius: 3px;
+    background: #f5f5f5; color: #333; cursor: pointer; font-family: inherit;
+  }
+  .gc-btn:hover { background: #e8e8e8; }
+  .gc-btn.gc-active { background: #dce9f7; border-color: #aac4e8; }
   .about {
     margin-top: 40px;
     padding: 13px 17px;
@@ -248,12 +274,48 @@ _CSS = """\
 
 
 def _inject_html(raw_html: str, page: PageSpec, last_updated: str) -> str:
+    n_charts = len(page.charts)
+    axes = ["xaxis"] + [f"xaxis{i}" for i in range(2, n_charts + 1)]
+    axes_js = "[" + ",".join('"' + a + '"' for a in axes) + "]"
+
     header = (
         '<div class="site-header">\n'
         '  <h1>' + page.title + '</h1>\n'
         '  <p class="tagline">' + page.tagline + '</p>\n'
         '  <p class="updated">Last updated: ' + last_updated + '</p>\n'
         '</div>\n'
+        '<div class="global-controls">\n'
+        '  <span class="gc-label">All charts —</span>\n'
+        '  <button class="gc-btn" onclick="gcRange(2,this)">2Y</button>\n'
+        '  <button class="gc-btn" onclick="gcRange(5,this)">5Y</button>\n'
+        '  <button class="gc-btn" onclick="gcRange(10,this)">10Y</button>\n'
+        '  <button class="gc-btn gc-active" onclick="gcMax(this)">Max</button>\n'
+        '</div>\n'
+        '<script>\n'
+        '(function(){\n'
+        '  var AX=' + axes_js + ';\n'
+        '  function gd(){return document.querySelector(".plotly-graph-div");}\n'
+        '  window.gcRange=function(y,b){\n'
+        '    var e=new Date(),s=new Date(e);\n'
+        '    s.setFullYear(s.getFullYear()-y);\n'
+        '    var u={};\n'
+        '    AX.forEach(function(a){\n'
+        '      u[a+".range"]=[s.toISOString().slice(0,10),e.toISOString().slice(0,10)];\n'
+        '      u[a+".autorange"]=false;\n'
+        '    });\n'
+        '    Plotly.relayout(gd(),u);\n'
+        '    document.querySelectorAll(".gc-btn").forEach(function(x){x.classList.remove("gc-active");});\n'
+        '    b.classList.add("gc-active");\n'
+        '  };\n'
+        '  window.gcMax=function(b){\n'
+        '    var u={};\n'
+        '    AX.forEach(function(a){u[a+".autorange"]=true;});\n'
+        '    Plotly.relayout(gd(),u);\n'
+        '    document.querySelectorAll(".gc-btn").forEach(function(x){x.classList.remove("gc-active");});\n'
+        '    b.classList.add("gc-active");\n'
+        '  };\n'
+        '})();\n'
+        '</script>\n'
     )
     about = (
         '<div class="about">\n'
@@ -298,6 +360,7 @@ PAGES = [
                 title="Unemployment Rate — Canada, Seasonally Adjusted (%)",
                 frequency="monthly",
                 color="#c0392b",
+                static=True,
             ),
             ChartSpec(
                 series="yield_2yr",
@@ -314,7 +377,8 @@ PAGES = [
 
 def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
     fig = build_figure(page, data)
-    fig.write_html(page.output_file, include_plotlyjs="cdn", full_html=True)
+    fig.write_html(page.output_file, include_plotlyjs="cdn", full_html=True,
+                   config={"displayModeBar": False})
 
     with open(page.output_file, "r", encoding="utf-8") as f:
         html = f.read()
