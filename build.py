@@ -1703,7 +1703,7 @@ PAGES = [
         title="Bank of Canada Tracker",
         tagline="Tracking the indicators behind Bank of Canada policy decisions",
         output_file="index.html",
-        sections={0: "policy", 2: "inflation", 5: "labour", 7: "financial"},
+        sections={0: "policy", 3: "inflation", 6: "labour", 8: "financial"},
         charts=[
             MultiLineSpec(
                 title="Policy Rates",
@@ -1729,6 +1729,21 @@ PAGES = [
                 smooth_window=20,
                 date_fmt="%b %d, %Y",
                 footnote="2-year benchmark government bond yields. Toggle 'Canada 2Y − Overnight' for the BoC market-implied path (negative = pricing net cuts); toggle 'Canada 2Y − US 2Y' for the cross-country differential (negative = Canadian rates expected lower than US, weighs on CAD).",
+            ),
+            MultiLineSpec(
+                title="BoC Balance Sheet",
+                lines=[
+                    LineConfig("boc_total_assets",         "Total assets",        "#1565c0"),
+                    LineConfig("boc_goc_bonds",            "GoC bonds",           "#00897b"),
+                    LineConfig("boc_settlement_balances",  "Settlement balances", "#7b1fa2", visible=False),
+                ],
+                ticksuffix="",
+                hoverformat=".0f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %d, %Y",
+                unit_label="C$ billions",
+                footnote="BoC Statement of Financial Position (weekly). QE ran from April 2020 to April 2022 (assets peaked at ~$575B); passive QT (bonds rolling off as they mature) began April 2022. Total assets is the headline; GoC bonds is the active policy instrument; settlement balances (deposits banks hold at the BoC) is the liability mirror and operating-regime indicator — large balances reflect the BoC's floor system, declared permanent in 2025.",
             ),
             CoreInflationSpec(
                 title="Core Inflation",

@@ -6,14 +6,15 @@ A short orientation for what the Bank of Canada Tracker shows and what each sect
 
 ## Monetary Policy
 
-Two charts — Policy Rates and 2-Year Yields — answering *"what is the BoC doing now, and where does the market think they're going?"*
+Three charts — Policy Rates, 2-Year Yields, and BoC Balance Sheet — answering *"what is the BoC doing across both of its policy tools, and where does the market think they're going?"*
 
 - **Where the BoC sits in the rate cycle.** Policy Rates chart shows the BoC overnight rate against a shaded 2.25–3.25% neutral-rate band (BoC's official range from their annual r* update). Above the band = restrictive policy, actively slowing the economy. Inside = roughly neutral. Below = accommodative.
 - **How the BoC compares to the Fed.** Policy Rates chart's two lines plus a toggleable **BoC − Fed spread**. Negative = BoC below Fed (CAD-negative via interest rate parity); ±100bp is historically unusual.
 - **What the market expects from the BoC.** 2-Year Yields chart's toggleable **Canada 2Y − Overnight** spread. Negative = market pricing net cuts over 2 years; positive = pricing hold or hikes. The 2Y embeds term premium, so magnitudes are directional rather than precise forecasts.
 - **Cross-country yield differential.** 2-Year Yields chart's toggleable **Canada 2Y − US 2Y** spread. Negative = Canadian rates expected lower than US (CAD-negative). Should track roughly with the BoC − Fed policy spread; divergence implies the market is pricing a future change in the relative-policy stance.
+- **Balance sheet — QE or QT, and at what pace.** BoC Balance Sheet chart shows total assets (headline) and GoC bond holdings (the active QE/QT instrument) by default, with settlement balances available as a toggle. Pre-COVID baseline of total assets was ~$120B; QE peak was ~$575B (April 2022). Passive QT has been running since then. When total assets and GoC bonds move together, the change is pure QE/QT; when they diverge, non-policy operations (FX, term repos, emergency facilities) are happening. Settlement balances anchor the floor-system operating regime (declared permanent in 2025).
 
-Not yet on the dashboard: balance sheet operations (QT/QE), longer-tenor yield curve (2Y vs 10Y), market-implied rate path from OIS or event contracts, inflation expectations, real rates.
+Not yet on the dashboard: market-implied rate path from OIS or event contracts (next priority — the 2Y proxy is rough), longer-tenor yield curve (2Y vs 10Y), inflation expectations, real rates, CORRA tracking target.
 
 ---
 

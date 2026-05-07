@@ -72,13 +72,13 @@ When citing breadth in the blurb, lead with the state name (*broad-based pressur
 
 ---
 
-## Policy Rates
+## Monetary Policy
 
-**Question:** Where does the BoC stand in the rate cycle, and what is the market pricing relative to the current rate?
+**Question:** What is the BoC doing across its policy tools — rate and balance sheet — and what is the market pricing for the rate path?
 
-**Data:** overnight_rate (BoC), fed_funds (Fed), yield_2yr (Canada), us_2yr (US), bocfed_spread (overnight − fed_funds), can2y_overnight_spread (Canada 2Y − overnight), can_us_2y_spread (Canada 2Y − US 2Y).
+**Data:** overnight_rate (BoC), fed_funds (Fed), yield_2yr (Canada), us_2yr (US), bocfed_spread (overnight − fed_funds), can2y_overnight_spread (Canada 2Y − overnight), can_us_2y_spread (Canada 2Y − US 2Y), boc_total_assets, boc_goc_bonds, boc_settlement_balances (all in C$ billions).
 
-**Signals to evaluate:**
+**Rate signals:**
 
 - Where is the BoC overnight rate relative to the neutral-rate band? The BoC's official neutral-rate range is **2.25–3.25%** (annual r* update). Above 3.25% = restrictive (actively slowing the economy); below 2.25% = accommodative (actively stimulating); inside the band = roughly neutral.
 - How far has the BoC moved from its most recent peak or trough, and in which direction? How does the magnitude compare to the Fed's move over the same period? Which central bank moved first.
@@ -87,12 +87,22 @@ When citing breadth in the blurb, lead with the state name (*broad-based pressur
 - Direction of `can2y_overnight_spread` over the last 1–3 months: falling = market expectations shifting dovishly even if the BoC has not moved; rising = shifting hawkishly.
 - Canada 2Y − US 2Y spread (`can_us_2y_spread`): cross-country yield differential. Negative = Canadian rates expected lower than US (CAD-negative; often reflects weaker Canadian growth/inflation outlook relative to the US). Positive = Canada expected tighter — historically rare. Should move roughly with `bocfed_spread`; when the two diverge, the market is pricing a future change in the relative-policy stance.
 
+**Balance sheet signals:**
+
+- Direction of `boc_total_assets` and `boc_goc_bonds` over the last 6–12 months: rising = QE; falling = QT (currently passive, GoC bonds rolling off as they mature); flat = steady state. The slope tells you the pace.
+- Distance from anchors: pre-COVID baseline of total assets was ~$120B (early 2020); peak QE was ~$575B (April 2022). Where is the balance sheet now relative to those two reference points? "QT is done when the balance sheet is normal" turns on this.
+- Alignment between `boc_total_assets` and `boc_goc_bonds`: when they move together, the change is pure QE/QT. When total assets diverges from GoC bonds (typically rises faster), something non-policy is happening — FX swap line activity, term repos, advances/lender-of-last-resort facility — that should be flagged as a stress signal rather than a policy signal.
+- `boc_settlement_balances` level: the operating regime indicator. The BoC declared the floor system permanent in 2025, so steady-state settlement balances will sit well above the pre-COVID corridor-system level (which was near zero). The current level relative to the BoC's stated steady-state target is the relevant read; deviations signal stress or transition.
+
 **Thresholds:**
 - 2.25–3.25% = BoC's official neutral-rate range
 - `can2y_overnight_spread` outside ±0.5pp = market pricing meaningful path
 - `bocfed_spread` outside ±100bp = historically unusual
+- ~$120B = pre-COVID balance sheet baseline (early 2020)
+- ~$575B = peak QE balance sheet (April 2022)
+- Floor system permanent (BoC announced 2025): settlement balances anchored at floor-system steady state, not pre-COVID corridor levels
 
-**What to surface:** Lead with where the BoC rate sits relative to the neutral band — this is the foundational policy positioning read. Note the BoC−Fed gap and whether it is at an extreme or changing direction, since this has direct implications for CAD. Characterize market expectations using the Can 2Y − Overnight spread directionally ("the market is broadly pricing further reductions" / "expects rates to hold") rather than as a precise basis-point forecast. Bring in the Canada−US 2Y spread when it is diverging meaningfully from the BoC−Fed policy spread, since that signals the market is pricing a future change in the relative-policy stance.
+**What to surface:** Lead with where the BoC rate sits relative to the neutral band — this is the foundational policy positioning read. Bring in the balance sheet trajectory (QE / QT / steady state) as the second movement; the BoC operates two tools and an overview that omits the second is incomplete. Note when the two tools send aligned signals ("BoC is restrictive on rate AND running QT") or different signals ("BoC is cutting rate but still running QT" — the BoC has explicitly said the rate and the balance sheet are independent levers, but the contrast is worth flagging). Note the BoC−Fed gap and whether it is at an extreme or changing direction, since this has direct implications for CAD. Characterize market expectations using `can2y_overnight_spread` directionally ("market is broadly pricing further reductions" / "expects rates to hold") rather than as a precise basis-point forecast. Bring in `can_us_2y_spread` when it is diverging meaningfully from `bocfed_spread`, since that signals the market is pricing a future change in the relative-policy stance.
 
 ---
 

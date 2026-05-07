@@ -52,6 +52,8 @@ STATSCAN_SERIES = {
 }
 
 BOC_VALET_SERIES = {
+    # 2-tuple: (series_key, start_date). 3-tuple: (series_key, start_date, scale_factor)
+    # Scale factor is applied to the fetched values (e.g. 0.001 to convert millions to billions)
     "yield_2yr":      ("BD.CDN.2YR.DQ.YLD",    "1990-01-01"),  # 2-yr GoC benchmark bond yield, daily
     "overnight_rate": ("STATIC_ATABLE_V39079",  "1990-01-01"),  # BoC overnight rate target, monthly
     "cpi_trim":       ("CPI_TRIM",              "1990-01-01"),  # CPI-trim, Y/Y %, monthly
@@ -60,6 +62,10 @@ BOC_VALET_SERIES = {
     "cpix":           ("ATOM_V41693242",        "1990-01-01"),  # CPIX (excl. 8 volatile), Y/Y %, monthly
     "cpixfet":          ("STATIC_CPIXFET",        "1990-01-01"),  # CPIXFET (excl. food & energy), Y/Y %, monthly
     "lfs_micro":        ("INDINF_LFSMICRO_M",    "2000-01-01"),  # BoC LFS-Micro composition-adjusted wage growth, Y/Y %, monthly
+    # BoC balance sheet (Statement of Financial Position), weekly. Source values in CAD millions; rescaled to billions for display.
+    "boc_total_assets":         ("V36610", "2000-01-01", 0.001),  # Total assets, weekly
+    "boc_goc_bonds":            ("V36613", "2000-01-01", 0.001),  # GoC bonds held outright, weekly
+    "boc_settlement_balances":  ("V36636", "2000-01-01", 0.001),  # Members of Payments Canada deposits (settlement balances), weekly
 }
 
 FRED_SERIES = {
@@ -243,9 +249,14 @@ def main(wait: bool = False):
         df.to_csv(path, index=False)
         print(f"  -> {len(df)} rows saved to {path}")
 
-    for name, (series_key, start_date) in BOC_VALET_SERIES.items():
+    for name, entry in BOC_VALET_SERIES.items():
+        series_key = entry[0]
+        start_date = entry[1]
+        scale      = entry[2] if len(entry) > 2 else 1.0
         print(f"Fetching {name} from Bank of Canada Valet API...")
         df = fetch_boc_valet(series_key, start_date)
+        if scale != 1.0:
+            df["value"] = df["value"] * scale
         path = DATA_DIR / f"{name}.csv"
         df.to_csv(path, index=False)
         print(f"  -> {len(df)} rows saved to {path}")
