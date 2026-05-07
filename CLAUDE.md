@@ -44,19 +44,45 @@ This is a **practitioner-level** tool. Default to the rigorous version of any re
 - Don't write probe scripts at the project root — gitignored as `probe_*.py`. New probes go in `analyses/`.
 - Don't write CSVs that aren't part of the pipeline into `data/`. That folder is the build's source of truth.
 
-## Model allocation
+## Model allocation — proactive subagent delegation
 
-Default to **Opus** for the main thread (this is a high-judgment project; design discussions and analytical decisions need it).
+This project's main thread runs on Opus by default (design + analytical work needs it). To save the user wait time, **proactively delegate bounded mechanical tasks to faster subagents** rather than doing them on the main thread. Do this without asking when the criteria below are met.
 
-Delegate to **Sonnet via the Agent tool** when the task is bounded and mechanical:
-- Long file reads with summary requested
-- Focused codebase searches
-- Format-checking, sanity-checking outputs
-- Use `model: "sonnet"` on the Agent tool call
+### Delegate when ALL of these are true
 
-Suggest a manual **`/model sonnet`** session-wide switch when entering a long pure-implementation phase where no design decisions remain (e.g. "design is locked; I'll implement these five steps"). User runs the switch.
+- The task has a clear input and clear output (you can describe it in 2 sentences)
+- The task does NOT need to integrate with the in-flight conversation as it runs
+- The task would take more than ~30 seconds of work on the main thread (multiple file reads, multi-step API queries, multi-file searches)
 
-**Haiku** for trivial fixes (single-line edits, typos) — same delegation pattern as Sonnet.
+### Use Haiku (`model: "haiku"`) for bounded one-shot tasks
+
+- Multi-step API queries: "Find the right BoC Valet series ID matching X criteria"
+- Sanity checks: "Run this Bash command and report whether the value is in range Y–Z"
+- Specific file lookups: "Read file X and report whether Y appears"
+- HTML verification: "Verify the new chart's traces are present in index.html and report counts"
+
+### Use Sonnet (`model: "sonnet"`) for tasks requiring some context-handling
+
+- Multi-file codebase searches with summary
+- Reading several markdown docs and summarizing what each says about a topic
+- Multi-step API exploration with intermediate decisions
+- Format / structural verification across a built artifact
+- Mechanical code edits with some judgment (e.g. "add a new line to PAGES following the existing pattern")
+
+### Keep on the main Opus thread
+
+Don't delegate when the overhead would be slower than just doing it inline:
+- Single Edit calls (faster on the main thread than spinning up a subagent)
+- Single Read of a file you'll continue to reference
+- Single Grep for a known pattern in known files
+- Git commit + push (sequential, fast, depends on just-completed work)
+- Anything that's part of an ongoing design discussion or analytical reasoning
+
+### Session-level model switch (manual)
+
+When entering a long pure-implementation phase where no design decisions remain (e.g. "design is locked; I'll implement these five steps"), suggest the user run `/model sonnet` for the whole session. The user runs the switch. Switch back to Opus before the next design discussion.
+
+**Opus stays on the main thread** for: blurb generation (analyze.py), framework / style-guide writing, judgment-heavy code review, design decisions. These are the places where Opus quality genuinely shows.
 
 ## Other context
 
