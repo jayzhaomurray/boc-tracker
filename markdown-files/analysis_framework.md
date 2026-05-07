@@ -76,25 +76,23 @@ When citing breadth in the blurb, lead with the state name (*broad-based pressur
 
 **Question:** Where does the BoC stand in the rate cycle, and what is the market pricing relative to the current rate?
 
-**Data:** overnight_rate (BoC), fed_funds (Fed), yield_2yr (Canada), us_2yr (US)
+**Data:** overnight_rate (BoC), fed_funds (Fed), yield_2yr (Canada), us_2yr (US), bocfed_spread (overnight − fed_funds), can2y_overnight_spread (Canada 2Y − overnight), can_us_2y_spread (Canada 2Y − US 2Y).
 
 **Signals to evaluate:**
 
-- Where is the BoC overnight rate relative to the neutral rate? ~2.5–3% is the commonly cited neutral range for Canada. Above neutral means policy is restrictive — it is actively slowing the economy. Below neutral means policy is accommodative — it is actively stimulating. At neutral means policy is neither adding to nor subtracting from economic momentum.
-- How far has the BoC moved from its most recent peak or trough, and in which direction? How does the magnitude compare to the Fed's move over the same period?
-- Which central bank has moved more in the current direction, and which moved first?
-- What is the current BoC–Fed rate spread? Is it widening or narrowing? A wider spread where the BoC is below the Fed puts downward pressure on CAD; a spread where the BoC is above the Fed supports CAD.
-- Is the Canada 2Y yield above or below the BoC overnight rate? If the 2Y is below the overnight rate, the market broadly expects net rate reductions over the next two years. If the 2Y is above the overnight rate, the market broadly expects rates to hold or rise. The size of this gap indicates the degree of conviction.
-- Has the Canada 2Y been rising or falling over the last 1–3 months? A falling 2Y means market expectations are shifting toward lower rates, even if the BoC has not moved. A rising 2Y means expectations are shifting toward higher rates or a longer hold.
-- Is the Canada–US 2Y spread widening or narrowing, and in which direction? Canada 2Y falling relative to US 2Y implies markets expect Canada's rate path to be lower than the US path — typically reflecting a weaker Canadian growth or inflation outlook relative to the US.
+- Where is the BoC overnight rate relative to the neutral-rate band? The BoC's official neutral-rate range is **2.25–3.25%** (annual r* update). Above 3.25% = restrictive (actively slowing the economy); below 2.25% = accommodative (actively stimulating); inside the band = roughly neutral.
+- How far has the BoC moved from its most recent peak or trough, and in which direction? How does the magnitude compare to the Fed's move over the same period? Which central bank moved first.
+- BoC−Fed spread (`bocfed_spread`): level and direction. Negative spread (BoC below Fed) puts downward pressure on CAD via interest rate parity; positive spread supports CAD. Sustained spreads outside ±100bp are historically unusual.
+- Canada 2Y − Overnight spread (`can2y_overnight_spread`): the cleanest read on the market-implied BoC path available without OIS. Negative = market pricing net cuts over 2 years; positive = pricing hold or net hikes. The 2Y embeds a term premium so magnitudes are directional rather than precise basis-point forecasts. Spreads outside ±0.5pp are notable.
+- Direction of `can2y_overnight_spread` over the last 1–3 months: falling = market expectations shifting dovishly even if the BoC has not moved; rising = shifting hawkishly.
+- Canada 2Y − US 2Y spread (`can_us_2y_spread`): cross-country yield differential. Negative = Canadian rates expected lower than US (CAD-negative; often reflects weaker Canadian growth/inflation outlook relative to the US). Positive = Canada expected tighter — historically rare. Should move roughly with `bocfed_spread`; when the two diverge, the market is pricing a future change in the relative-policy stance.
 
 **Thresholds:**
-- ~2.5–3% = neutral rate for Canada (BoC's r* estimate)
-- 2Y below overnight = market pricing net reductions
-- 2Y above overnight = market pricing hold or increases
-- BoC–Fed spread outside ±100bp = historically unusual
+- 2.25–3.25% = BoC's official neutral-rate range
+- `can2y_overnight_spread` outside ±0.5pp = market pricing meaningful path
+- `bocfed_spread` outside ±100bp = historically unusual
 
-**What to surface:** Lead with where the BoC rate sits relative to neutral — this is the foundational policy positioning read. Note the BoC–Fed gap and whether it is at an extreme or changing direction, since this has direct implications for the exchange rate. Characterize market expectations using the 2Y–overnight spread directionally ("the market is broadly pricing further reductions" or "the market expects rates to hold") rather than as a precise basis-point figure. Note the Canada–US 2Y spread only if it is moving materially and implies a diverging outlook.
+**What to surface:** Lead with where the BoC rate sits relative to the neutral band — this is the foundational policy positioning read. Note the BoC−Fed gap and whether it is at an extreme or changing direction, since this has direct implications for CAD. Characterize market expectations using the Can 2Y − Overnight spread directionally ("the market is broadly pricing further reductions" / "expects rates to hold") rather than as a precise basis-point forecast. Bring in the Canada−US 2Y spread when it is diverging meaningfully from the BoC−Fed policy spread, since that signals the market is pricing a future change in the relative-policy stance.
 
 ---
 

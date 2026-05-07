@@ -1,79 +1,60 @@
-# Dashboard Reading Guide
+# Dashboard reading guide
 
-How to read each chart to answer the underlying policy question. Written for use as analysis scaffolding.
-
----
-
-## Currently answerable
-
-### Is inflation coming down, and how broad is the retreat?
-
-Look at the core inflation panel and the breadth chart together. The core panel tells you the *level* — are trim, median, and common all below 3%? Are they converging toward each other (healthy disinflation) or diverging (one measure is being distorted)? The breadth chart tells you *texture* — a falling headline with breadth still elevated means a few categories are cooling but most of the basket is still running hot, which is a false signal. You want to see both the level falling *and* the deviation from historical average narrowing from the top. The 2022–2023 period is the reference: breadth peaked at +46pp, inflation was broad and self-reinforcing. Coming back toward zero on both measures simultaneously is the "all clear."
-
-### Which core measures are converging back to 2%?
-
-Toggle on trim and median individually and compare to the range band. If trim is at 2.8% but median is at 2.2%, the distribution of price changes is still skewed upward — there are outliers pulling trim up. If both are near 2% and the band is tight, that's genuine convergence. Divergence between measures is itself informative: CPIXFET (ex food and energy) running above trim suggests services inflation is the remaining problem. That's the reading that tells you whether the last mile will be easy or hard.
-
-### Are markets pricing in rate cuts, and how fast?
-
-The 2Y yield is the key. It's roughly the market's expectation of where the overnight rate will average over the next two years. If the BoC overnight is at 2.75% and the Canada 2Y is at 2.3%, markets are pricing in roughly 45bp of cuts over two years. The slope matters too — if the 2Y has been falling for three months, market expectations are shifting dovishly even if the BoC hasn't moved. The Level/20d Avg toggle is useful here: the raw daily series is noisy; the smoothed line shows the trend in expectations. The Canada–US spread is the second read — if Canada 2Y is falling relative to US 2Y, markets think the BoC will ease more aggressively than the Fed, which usually reflects a weaker growth or inflation outlook for Canada.
-
-### How out of sync are BoC and Fed policy, and has that gap changed?
-
-The policy rates chart shows the actual gap directly. Read the spread between the two lines. The step-function rendering makes the gap easy to see visually. A widening gap matters because it puts downward pressure on CAD (inflationary for Canada via import prices) and reflects fundamentally different economic conditions. The historical 10Y view shows how unusual the current gap is relative to the pre-pandemic norm, when the two rates tracked each other closely.
-
-### How tight is the labour market?
-
-The current unemployment chart barely answers this — a single line tells you the level but little about momentum. Read the level (is it above or below NAIRU, roughly 5–5.5% for Canada?) and the direction over the last 6–12 months. Without wage growth alongside it, you cannot distinguish "unemployment rising because workers are re-entering" from "unemployment rising because layoffs are happening." This chart is a placeholder until wage growth is added.
-
-### Is month-to-month CPI accelerating or decelerating right now?
-
-The M/M view with a 2Y window is designed for this. Watch for: is M/M running consistently above or below 0.2% (roughly the pace consistent with 2% annualized)? A few months at 0.5%+ M/M is a re-acceleration signal. A string of 0.1% or negative prints is disinflation gaining traction. The 3M AR transform smooths out one-month noise while staying current — it's the number the BoC's Governing Council actually watches most closely in the monthly release.
+A short orientation for what the Bank of Canada Tracker shows and what each section answers. For the analytical conventions and writing rules behind generated section blurbs, see `analysis_framework.md`. For chart formatting decisions, see `chart_style_guide.md`.
 
 ---
 
-## Not yet answerable — data gaps
+## Monetary Policy
 
-### Is growth slowing enough to bring inflation down sustainably?
+Two charts — Policy Rates and 2-Year Yields — answering *"what is the BoC doing now, and where does the market think they're going?"*
 
-*Needs: quarterly real GDP*
+- **Where the BoC sits in the rate cycle.** Policy Rates chart shows the BoC overnight rate against a shaded 2.25–3.25% neutral-rate band (BoC's official range from their annual r* update). Above the band = restrictive policy, actively slowing the economy. Inside = roughly neutral. Below = accommodative.
+- **How the BoC compares to the Fed.** Policy Rates chart's two lines plus a toggleable **BoC − Fed spread**. Negative = BoC below Fed (CAD-negative via interest rate parity); ±100bp is historically unusual.
+- **What the market expects from the BoC.** 2-Year Yields chart's toggleable **Canada 2Y − Overnight** spread. Negative = market pricing net cuts over 2 years; positive = pricing hold or hikes. The 2Y embeds term premium, so magnitudes are directional rather than precise forecasts.
+- **Cross-country yield differential.** 2-Year Yields chart's toggleable **Canada 2Y − US 2Y** spread. Negative = Canadian rates expected lower than US (CAD-negative). Should track roughly with the BoC − Fed policy spread; divergence implies the market is pricing a future change in the relative-policy stance.
 
-Is growth running below potential (roughly 1.5–2% annualized for Canada)? Below-potential growth closes the output gap, which reduces pricing power economy-wide. Look at the level and trend over 4–6 quarters — a single bad quarter doesn't answer the question. Without this, you cannot assess whether inflation is falling because the economy has genuinely cooled or just because of base effects and energy prices.
-
-### Are wages driving services inflation?
-
-*Needs: wage growth (LFS or SEPH average hourly earnings, Y/Y)*
-
-If wages are running at 4–5% and services CPI is at 3.5–4%, that's a cost-push story — firms are passing labour costs through to prices. If wages are cooling toward 3% and services CPI is following with a 3–6 month lag, that's the lag structure the BoC expects to see on the way down. Without the wage line, you can see services inflation but not diagnose its cause.
-
-### Is the exchange rate amplifying or absorbing the tariff shock?
-
-*Needs: CAD/USD exchange rate*
-
-CAD depreciation makes imports more expensive in Canadian dollar terms, which is directly inflationary for goods. If CAD fell 8% because of tariff uncertainty and goods CPI is rising 4%, part of that goods inflation is currency pass-through — not a sign of domestic demand strength. Without the exchange rate, you cannot decompose goods inflation into tariff, currency, and demand components. This is probably the most important missing piece for the 2025–2026 tariff context specifically.
-
-### What are businesses actually expecting to do with prices?
-
-*Needs: BoC Business Outlook Survey (BOS) price expectations net balance*
-
-The BOS asks firms directly whether they expect to raise prices. It's a leading indicator — it moves before CPI because it's measuring intent. Read the net balance (% expecting higher prices minus % expecting lower). A high positive net balance not yet in CPI tells you inflation is coming. A net balance that has been falling for 3 quarters tells you pass-through pressure is easing. This is quarterly, published by the BoC as a free CSV.
-
-### Is the tariff impact hitting goods prices yet?
-
-*Needs: goods CPI component breakdown or import price index*
-
-Watch goods CPI components (durable goods, clothing, household items) for acceleration after tariff announcements. The timing signal matters: tariffs announced in February, goods CPI starts rising in April — that's a 2-month pass-through lag. The breadth chart gives a partial read: if breadth lifts because goods components go above 3% while services components stay anchored, that's a tariff signature.
-
-### Where is oil, and how is that feeding through?
-
-*Needs: Brent or WTI price (EIA API)*
-
-Oil affects CPI directly (gasoline) and indirectly (transport costs throughout the supply chain). Read Brent or WTI level and trend, then cross-reference with energy CPI. If oil is falling but energy CPI is still high, there's either a lag or a currency effect. If oil is stable but CPI ex-energy is rising, the oil story is not the driver. Without an oil chart, you are blind to one of the most reliable leading indicators of headline CPI.
+Not yet on the dashboard: balance sheet operations (QT/QE), longer-tenor yield curve (2Y vs 10Y), market-implied rate path from OIS or event contracts, inflation expectations, real rates.
 
 ---
 
-## Meta-conclusion
+## Inflation
 
-The dashboard right now can tell you *where inflation is* but not *why it's there or where it's going*. Adding wages, GDP, the exchange rate, and BOS expectations would let you build a full causal chain — the difference between a data display and something you can write an informed view from.
+Three charts — Core Inflation, CPI Components, CPI Breadth — answering *"is inflation at the BoC's 2% target, and what's the underlying trend?"*
 
-**The central question every chart should trace back to:** Should the BoC cut at the next decision, and by how much? Every indicator is relevant only insofar as it shifts the probability on that question.
+- **Core measures vs target.** Core Inflation chart shows the band of five core measures (trim, median, common, CPIX, CPIXFET) plus headline CPI Y/Y. A 2% line marks target.
+- **What's driving headline.** CPI Components chart shows headline plus food, energy, goods, services breakdowns at the same Y/Y view. Food and energy on by default — those are the volatile components most likely to explain short-term headline movements.
+- **How broad the price pressure is.** CPI Breadth chart shows the share of basket components running well above 3% and well below 1% Y/Y, expressed as deviation from the 1996–2019 historical average.
+
+This section has a generated blurb above it that synthesizes these three reads into a takeaway.
+
+---
+
+## Labour Market
+
+Two charts — Unemployment Rate and Wage Growth — answering *"is the labour market tight or loose, and is wage pressure consistent with target inflation?"*
+
+- **Tightness.** Unemployment Rate chart, monthly, seasonally adjusted. NAIRU is commonly cited at ~5–5.5% for Canada (not yet drawn on the chart pending verification).
+- **Wage pressure.** Wage Growth chart with four wage measures (LFS all employees, LFS permanent, SEPH weekly earnings, BoC's LFS-Micro composition-adjusted) plus a Services CPI overlay. The wage-vs-services-CPI relationship is the key wage-price-spiral read.
+
+Not yet on the dashboard: hours worked, participation rate, sectoral breakdown, regional labour markets.
+
+---
+
+## Financial Conditions
+
+Two charts — Oil Prices and USD/CAD — answering *"how are commodity prices and the exchange rate affecting Canada?"*
+
+- **Oil.** WTI, Brent, and WCS lines (USD per barrel). 20-day smooth toggle for trend through daily noise. WCS is monthly so doesn't smooth further.
+- **CAD.** USD/CAD level (CAD per USD; higher = weaker CAD).
+
+Future additions: equities (TSX, S&P 500), credit spreads, broader market conditions. Section is named "Financial Conditions" rather than the narrower "Commodities and FX" so it can absorb these as they're added.
+
+---
+
+## What the dashboard doesn't try to do
+
+- Forecast where rates, inflation, or any series will go
+- Make policy recommendations
+- Replace economist commentary or BoC publications
+
+Section blurbs (currently only on Inflation) are AI-generated from the latest data using the rules in `analysis_framework.md`. They describe what the data says, not where it's headed. As the framework is verified for the other three sections, blurbs for Monetary Policy, Labour Market, and Financial Conditions will be added.
