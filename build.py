@@ -1092,37 +1092,111 @@ _CSS = """\
 _JS_TEMPLATE = """\
 <script>
 var ALL_CHARTS = {chart_ids_js};
-var Y_RANGES = {y_ranges_js};
 var DEFAULT_RANGES = {default_ranges_js};
+var Y_FLOORS = {y_floors_js};
 document.addEventListener("DOMContentLoaded", function() {
   Object.keys(DEFAULT_RANGES).forEach(function(id) {
     applyRange(id, DEFAULT_RANGES[id]);
   });
 });
 
+function _toMillis(x) {
+  if (x instanceof Date) return x.getTime();
+  return new Date(x).getTime();
+}
+
+function _niceDtick(ymin, ymax, target) {
+  target = target || 5;
+  var span = ymax - ymin;
+  if (span <= 0) return 1;
+  var rough = span / target;
+  var mag = Math.pow(10, Math.floor(Math.log10(rough)));
+  var norm = rough / mag;
+  var nice;
+  if (norm >= 5) nice = 5;
+  else if (norm >= 2.5) nice = 2.5;
+  else if (norm >= 2) nice = 2;
+  else if (norm >= 1) nice = 1;
+  else nice = 0.5;
+  return nice * mag;
+}
+
+function _dtickFormat(dt) {
+  var s = dt.toString();
+  var dotIdx = s.indexOf('.');
+  if (dotIdx === -1) return '.0f';
+  var decimals = s.length - dotIdx - 1;
+  return '.' + Math.min(decimals, 2) + 'f';
+}
+
+function _computeYRange(div, xStartMs, xEndMs) {
+  var ymin = Infinity, ymax = -Infinity, found = false;
+  for (var i = 0; i < div.data.length; i++) {
+    if (div.data[i].visible === false) continue;
+    var trace = div.data[i];
+    var xs = trace.x, ys = trace.y;
+    if (!xs || !ys) continue;
+    for (var j = 0; j < xs.length; j++) {
+      if (xStartMs != null) {
+        var xt = _toMillis(xs[j]);
+        if (xt < xStartMs || xt > xEndMs) continue;
+      }
+      var y = ys[j];
+      if (y === null || y === undefined || isNaN(y)) continue;
+      if (y < ymin) ymin = y;
+      if (y > ymax) ymax = y;
+      found = true;
+    }
+  }
+  if (!found) return null;
+  var pad = Math.max((ymax - ymin) * 0.08, 0.1);
+  var floor = (Y_FLOORS && typeof Y_FLOORS[div.id] === "number") ? Y_FLOORS[div.id] : null;
+  var lo = ymin - pad;
+  if (floor !== null) lo = Math.max(lo, floor);
+  return [lo, ymax + pad];
+}
+
+function _applyComputedYAxis(div, update, yr) {
+  update["yaxis.range"] = yr;
+  update["yaxis.autorange"] = false;
+  var dt = _niceDtick(yr[0], yr[1]);
+  update["yaxis.tick0"] = 0;
+  update["yaxis.dtick"] = dt;
+  update["yaxis.tickformat"] = _dtickFormat(dt);
+}
+
 function applyRange(chartId, years) {
   var div = document.getElementById(chartId);
   if (!div) return;
+  var update = {};
+  var yr;
   if (years === null) {
-    Plotly.relayout(div, {"xaxis.autorange": true, "yaxis.autorange": true});
+    update["xaxis.autorange"] = true;
+    yr = _computeYRange(div, null, null);
   } else {
     var e = new Date(), s = new Date(e);
     s.setFullYear(s.getFullYear() - years);
-    var update = {
-      "xaxis.range": [s.toISOString().slice(0, 10), e.toISOString().slice(0, 10)],
-      "xaxis.autorange": false,
-      "yaxis.autorange": false
-    };
-    var traceIdx = 0;
-    for (var i = 0; i < (div.data || []).length; i++) {
-      if (div.data[i].visible !== false) { traceIdx = i; break; }
-    }
-    var cr = Y_RANGES[chartId];
-    if (cr && cr[String(traceIdx)] && cr[String(traceIdx)][String(years)]) {
-      update["yaxis.range"] = cr[String(traceIdx)][String(years)];
-    }
-    Plotly.relayout(div, update);
+    update["xaxis.range"] = [s.toISOString().slice(0, 10), e.toISOString().slice(0, 10)];
+    update["xaxis.autorange"] = false;
+    yr = _computeYRange(div, s.getTime(), e.getTime());
   }
+  if (yr) _applyComputedYAxis(div, update, yr);
+  else update["yaxis.autorange"] = true;
+  Plotly.relayout(div, update);
+}
+
+function _refreshYAxis(chartId) {
+  var rb = document.getElementById("rb-" + chartId);
+  if (!rb) {
+    applyRange(chartId, null);
+    return;
+  }
+  var ab = rb.querySelector(".ctrl-btn.active");
+  if (!ab) { applyRange(chartId, null); return; }
+  var m = ab.getAttribute("onclick").match(/,(\\w+)\\)$/);
+  if (!m) { applyRange(chartId, null); return; }
+  var years = m[1] === "null" ? null : parseInt(m[1]);
+  applyRange(chartId, years);
 }
 
 function rangeClick(btn, chartId, years) {
@@ -1158,6 +1232,7 @@ function toggleTrace(btn, chartId, indices) {
   var vis = div.data.map(function(t) { return t.visible !== false; });
   indices.forEach(function(i) { vis[i] = !isActive; });
   Plotly.restyle(div, {visible: vis});
+  _refreshYAxis(chartId);
 }
 
 function mlXformClick(btn, chartId, mode, lineCount) {
@@ -1197,6 +1272,7 @@ function mlToggle(btn, chartId, lineIdx, lineCount) {
   vis[lineIdx] = !isActive && mode === "raw";
   vis[lineCount + lineIdx] = !isActive && mode === "smooth";
   Plotly.restyle(div, {visible: vis});
+  _refreshYAxis(chartId);
 }
 
 function gcRange(years, btn) {
@@ -1273,6 +1349,7 @@ function cpiLineToggle(btn, chartId, lineIdx) {
   btn.classList.toggle("active");
   div._cpiVisible[lineIdx] = !isActive;
   _cpiApplyVisibility(div);
+  _refreshYAxis(chartId);
 }
 </script>
 """
@@ -1436,15 +1513,15 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
 
 def _assemble_page(page: PageSpec, chart_panels: list[str],
                    chart_ids: list[str], last_updated: str,
-                   y_ranges: dict, default_ranges: dict) -> str:
+                   default_ranges: dict, y_floors: dict) -> str:
     chart_ids_js = "[" + ",".join('"' + cid + '"' for cid in chart_ids) + "]"
-    y_ranges_js = json.dumps(y_ranges)
     default_ranges_js = json.dumps(default_ranges)
+    y_floors_js = json.dumps(y_floors)
     js = (
         _JS_TEMPLATE
         .replace("{chart_ids_js}", chart_ids_js)
-        .replace("{y_ranges_js}", y_ranges_js)
         .replace("{default_ranges_js}", default_ranges_js)
+        .replace("{y_floors_js}", y_floors_js)
     )
 
     header = (
@@ -1627,15 +1704,18 @@ def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
             y_ranges[cid] = _compute_y_ranges(chart, df)
 
     default_ranges: dict = {}
+    y_floors: dict = {}
     for i, chart in enumerate(page.charts):
         cid = "chart-" + str(i)
         if isinstance(chart, CpiBreadthSpec):
             default_ranges[cid] = 10
         elif isinstance(chart, (ChartSpec, MultiLineSpec, WageSpec, CoreInflationSpec, CpiSpec)) and chart.default_years is not None:
             default_ranges[cid] = chart.default_years
+        if isinstance(chart, MultiLineSpec) and chart.ymin is not None:
+            y_floors[cid] = chart.ymin
 
     last_updated = datetime.now(timezone.utc).strftime("%B %d, %Y at %H:%M UTC")
-    html = _assemble_page(page, panels, chart_ids, last_updated, y_ranges, default_ranges)
+    html = _assemble_page(page, panels, chart_ids, last_updated, default_ranges, y_floors)
 
     with open(page.output_file, "w", encoding="utf-8") as f:
         f.write(html)
