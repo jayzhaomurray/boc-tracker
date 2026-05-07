@@ -295,7 +295,7 @@ class PageSpec:
 PageSpec("Bank of Canada Tracker", sections={0: "policy", 2: "inflation", 5: "labour", 7: "financial"}, ...)
   ── MONETARY POLICY (heading) ──
   MultiLineSpec            — Policy Rates (BoC overnight + Fed funds + BoC−Fed spread toggle, hv step, neutral-rate band 2.25–3.25%, 10Y default)
-  MultiLineSpec            — 2-Year Yields (Canada + US + Canada 2Y−Overnight spread toggle, smooth toggle, 10Y default)
+  MultiLineSpec            — 2-Year Yields (Canada + US + Canada 2Y−Overnight spread toggle + Canada 2Y−US 2Y spread toggle, smooth toggle, 10Y default)
   ── INFLATION (heading + blurb) ──
   CoreInflationSpec        — Core Inflation (range band + headline + trim/median toggle)
   CpiSpec                  — CPI Components (6 lines × 4 transforms, Y/Y default, 10Y default)

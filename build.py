@@ -1723,11 +1723,12 @@ PAGES = [
                     LineConfig("yield_2yr",                "Canada 2Y",                "#1565c0"),
                     LineConfig("us_2yr",                   "US 2Y",                    "#c62828"),
                     LineConfig("can2y_overnight_spread",   "Canada 2Y − Overnight",    "#7b1fa2", visible=False, smooth=False),
+                    LineConfig("can_us_2y_spread",         "Canada 2Y − US 2Y",        "#00897b", visible=False, smooth=False),
                 ],
                 default_years=10,
                 smooth_window=20,
                 date_fmt="%b %d, %Y",
-                footnote="2-year benchmark government bond yields. Toggle 'Canada 2Y − Overnight' for the spread to the BoC's policy rate; negative = market pricing net cuts.",
+                footnote="2-year benchmark government bond yields. Toggle 'Canada 2Y − Overnight' for the BoC market-implied path (negative = pricing net cuts); toggle 'Canada 2Y − US 2Y' for the cross-country differential (negative = Canadian rates expected lower than US, weighs on CAD).",
             ),
             CoreInflationSpec(
                 title="Core Inflation",
@@ -1844,6 +1845,17 @@ def _add_derived_series(data: dict[str, pd.DataFrame]) -> None:
             "value": merged["value"] - merged["ov"],
         }).dropna().reset_index(drop=True)
         data["can2y_overnight_spread"] = spread
+
+    # Canada 2Y − US 2Y spread (daily, both daily; align on Canadian dates)
+    if "yield_2yr" in data and "us_2yr" in data:
+        cy = data["yield_2yr"].sort_values("date").reset_index(drop=True)
+        uy = data["us_2yr"].sort_values("date").rename(columns={"value": "us"}).reset_index(drop=True)
+        merged = pd.merge_asof(cy, uy, on="date", direction="backward")
+        spread = pd.DataFrame({
+            "date":  merged["date"],
+            "value": merged["value"] - merged["us"],
+        }).dropna().reset_index(drop=True)
+        data["can_us_2y_spread"] = spread
 
 
 def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
