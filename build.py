@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from datetime import datetime, timezone
 
+import json
 import pandas as pd
 import plotly.graph_objects as go
 
@@ -50,6 +51,12 @@ class CoreInflationSpec:
     """One-off composite chart: headline CPI + core measures range + individual toggles."""
     title: str
     SERIES = ["cpi_all_items", "cpi_trim", "cpi_median", "cpi_common", "cpix", "cpixfet"]
+
+
+@dataclass
+class CpiBreadthSpec:
+    """Weighted share of CPI basket (60 depth-3 components) with Y/Y > 3% and < 1%."""
+    title: str
 
 
 # ── Transform system ──────────────────────────────────────────────────────────
@@ -393,6 +400,101 @@ def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
     return html, y_ranges
 
 
+# ── CPI breadth chart ────────────────────────────────────────────────────────
+
+def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
+                              chart_idx: int, include_plotlyjs: bool) -> tuple:
+    div_id = "chart-" + str(chart_idx)
+
+    with open(DATA_DIR / "cpi_breadth_mapping.json") as f:
+        mapping = json.load(f)
+    raw = {m["name"]: m["wt_value"] for m in mapping if m["wt_value"] is not None}
+    total = sum(raw.values())
+    weights = pd.Series({name: w / total for name, w in raw.items()})
+
+    comp_df = data["cpi_components"]
+    yoy_df = comp_df.pct_change(12) * 100
+    w = weights.reindex(yoy_df.columns).fillna(0)
+
+    above_3 = yoy_df.gt(3).multiply(w, axis=1).sum(axis=1) * 100
+    below_1 = yoy_df.lt(1).multiply(w, axis=1).sum(axis=1) * 100
+
+    valid = yoy_df.notna().all(axis=1)
+    above_3 = above_3[valid]
+    below_1 = below_1[valid]
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=above_3.index, y=above_3.values,
+        name="above_3", line=dict(color="#e74c3c", width=2),
+        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>Share above 3%</extra>",
+        showlegend=False, visible=True,
+    ))
+    fig.add_trace(go.Scatter(
+        x=below_1.index, y=below_1.values,
+        name="below_1", line=dict(color="#2980b9", width=2),
+        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>Share below 1%</extra>",
+        showlegend=False, visible=True,
+    ))
+    fig.update_layout(
+        height=_CHART_HEIGHT, showlegend=False,
+        paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
+        margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
+    )
+    fig.update_xaxes(showgrid=False, zeroline=False)
+    fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False, ticksuffix="%")
+
+    plotly_frag = fig.to_html(
+        full_html=False,
+        include_plotlyjs="cdn" if include_plotlyjs else False,
+        div_id=div_id,
+        config={"displayModeBar": False},
+    )
+
+    controls = '<div class="chart-controls">' + _range_buttons_html(div_id) + '</div>'
+
+    def _swatch(color: str) -> str:
+        return (
+            '<span style="display:inline-block;width:22px;height:2.5px;'
+            'background:' + color + ';border-radius:1px;vertical-align:middle;'
+            'margin-right:5px"></span>'
+        )
+
+    legend = (
+        '<div class="chart-legend">'
+        + '<button class="legend-item active"'
+        + ' onclick="toggleTrace(this,\'' + div_id + '\',[0])">'
+        + _swatch("#e74c3c") + 'Share above 3%</button>'
+        + '<button class="legend-item active"'
+        + ' onclick="toggleTrace(this,\'' + div_id + '\',[1])">'
+        + _swatch("#2980b9") + 'Share below 1%</button>'
+        + '</div>'
+    )
+
+    html = (
+        '<div class="chart-panel">'
+        '<div class="chart-header">'
+        '<div class="chart-title">' + chart.title + '</div>'
+        + controls + '</div>'
+        + plotly_frag + legend + '</div>\n'
+    )
+
+    today = pd.Timestamp.now().normalize()
+    combined = pd.concat([above_3, below_1], axis=1)
+    yr_dict: dict = {}
+    for years in [2, 5, 10]:
+        cutoff = today - pd.DateOffset(years=years)
+        vals = combined[combined.index >= cutoff].stack().dropna()
+        if vals.empty:
+            continue
+        ymin, ymax = float(vals.min()), float(vals.max())
+        pad = max((ymax - ymin) * 0.08, 1.0)
+        yr_dict[years] = [round(max(ymin - pad, 0), 2), round(min(ymax + pad, 100), 2)]
+    y_ranges = {str(i): yr_dict for i in range(2)}
+
+    return html, y_ranges
+
+
 # ── CSS ───────────────────────────────────────────────────────────────────────
 
 _CSS = """\
@@ -596,7 +698,6 @@ function gcRange(years, btn) {
 def _assemble_page(page: PageSpec, chart_panels: list[str],
                    chart_ids: list[str], last_updated: str,
                    y_ranges: dict) -> str:
-    import json
     chart_ids_js = "[" + ",".join('"' + cid + '"' for cid in chart_ids) + "]"
     y_ranges_js = json.dumps(y_ranges)
     js = _JS_TEMPLATE.replace("{chart_ids_js}", chart_ids_js).replace("{y_ranges_js}", y_ranges_js)
@@ -663,6 +764,9 @@ PAGES = [
             CoreInflationSpec(
                 title="Core Inflation Measures — Canada (Year-over-year %)",
             ),
+            CpiBreadthSpec(
+                title="CPI Breadth — Share of Basket with Y/Y Inflation Above 3% or Below 1%",
+            ),
             ChartSpec(
                 series="cpi_all_items",
                 title="Consumer Price Index — All Items, Canada (2002=100)",
@@ -700,6 +804,10 @@ def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
             panel, cyr = _build_core_inflation_panel(chart, data, i, i == 0)
             panels.append(panel)
             y_ranges[cid] = cyr
+        elif isinstance(chart, CpiBreadthSpec):
+            panel, cyr = _build_cpi_breadth_panel(chart, data, i, i == 0)
+            panels.append(panel)
+            y_ranges[cid] = cyr
         else:
             df = data[chart.series]
             panels.append(_chart_panel_html(chart, df, i, include_plotlyjs=(i == 0)))
@@ -716,10 +824,13 @@ def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
 def main():
     print("Loading data...")
     all_series: set[str] = set()
+    has_breadth = False
     for page in PAGES:
         for chart in page.charts:
             if isinstance(chart, CoreInflationSpec):
                 all_series.update(CoreInflationSpec.SERIES)
+            elif isinstance(chart, CpiBreadthSpec):
+                has_breadth = True
             else:
                 all_series.add(chart.series)
     data: dict[str, pd.DataFrame] = {}
@@ -730,6 +841,12 @@ def main():
         data[name] = pd.read_csv(path, parse_dates=["date"])
         latest = data[name]["date"].max().strftime("%Y-%m-%d")
         print(f"  -> {name}: {len(data[name])} rows, latest {latest}")
+    if has_breadth:
+        path = DATA_DIR / "cpi_components.csv"
+        if not path.exists():
+            raise FileNotFoundError(f"Missing {path} -- run fetch.py first.")
+        data["cpi_components"] = pd.read_csv(path, parse_dates=["date"], index_col="date")
+        print(f"  -> cpi_components: {len(data['cpi_components'])} months × {len(data['cpi_components'].columns)} components")
 
     print("Building pages...")
     for page in PAGES:

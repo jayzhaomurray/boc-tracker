@@ -7,6 +7,7 @@ Output: data/cpi_all_items.csv
         data/yield_2yr.csv
 """
 
+import json
 import requests
 import pandas as pd
 from pathlib import Path
@@ -89,6 +90,45 @@ def fetch_boc_valet(series_key: str, start_date: str) -> pd.DataFrame:
     return df.sort_values("date").reset_index(drop=True)
 
 
+def fetch_cpi_components() -> pd.DataFrame:
+    """Fetch all 60 CPI component series and return as a wide DataFrame (date × component)."""
+    mapping_path = DATA_DIR / "cpi_breadth_mapping.json"
+    if not mapping_path.exists():
+        raise FileNotFoundError(
+            f"Missing {mapping_path} — run the breadth mapping probe first."
+        )
+    with open(mapping_path) as f:
+        mapping = json.load(f)
+
+    vectors = [m["cpi_vector"] for m in mapping]
+    names   = [m["name"]       for m in mapping]
+
+    url = "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromVectorsAndLatestNPeriods"
+    r = requests.post(
+        url,
+        json=[{"vectorId": v, "latestN": 200} for v in vectors],
+        timeout=120,
+    )
+    r.raise_for_status()
+    payload = r.json()
+
+    series: dict = {}
+    for item, name in zip(payload, names):
+        if item.get("status") != "SUCCESS":
+            print(f"  Warning: '{name}' fetch failed — skipping.")
+            continue
+        pts = item["object"]["vectorDataPoint"]
+        series[name] = pd.Series(
+            {pd.Timestamp(p["refPer"]): pd.to_numeric(p["value"], errors="coerce")
+             for p in pts},
+            name=name,
+        )
+
+    df = pd.DataFrame(series)
+    df.index.name = "date"
+    return df.sort_index()
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
@@ -105,6 +145,12 @@ def main():
         path = DATA_DIR / f"{name}.csv"
         df.to_csv(path, index=False)
         print(f"  -> {len(df)} rows saved to {path}")
+
+    print("Fetching CPI components (breadth chart)...")
+    df = fetch_cpi_components()
+    path = DATA_DIR / "cpi_components.csv"
+    df.to_csv(path)
+    print(f"  -> {len(df)} months × {len(df.columns)} components saved to {path}")
 
     print("\nDone. Run build.py to regenerate index.html.")
 
