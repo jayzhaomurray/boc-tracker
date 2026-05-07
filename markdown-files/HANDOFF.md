@@ -29,7 +29,14 @@ boc-tracker/
 ├── data/
 │   ├── cpi_all_items.csv
 │   ├── unemployment_rate.csv
-│   └── yield_2yr.csv
+│   ├── yield_2yr.csv
+│   ├── cpi_trim.csv
+│   ├── cpi_median.csv
+│   ├── cpi_common.csv
+│   ├── cpix.csv
+│   ├── cpixfet.csv
+│   ├── cpi_components.csv       ← wide CSV: 500 months × 59 depth-3 CPI components
+│   └── cpi_breadth_mapping.json ← component metadata: vector IDs, basket weights, names
 └── markdown-files/       ← reference docs and this handoff
     ├── HANDOFF.md
     ├── boc_mpr_charts_inventory.md
@@ -118,6 +125,12 @@ Defined in `fetch.py` under `STATSCAN_SERIES` and `BOC_VALET_SERIES`:
 | `cpi_all_items` | StatsCan | Vector 41690914 | All-items CPI, Canada, not SA (Table 18-10-0006-01) |
 | `unemployment_rate` | StatsCan | Vector 2062815 | Unemployment rate, Canada, SA (Table 14-10-0287-01) |
 | `yield_2yr` | BoC Valet | `BD.CDN.2YR.DQ.YLD` | 2-yr GoC benchmark bond yield, daily |
+| `cpi_trim` | BoC Valet | `CPI_TRIM` | CPI-trim, Y/Y %, monthly |
+| `cpi_median` | BoC Valet | `CPI_MEDIAN` | CPI-median, Y/Y %, monthly |
+| `cpi_common` | BoC Valet | `CPI_COMMON` | CPI-common, Y/Y %, monthly |
+| `cpix` | BoC Valet | `ATOM_V41693242` | CPIX (excl. 8 volatile), Y/Y %, monthly |
+| `cpixfet` | BoC Valet | `STATIC_CPIXFET` | CPIXFET (excl. food & energy), Y/Y %, monthly |
+| `cpi_components` | StatsCan | 59 vectors (see mapping JSON) | Wide CSV: one column per CPI component, 500 months |
 
 To add a new StatsCan series: add an entry to `STATSCAN_SERIES` in `fetch.py`, run `fetch.py`, then add a `ChartSpec` in `build.py`.
 
@@ -146,6 +159,35 @@ class ChartSpec:
 
 `default_transform` must be a valid key for the given `frequency` (see table below). If it's invalid, `build.py` prints a warning and falls back to `"level"`.
 
+### CoreInflationSpec
+
+A one-off composite chart for the core inflation panel. No configurable fields beyond `title`. Hardcoded to load `cpi_all_items`, `cpi_trim`, `cpi_median`, `cpi_common`, `cpix`, `cpixfet`. Displays headline CPI Y/Y as a blue line, a shaded band showing the min–max range of the five core measures, and toggle-able individual lines for trim and median. Add a `CoreInflationSpec` to any page's `charts` list to include it.
+
+### CpiBreadthSpec
+
+A one-off composite chart for the CPI breadth panel. No configurable fields beyond `title`. Implemented in `_build_cpi_breadth_panel()`.
+
+**Methodology:**
+- Source data: `data/cpi_components.csv` — a wide CSV with 500 months × 59 columns (one per component), fetched via `fetch_cpi_components()` in `fetch.py`
+- Component selection: 59 of 60 depth-3 components from StatsCan Table 18-10-0004 (Canada geography, not SA). The 60th — "Other tobacco products and smokers' supplies" — is excluded because it only has data from 2013, breaking the pre-1995 history requirement.
+- Basket weights: 2024-vintage from StatsCan Table 18-10-0007, "Weight at basket link month prices", "Distribution to selected geographies", Canada. Stored in `data/cpi_breadth_mapping.json` alongside vector IDs.
+- Weight normalisation: weights from the mapping sum to ~96% (after dropping tobacco and the ~1% depth-3 coverage gap). They are re-normalised to 1.0 inside `_build_cpi_breadth_panel()` before use, so the breadth percentages represent "share of the tracked basket," not the full CPI.
+- Computation: for each month, compute Y/Y for each component, then sum the (normalised) weights of components where Y/Y > 3% → `above_3_raw`; same for Y/Y < 1% → `below_1_raw`.
+- Late-starter filter: components whose first valid date is after 1995-01-01 are dropped at build time (not at fetch time). Currently only the tobacco component hits this filter. The dropped weight is absorbed by re-normalisation.
+- Historical average: mean of `above_3_raw` and `below_1_raw` over 1996–2019 (BoC inflation-targeting era, pre-COVID, matching the display start date).
+- Display: deviation from that average, shown from 1996 onward. Two lines: above-3% in red (#e74c3c), below-1% in blue (#2980b9). Y-axis in percentage points (pp). A zero reference line marks the historical average.
+- Validation: the 2022 peak deviation (+46 pp above 3%) aligns within 1 pp of the BoC's published version of this chart (from speech SPEECH_MEND20251002, Oct 2025).
+
+**Mapping file (`data/cpi_breadth_mapping.json`):** a JSON array of 60 objects (including the excluded tobacco one). Each has:
+- `cpi_pid` — product member ID in Table 18-10-0004
+- `wt_pid` — product member ID in Table 18-10-0007
+- `name` — component name (also the column header in `cpi_components.csv`)
+- `cpi_vector` — StatsCan vector ID used to fetch the CPI series
+- `wt_value` — basket weight (percentage points, raw from the API, sum ~99%)
+- `wt_refPer` — reference period for the weight (2024-01-01 = latest vintage)
+
+**To regenerate the mapping** (e.g., after a new basket revision): the mapping was built by probing Tables 18-10-0004 and 18-10-0007 via the StatsCan WDS `getCubeMetadata` and `getDataFromCubePidCoordAndLatestNPeriods` endpoints. The full probe logic is not in the repo — refer to the session that built it (2026-05-06). Key parameters: depth-3 in the product hierarchy, Canada geography, established series only (no post-2020 base-year markers, no terminated flag).
+
 ### PageSpec
 
 ```python
@@ -166,6 +208,12 @@ PAGES = [
         tagline="Tracking the indicators behind Bank of Canada policy decisions",
         output_file="index.html",
         charts=[
+            CoreInflationSpec(
+                title="Core Inflation Measures — Canada (Year-over-year %)",
+            ),
+            CpiBreadthSpec(
+                title="CPI Breadth — Deviation from 1996–2019 Average: Share of Basket Above 3% or Below 1% (pp)",
+            ),
             ChartSpec(
                 series="cpi_all_items",
                 title="Consumer Price Index — All Items, Canada (2002=100)",
@@ -178,6 +226,7 @@ PAGES = [
                 title="Unemployment Rate — Canada, Seasonally Adjusted (%)",
                 frequency="monthly",
                 color="#c0392b",
+                static=True,
             ),
             ChartSpec(
                 series="yield_2yr",
@@ -262,46 +311,33 @@ Using `include_plotlyjs="cdn"` keeps the HTML file small (~50KB vs ~3MB with emb
 
 - [x] `fetch.py` — fetches StatsCan and BoC Valet series, saves to CSV
 - [x] `build.py` — config-driven, reads CSVs, builds HTML with toggles
-- [x] Three charts: CPI (opens on Y/Y), unemployment rate (opens on Level), 2-year yield (opens on Level)
 - [x] Full transformation system for all frequencies
 - [x] Pre-computed toggle buttons; independent per chart
 - [x] ChartSpec / PageSpec config structure
 - [x] Multi-page infrastructure (PAGES list, build_page loop)
 - [x] Custom page header, tagline, last-updated timestamp, About section
 - [x] GitHub repo and GitHub Pages deployment
+- [x] **Core inflation panel** (`CoreInflationSpec`) — headline CPI Y/Y + shaded range of 5 core measures + toggle-able trim/median lines
+- [x] **CPI breadth chart** (`CpiBreadthSpec`) — weighted share of 59 depth-3 components above 3% / below 1%, expressed as deviation from 1996–2019 average. Calibrated against BoC published chart (within 1 pp at 2022 peak).
+- [x] **2-year yield** (BoC Valet)
+- [x] **Unemployment rate** (StatsCan, static display)
+- [x] **All-items CPI** (opens on Y/Y)
 
 ## What has NOT been implemented
 
 - [ ] **GitHub Actions workflow** — daily automated refresh. The file `.github/workflows/update.yml` does not exist yet. Data must be refreshed manually by running `fetch.py` and `build.py` and pushing.
-- [ ] **More charts** — the dashboard has 3 charts. The A-tier priority list has 13. See expansion roadmap below.
+- [ ] **More charts** — the dashboard has 5 charts. The A-tier priority list has 13. See expansion roadmap below.
 - [ ] **Multiple pages** — the PAGES list has one entry. Infrastructure is ready.
 - [ ] **Navigation bar** — if multiple pages are added, there's no nav between them yet.
 - [ ] **Custom domain** — planned for later; GitHub Pages URL is currently the public URL.
-- [ ] **`hover_format` field on ChartSpec** — intentionally deferred. The current hover template is inferred from transform and frequency (`:.2f` with `%` suffix for change transforms, no suffix for levels). If a specific chart looks wrong, add `hover_format: str = ""` to ChartSpec and pass it through `_hover_template()`.
-- [ ] **Reference lines** — the 2% BoC inflation target line was in an early prototype but was not carried into the current build. Easy to add: `fig.add_hline(y=2, row=1, col=1, ...)` inside `build_figure()`.
+- [ ] **`hover_format` field on ChartSpec** — intentionally deferred. The current hover template is inferred from transform and frequency. If a specific chart looks wrong, add `hover_format: str = ""` to ChartSpec and pass it through `_hover_template()`.
+- [ ] **Reference lines** — the 2% BoC inflation target line was in an early prototype but not carried forward. Easy to add: `fig.add_hline(y=2, ...)` inside `_build_chart_fig()`.
 
 ---
 
 ## Next steps, in priority order
 
-### 1. Push the restructured code to GitHub
-
-Run these commands in the boc-tracker directory:
-
-```bash
-git rm fetch_data.py
-git add fetch.py build.py .gitignore index.html data/ markdown-files/
-git commit -m "Restructure: split fetch/build, add CSV persistence and transform toggles"
-git push
-```
-
-After pushing, GitHub Pages will serve the updated `index.html` automatically.
-
-### 2. Verify toggle button positioning
-
-The buttons are placed using `fig.layout[yaxis_key].domain[1]` (top of each subplot's y-domain) with `yanchor="bottom"`. This should place them just above the chart area, below the subplot title. Check visually — if they overlap with the title text or look misaligned, adjust `pad` or `y` offset in the `updatemenus` block in `build_figure()`.
-
-### 3. Set up GitHub Actions for daily refresh
+### 1. Set up GitHub Actions for daily refresh
 
 Create `.github/workflows/update.yml`:
 
@@ -430,12 +466,16 @@ Several of the above charts output a derived number per period (a percentage, a 
 
 1. **Author display name** — `AUTHOR_DISPLAY_NAME = "jayzhaomurray"` in `build.py`. Update to a real name if desired.
 
-2. **Hover format for level series** — unemployment rate level shows "6.70" with no `%` sign. The value is a percent but the chart doesn't know that. Without a `unit` or `hover_format` field on ChartSpec, there's no clean way to distinguish "this level value happens to be a percent" from "this level value is an index." Adding `hover_format: str = ""` to ChartSpec and threading it through `_hover_template()` is the right fix — deferred until a chart actually looks bad.
+2. **Hover format for level series** — unemployment rate level shows "6.70" with no `%` sign. Adding `hover_format: str = ""` to ChartSpec and threading it through `_hover_template()` is the right fix — deferred until a chart actually looks bad.
 
-3. **StatsCan `n_periods=120`** — `fetch.py` fetches 120 periods for all StatsCan series. For monthly series this is 10 years of history. For quarterly series it would be 30 years. When quarterly series are added, consider a separate `n_periods` per series or a frequency-aware default.
+3. **StatsCan `n_periods` for non-monthly series** — `fetch.py` fetches 10,000 periods for all StatsCan series (effectively "all available"). For quarterly series this gives decades of data. When quarterly series are added, this is fine but worth being aware of.
 
-4. **EIA API registration** — the EIA API (for oil prices) requires a free API key from eia.gov. When adding oil charts, `fetch.py` will need to read the key from an environment variable (`EIA_API_KEY`) and the GitHub Actions workflow will need it as a secret.
+4. **CPI breadth basket weights** — the 2024 vintage from Table 18-10-0007 is hardcoded in `data/cpi_breadth_mapping.json`. When StatsCan publishes a new basket (every ~2 years), re-running the probe and regenerating the mapping would improve accuracy. The methodology is documented in the `CpiBreadthSpec` section above.
 
-5. **BoC survey data (BOS, BLP, CSCE)** — these are published as PDFs with companion CSV files at predictable URL patterns on bankofcanada.ca. There is no REST API. Fetching them requires downloading the CSV directly. This is classified as "free with effort" in the methodology doc.
+5. **CPI breadth component coverage** — 59 of 60 depth-3 components are used (96% of basket after dropping "Other tobacco products" which only starts in 2013). If future basket revisions introduce more late-starting components, the `first_valid_index() <= '1995-01-01'` filter in `_build_cpi_breadth_panel()` will automatically exclude them and re-normalise.
 
-6. **Consensus Economics** — the only meaningful paid data source in the A-tier list. The BoC's own three surveys (BOS, BLP, CSCE) are a sufficient free substitute for tracking inflation expectations.
+6. **EIA API registration** — the EIA API (for oil prices) requires a free API key from eia.gov. When adding oil charts, `fetch.py` will need to read the key from an environment variable (`EIA_API_KEY`) and the GitHub Actions workflow will need it as a secret.
+
+7. **BoC survey data (BOS, BLP, CSCE)** — these are published as PDFs with companion CSV files at predictable URL patterns on bankofcanada.ca. There is no REST API. Fetching them requires downloading the CSV directly.
+
+8. **Consensus Economics** — the only meaningful paid data source in the A-tier list. The BoC's own three surveys (BOS, BLP, CSCE) are a sufficient free substitute for tracking inflation expectations.
