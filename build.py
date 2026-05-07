@@ -294,6 +294,20 @@ def _resolve_default(chart: ChartSpec) -> str:
 
 # ── Per-chart figure builder ──────────────────────────────────────────────────
 
+def _compact_x_dates(fig: go.Figure) -> None:
+    # Plotly serializes pandas Timestamps as "YYYY-MM-DDT00:00:00.000000" (28 chars).
+    # All x-axes here are date-only; the time component is noise that adds ~2.4 MB
+    # to index.html. JS uses new Date(x) which parses YYYY-MM-DD identically.
+    for trace in fig.data:
+        x = getattr(trace, "x", None)
+        if x is None or len(x) == 0:
+            continue
+        try:
+            trace.x = pd.to_datetime(x).strftime("%Y-%m-%d").tolist()
+        except (ValueError, TypeError):
+            pass
+
+
 def _build_chart_fig(chart: ChartSpec, df: pd.DataFrame) -> go.Figure:
     transforms = compute_transforms(df, chart.frequency)
     available = FREQ_TRANSFORMS[chart.frequency]
@@ -371,6 +385,7 @@ def _chart_panel_html(chart: ChartSpec, df: pd.DataFrame, chart_idx: int,
                       include_plotlyjs: bool) -> str:
     div_id = "chart-" + str(chart_idx)
     fig = _build_chart_fig(chart, df)
+    _compact_x_dates(fig)
     plotly_frag = fig.to_html(
         full_html=False,
         include_plotlyjs="cdn" if include_plotlyjs else False,
@@ -481,6 +496,7 @@ def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False,
                      tick0=0, dtick=_ci_dtick, tickformat=_ci_tickfmt)
 
+    _compact_x_dates(fig)
     plotly_frag = fig.to_html(
         full_html=False,
         include_plotlyjs="cdn" if include_plotlyjs else False,
@@ -628,6 +644,7 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False,
                      tickformat=_cb_tickfmt, tick0=0, dtick=_cb_dtick)
 
+    _compact_x_dates(fig)
     plotly_frag = fig.to_html(
         full_html=False,
         include_plotlyjs="cdn" if include_plotlyjs else False,
@@ -783,6 +800,7 @@ def _build_wage_panel(chart: "WageSpec", data: dict,
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False,
                      tick0=0, dtick=_wg_dtick, tickformat=_wg_tickfmt)
 
+    _compact_x_dates(fig)
     plotly_frag = fig.to_html(
         full_html=False,
         include_plotlyjs="cdn" if include_plotlyjs else False,
@@ -924,6 +942,7 @@ def _build_cpi_panel(chart: "CpiSpec", data: dict,
     fig.update_xaxes(showgrid=False, zeroline=False)
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False, nticks=7)
 
+    _compact_x_dates(fig)
     plotly_frag = fig.to_html(
         full_html=False,
         include_plotlyjs="cdn" if include_plotlyjs else False,
@@ -1551,6 +1570,7 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
                      tick0=0, dtick=ml_dtick,
                      rangemode="nonnegative" if chart.ymin == 0 else "normal")
 
+    _compact_x_dates(fig)
     plotly_frag = fig.to_html(
         full_html=False,
         include_plotlyjs="cdn" if include_plotlyjs else False,

@@ -420,6 +420,8 @@ Each chart panel:
 
 Plotly JS is loaded from CDN for the first chart only (subsequent panels pass `include_plotlyjs=False`). `displayModeBar` is disabled.
 
+**X-date compaction.** `_compact_x_dates(fig)` runs before every `fig.to_html(...)`. Plotly's default serialization of pandas Timestamp x arrays produces `"YYYY-MM-DDT00:00:00.000000"` (28 chars per entry); for date-only data this trailing time component is pure noise. The helper rewrites each trace's x to `YYYY-MM-DD` strings, cutting `index.html` from ~6.0 MB to ~3.7 MB (~38%). Y values are already encoded as Plotly typed arrays (`bdata` blocks). The JS uses `new Date(x).getTime()` which parses both formats identically, so live y-axis and hover are unaffected. **If a future chart needs intraday x values, skip the helper for that figure** — it will round all timestamps to midnight.
+
 The About section lists all four data sources (StatsCan, BoC Valet, FRED, Alberta Economic Dashboard).
 
 ---
