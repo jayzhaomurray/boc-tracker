@@ -106,7 +106,7 @@ def fetch_cpi_components() -> pd.DataFrame:
     url = "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromVectorsAndLatestNPeriods"
     r = requests.post(
         url,
-        json=[{"vectorId": v, "latestN": 200} for v in vectors],
+        json=[{"vectorId": v, "latestN": 500} for v in vectors],
         timeout=120,
     )
     r.raise_for_status()

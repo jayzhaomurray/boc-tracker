@@ -413,36 +413,51 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
     weights = pd.Series({name: w / total for name, w in raw.items()})
 
     comp_df = data["cpi_components"]
+
+    # Drop components whose data starts after Jan 1995 — they'd break the 1996 display
+    # cutoff after the 12-month Y/Y lag. Dropped weight is absorbed by re-normalising.
+    active_cols = [c for c in comp_df.columns
+                   if comp_df[c].first_valid_index() <= pd.Timestamp("1995-01-01")]
+    comp_df = comp_df[active_cols]
+
     yoy_df = comp_df.pct_change(12) * 100
     w = weights.reindex(yoy_df.columns).fillna(0)
+    w = w / w.sum()  # re-normalise after dropping late-starting components
 
-    above_3 = yoy_df.gt(3).multiply(w, axis=1).sum(axis=1) * 100
-    below_1 = yoy_df.lt(1).multiply(w, axis=1).sum(axis=1) * 100
+    above_3_raw = yoy_df.gt(3).multiply(w, axis=1).sum(axis=1) * 100
+    below_1_raw = yoy_df.lt(1).multiply(w, axis=1).sum(axis=1) * 100
 
     valid = yoy_df.notna().all(axis=1)
-    above_3 = above_3[valid]
-    below_1 = below_1[valid]
+    above_3_raw = above_3_raw[valid]
+    below_1_raw = below_1_raw[valid]
+
+    # Deviation from 1996–2019 historical average (pre-COVID, matches display start)
+    ha_above = above_3_raw["1996":"2019"].mean()
+    ha_below = below_1_raw["1996":"2019"].mean()
+    above_3 = (above_3_raw - ha_above).loc["1996":]
+    below_1 = (below_1_raw - ha_below).loc["1996":]
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=above_3.index, y=above_3.values,
         name="above_3", line=dict(color="#e74c3c", width=2),
-        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>Share above 3%</extra>",
+        hovertemplate="%{x|%b %Y}<br>%{y:+.1f} pp<extra>Above 3%</extra>",
         showlegend=False, visible=True,
     ))
     fig.add_trace(go.Scatter(
         x=below_1.index, y=below_1.values,
         name="below_1", line=dict(color="#2980b9", width=2),
-        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>Share below 1%</extra>",
+        hovertemplate="%{x|%b %Y}<br>%{y:+.1f} pp<extra>Below 1%</extra>",
         showlegend=False, visible=True,
     ))
+    fig.add_hline(y=0, line_color="#aaa", line_width=1)
     fig.update_layout(
         height=_CHART_HEIGHT, showlegend=False,
         paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
         margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
     )
     fig.update_xaxes(showgrid=False, zeroline=False)
-    fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False, ticksuffix="%")
+    fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False, ticksuffix=" pp")
 
     plotly_frag = fig.to_html(
         full_html=False,
@@ -489,7 +504,7 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
             continue
         ymin, ymax = float(vals.min()), float(vals.max())
         pad = max((ymax - ymin) * 0.08, 1.0)
-        yr_dict[years] = [round(max(ymin - pad, 0), 2), round(min(ymax + pad, 100), 2)]
+        yr_dict[years] = [round(ymin - pad, 2), round(ymax + pad, 2)]
     y_ranges = {str(i): yr_dict for i in range(2)}
 
     return html, y_ranges
@@ -765,7 +780,7 @@ PAGES = [
                 title="Core Inflation Measures — Canada (Year-over-year %)",
             ),
             CpiBreadthSpec(
-                title="CPI Breadth — Share of Basket with Y/Y Inflation Above 3% or Below 1%",
+                title="CPI Breadth — Deviation from 1996–2019 Average: Share of Basket Above 3% or Below 1% (pp)",
             ),
             ChartSpec(
                 series="cpi_all_items",
