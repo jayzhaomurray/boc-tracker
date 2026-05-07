@@ -37,6 +37,7 @@ class ChartSpec:
     static: bool = False      # if True, no transform buttons shown
     default_transform: str = "level"
     default_years: int | None = None  # initial date range; None means Max
+    footnote: str = ""
 
 
 @dataclass
@@ -51,6 +52,7 @@ class PageSpec:
 class CoreInflationSpec:
     """One-off composite chart: headline CPI + core measures range + individual toggles."""
     title: str
+    footnote: str = ""
     SERIES = ["cpi_all_items", "cpi_trim", "cpi_median", "cpi_common", "cpix", "cpixfet"]
 
 
@@ -58,6 +60,7 @@ class CoreInflationSpec:
 class CpiBreadthSpec:
     """Weighted share of CPI basket (60 depth-3 components) with Y/Y > 3% and < 1%."""
     title: str
+    footnote: str = ""
 
 
 @dataclass
@@ -79,6 +82,7 @@ class MultiLineSpec:
     line_shape: str = "linear"          # "linear" | "hv" (step)
     smooth_window: int | None = None    # rolling average window; None = no smooth button
     date_fmt: str = "%b %Y"            # hover date format
+    footnote: str = ""
 
 
 # ── Transform system ──────────────────────────────────────────────────────────
@@ -166,6 +170,21 @@ def _compute_y_ranges(chart: ChartSpec, df: pd.DataFrame) -> dict:
             by_years[years] = [round(ymin - pad, 4), round(ymax + pad, 4)]
         result[i] = by_years
     return result
+
+
+def _ytick_format(vals: pd.Series) -> str:
+    """Minimum decimal places that remain consistent across all y-axis ticks."""
+    v = vals.dropna()
+    if v.empty:
+        return ".1f"
+    span = float(v.max() - v.min())
+    step = span / 4 if span > 0 else 1.0   # ~5 ticks → 4 intervals
+    if step >= 1.0:
+        return ".0f"
+    elif step >= 0.1:
+        return ".1f"
+    else:
+        return ".2f"
 
 
 def _resolve_default(chart: ChartSpec) -> str:
@@ -272,14 +291,19 @@ def _chart_panel_html(chart: ChartSpec, df: pd.DataFrame, chart_idx: int,
         controls += xform_btns + '<div class="btn-sep"></div>'
     controls += range_btns + "</div>"
 
+    footnote_html = (
+        '<div class="chart-footnote">' + chart.footnote + '</div>'
+        if chart.footnote else ""
+    )
     return (
         '<div class="chart-panel">'
         '<div class="chart-header">'
         '<div class="chart-title">' + chart.title + "</div>"
         + controls +
         "</div>"
-        + plotly_frag +
-        "</div>\n"
+        + plotly_frag
+        + footnote_html
+        + "</div>\n"
     )
 
 
@@ -391,12 +415,17 @@ def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
         + '</div>'
     )
 
+    footnote_html = (
+        '<div class="chart-footnote">' + chart.footnote + '</div>'
+        if chart.footnote else ""
+    )
     html = (
         '<div class="chart-panel">'
         '<div class="chart-header">'
         '<div class="chart-title">' + chart.title + '</div>'
         + controls + '</div>'
         + plotly_frag
+        + footnote_html
         + legend + '</div>\n'
     )
 
@@ -478,9 +507,10 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
         paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
         margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
     )
+    ytickfmt = _ytick_format(pd.concat([above_3, below_1]).dropna())
     fig.update_xaxes(showgrid=False, zeroline=False)
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False,
-                     ticksuffix=" pp", tickformat=".1f")
+                     ticksuffix=" pp", tickformat=ytickfmt)
 
     plotly_frag = fig.to_html(
         full_html=False,
@@ -509,12 +539,18 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
         + '</div>'
     )
 
+    footnote_html = (
+        '<div class="chart-footnote">' + chart.footnote + '</div>'
+        if chart.footnote else ""
+    )
     html = (
         '<div class="chart-panel">'
         '<div class="chart-header">'
         '<div class="chart-title">' + chart.title + '</div>'
         + controls + '</div>'
-        + plotly_frag + legend + '</div>\n'
+        + plotly_frag
+        + footnote_html
+        + legend + '</div>\n'
     )
 
     today = pd.Timestamp.now().normalize()
@@ -626,6 +662,14 @@ _CSS = """\
   }
   .legend-item.active { opacity: 1; }
   .legend-item:hover { background: #f0f0f0; }
+
+  .chart-footnote {
+    font-size: 0.72rem;
+    color: #999;
+    margin-top: 4px;
+    padding: 0 2px;
+    line-height: 1.5;
+  }
 
   .about {
     margin-top: 40px;
@@ -821,9 +865,20 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
         paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
         margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
     )
+    _fmt_today = pd.Timestamp.now().normalize()
+    _fmt_vals: list = []
+    for _line in lines:
+        _df = data[_line.series]
+        if chart.default_years:
+            _cutoff = _fmt_today - pd.DateOffset(years=chart.default_years)
+            _fmt_vals.append(_df["value"][_df["date"] >= _cutoff])
+        else:
+            _fmt_vals.append(_df["value"])
+    ytickfmt = _ytick_format(pd.concat(_fmt_vals)) if _fmt_vals else ".2f"
+
     fig.update_xaxes(showgrid=False, zeroline=False)
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False,
-                     ticksuffix=chart.ticksuffix, tickformat=chart.hoverformat)
+                     ticksuffix=chart.ticksuffix, tickformat=ytickfmt)
 
     plotly_frag = fig.to_html(
         full_html=False,
@@ -865,12 +920,18 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
         )
     legend = '<div class="chart-legend" id="leg-' + div_id + '">' + "".join(legend_items) + '</div>'
 
+    footnote_html = (
+        '<div class="chart-footnote">' + chart.footnote + '</div>'
+        if chart.footnote else ""
+    )
     html = (
         '<div class="chart-panel">'
         '<div class="chart-header">'
         '<div class="chart-title">' + chart.title + '</div>'
         + controls + '</div>'
-        + plotly_frag + legend + '</div>\n'
+        + plotly_frag
+        + footnote_html
+        + legend + '</div>\n'
     )
 
     # Y-ranges: union of all lines for each window, stored under all trace indices
@@ -968,22 +1029,25 @@ PAGES = [
         output_file="index.html",
         charts=[
             CoreInflationSpec(
-                title="Core Inflation Measures — Canada (Year-over-year %)",
+                title="Core Inflation",
+                footnote="Year-over-year %. Shaded band shows range across BoC core measures (trim, median, common, CPIX, CPIXFET).",
             ),
             CpiBreadthSpec(
-                title="CPI Breadth — Deviation from 1996–2019 Average: Share of Basket Above 3% or Below 1% (pp)",
+                title="CPI Breadth",
+                footnote="Deviation from 1996–2019 average. Weighted share of 60 basket components with year-over-year change above 3% or below 1%.",
             ),
             MultiLineSpec(
-                title="Policy Rates — Bank of Canada Overnight vs Fed Funds (%)",
+                title="Policy Rates",
                 lines=[
                     LineConfig("overnight_rate", "BoC overnight",              "#1565c0"),
                     LineConfig("fed_funds",       "Fed funds target (midpoint)", "#c62828"),
                 ],
                 default_years=10,
                 line_shape="hv",
+                footnote="BoC overnight rate target; Fed funds midpoint of target range.",
             ),
             MultiLineSpec(
-                title="2-Year Government Bond Yields — Canada vs United States (%)",
+                title="2-Year Yields",
                 lines=[
                     LineConfig("yield_2yr", "Canada 2Y", "#1565c0"),
                     LineConfig("us_2yr",    "US 2Y",     "#c62828"),
@@ -991,21 +1055,24 @@ PAGES = [
                 default_years=10,
                 smooth_window=20,
                 date_fmt="%b %d, %Y",
+                footnote="2-year benchmark government bond yields. Canada: Bank of Canada Valet; US: Federal Reserve.",
             ),
             ChartSpec(
                 series="cpi_all_items",
-                title="Consumer Price Index — All Items, Canada (2002=100)",
+                title="CPI — All Items",
                 frequency="monthly",
                 color="#1565c0",
                 default_transform="mom",
                 default_years=2,
+                footnote="All-items CPI index, Canada, 2002=100, not seasonally adjusted.",
             ),
             ChartSpec(
                 series="unemployment_rate",
-                title="Unemployment Rate — Canada, Seasonally Adjusted (%)",
+                title="Unemployment Rate",
                 frequency="monthly",
                 color="#1565c0",
                 static=True,
+                footnote="Canada, seasonally adjusted (Statistics Canada, LFS).",
             ),
         ],
     ),
