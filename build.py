@@ -36,6 +36,21 @@ _CHART_MARGINS = dict(l=48, r=16, t=8, b=32)
 _FONT_STACK    = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
 
 
+def _unit_annotation(text: str) -> dict:
+    """Small unit label overlaid in the top-left of the plot area (paper coords).
+    The y-axis ticks are bare; this annotation says what the numbers mean.
+    Style: ~10pt, gray. Updated at runtime by cpiXformClick when a chart's
+    transforms cross unit boundaries (CPI Level vs Y/Y)."""
+    return dict(
+        text=text,
+        x=0, y=1,
+        xref="paper", yref="paper",
+        xanchor="left", yanchor="top",
+        showarrow=False,
+        font=dict(size=10, color="#999"),
+    )
+
+
 # ── Data structures ───────────────────────────────────────────────────────────
 
 @dataclass
@@ -48,6 +63,8 @@ class ChartSpec:
     default_transform: str = "level"
     default_years: int | None = None  # initial date range; None means Max
     footnote: str = ""
+    unit_label: str = "%"     # text shown in top-left of plot area (e.g. %, CAD per USD)
+    hover_decimals: int = 2   # precision in hover tooltip — see chart_style_guide.md §5
 
 
 @dataclass
@@ -122,7 +139,7 @@ class MultiLineSpec:
     """Generic multi-line chart with per-line toggle buttons."""
     title: str
     lines: list               # list[LineConfig]
-    ticksuffix: str = "%"
+    ticksuffix: str = "%"     # used in HOVER only (axis ticks are bare per style guide)
     hoverformat: str = ".2f"
     default_years: int | None = None
     line_shape: str = "linear"          # "linear" | "hv" (step)
@@ -130,6 +147,7 @@ class MultiLineSpec:
     date_fmt: str = "%b %Y"            # hover date format
     footnote: str = ""
     ymin: float | None = None           # hard floor for y-axis (pre-computed ranges + autorange)
+    unit_label: str = "%"               # text shown in top-left of plot area
 
 
 # ── Transform system ──────────────────────────────────────────────────────────
@@ -178,7 +196,7 @@ def compute_transforms(df: pd.DataFrame, frequency: str) -> dict[str, pd.Series]
     return out
 
 
-def _hover_template(transform: str, frequency: str) -> str:
+def _hover_template(transform: str, frequency: str, decimals: int = 2) -> str:
     date_fmt = {
         "daily":     "%b %d, %Y",
         "weekly":    "%b %d, %Y",
@@ -190,7 +208,7 @@ def _hover_template(transform: str, frequency: str) -> str:
 
     pct_transforms = {"mom", "ar_3m", "qoq", "qoq_ar", "yoy"}
     suffix = "%" if transform in pct_transforms else ""
-    return f"%{{x|{date_fmt}}}<br>%{{y:.2f}}{suffix}<extra></extra>"
+    return f"%{{x|{date_fmt}}}<br>%{{y:.{decimals}f}}{suffix}<extra></extra>"
 
 
 def _compute_y_ranges(chart: ChartSpec, df: pd.DataFrame) -> dict:
@@ -290,7 +308,7 @@ def _build_chart_fig(chart: ChartSpec, df: pd.DataFrame) -> go.Figure:
             name=transform_key,
             visible=(transform_key == default),
             line=dict(color=chart.color, width=2),
-            hovertemplate=_hover_template(transform_key, chart.frequency),
+            hovertemplate=_hover_template(transform_key, chart.frequency, chart.hover_decimals),
             showlegend=False,
         ))
 
@@ -301,6 +319,7 @@ def _build_chart_fig(chart: ChartSpec, df: pd.DataFrame) -> go.Figure:
         plot_bgcolor="#fafafa",
         margin=_CHART_MARGINS,
         font=dict(family=_FONT_STACK),
+        annotations=[_unit_annotation(chart.unit_label)],
     )
     fig.update_xaxes(showgrid=False, zeroline=False)
 
@@ -444,6 +463,7 @@ def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
         height=_CHART_HEIGHT, showlegend=False,
         paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
         margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
+        annotations=[_unit_annotation("%")],
     )
     fig.update_xaxes(showgrid=False, zeroline=False)
     _ci_today = pd.Timestamp.now().normalize()
@@ -459,7 +479,7 @@ def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
     else:
         _ci_dtick, _ci_tickfmt = 1.0, ".0f"
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False,
-                     ticksuffix="%", tick0=0, dtick=_ci_dtick, tickformat=_ci_tickfmt)
+                     tick0=0, dtick=_ci_dtick, tickformat=_ci_tickfmt)
 
     plotly_frag = fig.to_html(
         full_html=False,
@@ -593,6 +613,7 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
         height=_CHART_HEIGHT, showlegend=False,
         paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
         margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
+        annotations=[_unit_annotation("pp")],
     )
     _cb_today = pd.Timestamp.now().normalize()
     _cb_cutoff = _cb_today - pd.DateOffset(years=10)
@@ -606,7 +627,7 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
         _cb_dtick, _cb_tickfmt = 5.0, ".0f"
     fig.update_xaxes(showgrid=False, zeroline=False)
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False,
-                     ticksuffix=" pp", tickformat=_cb_tickfmt, tick0=0, dtick=_cb_dtick)
+                     tickformat=_cb_tickfmt, tick0=0, dtick=_cb_dtick)
 
     plotly_frag = fig.to_html(
         full_html=False,
@@ -746,6 +767,7 @@ def _build_wage_panel(chart: "WageSpec", data: dict,
         height=_CHART_HEIGHT, showlegend=False,
         paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
         margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
+        annotations=[_unit_annotation("%")],
     )
     fig.update_xaxes(showgrid=False, zeroline=False)
     _wg_today = pd.Timestamp.now().normalize()
@@ -761,7 +783,7 @@ def _build_wage_panel(chart: "WageSpec", data: dict,
     else:
         _wg_dtick, _wg_tickfmt = 1.0, ".0f"
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False,
-                     ticksuffix="%", tick0=0, dtick=_wg_dtick, tickformat=_wg_tickfmt)
+                     tick0=0, dtick=_wg_dtick, tickformat=_wg_tickfmt)
 
     plotly_frag = fig.to_html(
         full_html=False,
@@ -848,6 +870,8 @@ def _build_wage_panel(chart: "WageSpec", data: dict,
 
 _CPI_TRANSFORMS = ["level", "mom", "ar_3m", "yoy"]
 _CPI_TRANSFORM_LABELS = {"level": "Level", "mom": "M/M", "ar_3m": "3M AR", "yoy": "Y/Y"}
+_CPI_TRANSFORM_UNITS  = {"level": "Index", "mom": "%", "ar_3m": "%", "yoy": "%"}
+_CPI_TRANSFORM_DECIMALS = {"level": 1, "mom": 2, "ar_3m": 1, "yoy": 1}
 
 
 def _cpi_compute_transform(v: pd.Series, key: str) -> pd.Series:
@@ -883,11 +907,12 @@ def _build_cpi_panel(chart: "CpiSpec", data: dict,
             visible = line.visible and (t_idx == default_t_idx)
             pct_t = t_key in {"mom", "ar_3m", "yoy"}
             suffix = "%" if pct_t else ""
+            decimals = _CPI_TRANSFORM_DECIMALS[t_key]
             fig.add_trace(go.Scatter(
                 x=s.index, y=s.values,
                 line=dict(color=line.color, width=2),
                 visible=visible,
-                hovertemplate="%{x|%b %Y}<br>%{y:.2f}" + suffix + "<extra>"
+                hovertemplate="%{x|%b %Y}<br>%{y:." + str(decimals) + "f}" + suffix + "<extra>"
                               + line.label + " " + _CPI_TRANSFORM_LABELS[t_key]
                               + "</extra>",
                 showlegend=False,
@@ -897,6 +922,7 @@ def _build_cpi_panel(chart: "CpiSpec", data: dict,
         height=_CHART_HEIGHT, showlegend=False,
         paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
         margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
+        annotations=[_unit_annotation(_CPI_TRANSFORM_UNITS[chart.default_transform])],
     )
     fig.update_xaxes(showgrid=False, zeroline=False)
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False, nticks=7)
@@ -913,11 +939,11 @@ def _build_cpi_panel(chart: "CpiSpec", data: dict,
     for t_idx, t_key in enumerate(_CPI_TRANSFORMS):
         active = " active" if t_idx == default_t_idx else ""
         label = _CPI_TRANSFORM_LABELS[t_key]
-        suffix = "%" if t_key in {"mom", "ar_3m", "yoy"} else ""
+        unit  = _CPI_TRANSFORM_UNITS[t_key]
         xform_btns += (
             '<button class="ctrl-btn' + active + '"'
             ' onclick="cpiXformClick(this,\'' + div_id + '\',' + str(t_idx)
-            + ',\'' + suffix + '\')">'
+            + ",'" + unit + "')\">"
             + label + '</button>'
         )
     xform_btns += '</div>'
@@ -1395,7 +1421,7 @@ function _cpiApplyVisibility(div) {
   Plotly.restyle(div, {visible: vis});
 }
 
-function cpiXformClick(btn, chartId, transformIdx, ticksuffix) {
+function cpiXformClick(btn, chartId, transformIdx, unitLabel) {
   var div = document.getElementById(chartId);
   btn.closest(".btn-group").querySelectorAll(".ctrl-btn").forEach(function(b) {
     b.classList.remove("active");
@@ -1403,7 +1429,7 @@ function cpiXformClick(btn, chartId, transformIdx, ticksuffix) {
   btn.classList.add("active");
   div._cpiTransform = transformIdx;
   _cpiApplyVisibility(div);
-  Plotly.relayout(div, {"yaxis.ticksuffix": ticksuffix});
+  Plotly.relayout(div, {"annotations[0].text": unitLabel});
   var rb = document.getElementById("rb-" + chartId);
   if (rb) {
     var ab = rb.querySelector(".ctrl-btn.active");
@@ -1475,6 +1501,7 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
         height=_CHART_HEIGHT, showlegend=False,
         paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
         margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
+        annotations=[_unit_annotation(chart.unit_label)],
     )
     _fmt_today = pd.Timestamp.now().normalize()
     _fmt_vals: list = []
@@ -1500,7 +1527,7 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
 
     fig.update_xaxes(showgrid=False, zeroline=False)
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False,
-                     ticksuffix=chart.ticksuffix, tickformat=ml_tickfmt,
+                     tickformat=ml_tickfmt,
                      tick0=0, dtick=ml_dtick,
                      rangemode="nonnegative" if chart.ymin == 0 else "normal")
 
@@ -1709,6 +1736,7 @@ PAGES = [
                 color="#1565c0",
                 static=True,
                 default_years=10,
+                hover_decimals=1,
                 footnote="Canada, seasonally adjusted.",
             ),
             WageSpec(
@@ -1728,6 +1756,7 @@ PAGES = [
                 smooth_window=20,
                 date_fmt="%b %d, %Y",
                 ymin=0,
+                unit_label="USD/barrel",
                 footnote="Crude oil prices, USD per barrel. WTI and Brent are daily; WCS (Western Canada Select) is monthly. WTI briefly traded negative in April 2020 (futures contract anomaly); not shown.",
             ),
             ChartSpec(
@@ -1736,6 +1765,7 @@ PAGES = [
                 frequency="daily",
                 color="#1565c0",
                 default_years=10,
+                unit_label="CAD per USD",
                 footnote="Canadian dollars per US dollar. Higher = weaker CAD.",
             ),
         ],
