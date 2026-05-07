@@ -36,6 +36,7 @@ class ChartSpec:
     color: str                # hex line color
     static: bool = False      # if True, no transform buttons shown
     default_transform: str = "level"
+    default_years: int | None = None  # initial date range; None means Max
 
 
 @dataclass
@@ -235,6 +236,10 @@ def _chart_panel_html(chart: ChartSpec, df: pd.DataFrame, chart_idx: int,
                       include_plotlyjs: bool) -> str:
     div_id = "chart-" + str(chart_idx)
     fig = _build_chart_fig(chart, df)
+    if chart.default_years is not None:
+        end_dt = pd.Timestamp.now().normalize()
+        start_dt = end_dt - pd.DateOffset(years=chart.default_years)
+        fig.update_xaxes(range=[start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")])
     plotly_frag = fig.to_html(
         full_html=False,
         include_plotlyjs="cdn" if include_plotlyjs else False,
@@ -242,7 +247,7 @@ def _chart_panel_html(chart: ChartSpec, df: pd.DataFrame, chart_idx: int,
         config={"displayModeBar": False},
     )
 
-    range_btns = _range_buttons_html(div_id)
+    range_btns = _range_buttons_html(div_id, default_years=chart.default_years)
     xform_btns = _transform_buttons_html(chart, div_id)
 
     controls = '<div class="chart-controls">'
@@ -793,7 +798,8 @@ PAGES = [
                 title="Consumer Price Index — All Items, Canada (2002=100)",
                 frequency="monthly",
                 color="#1f6aa5",
-                default_transform="yoy",
+                default_transform="mom",
+                default_years=2,
             ),
             ChartSpec(
                 series="unemployment_rate",
@@ -807,6 +813,7 @@ PAGES = [
                 title="2-Year Government of Canada Benchmark Bond Yield (%)",
                 frequency="daily",
                 color="#27ae60",
+                default_years=10,
             ),
         ],
     ),
