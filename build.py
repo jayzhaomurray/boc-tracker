@@ -36,18 +36,19 @@ _CHART_MARGINS = dict(l=48, r=16, t=8, b=32)
 _FONT_STACK    = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
 
 
-def _unit_annotation(text: str) -> dict:
-    """Small unit label overlaid in the top-left of the plot area (paper coords).
-    The y-axis ticks are bare; this annotation says what the numbers mean.
-    Style: ~10pt, gray. Updated at runtime by cpiXformClick when a chart's
-    transforms cross unit boundaries (CPI Level vs Y/Y)."""
-    return dict(
-        text=text,
-        x=0, y=1,
-        xref="paper", yref="paper",
-        xanchor="left", yanchor="top",
-        showarrow=False,
-        font=dict(size=10, color="#999"),
+def _title_block_html(title: str, unit: str, div_id: str) -> str:
+    """Build the title-block HTML: chart title with unit label as a subtitle
+    underneath. The subtitle div has id `unit-{div_id}` so JS can update its
+    text on transform change for charts whose units differ across transforms."""
+    subtitle = (
+        '<div class="chart-subtitle" id="unit-' + div_id + '">' + unit + '</div>'
+        if unit else ''
+    )
+    return (
+        '<div class="chart-title-block">'
+        '<div class="chart-title">' + title + '</div>'
+        + subtitle +
+        '</div>'
     )
 
 
@@ -319,7 +320,6 @@ def _build_chart_fig(chart: ChartSpec, df: pd.DataFrame) -> go.Figure:
         plot_bgcolor="#fafafa",
         margin=_CHART_MARGINS,
         font=dict(family=_FONT_STACK),
-        annotations=[_unit_annotation(chart.unit_label)],
     )
     fig.update_xaxes(showgrid=False, zeroline=False)
 
@@ -392,7 +392,7 @@ def _chart_panel_html(chart: ChartSpec, df: pd.DataFrame, chart_idx: int,
     return (
         '<div class="chart-panel">'
         '<div class="chart-header">'
-        '<div class="chart-title">' + chart.title + "</div>"
+        + _title_block_html(chart.title, chart.unit_label, div_id)
         + controls +
         "</div>"
         + plotly_frag
@@ -463,7 +463,6 @@ def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
         height=_CHART_HEIGHT, showlegend=False,
         paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
         margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
-        annotations=[_unit_annotation("%")],
     )
     fig.update_xaxes(showgrid=False, zeroline=False)
     _ci_today = pd.Timestamp.now().normalize()
@@ -529,7 +528,7 @@ def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
     html = (
         '<div class="chart-panel">'
         '<div class="chart-header">'
-        '<div class="chart-title">' + chart.title + '</div>'
+        + _title_block_html(chart.title, "%", div_id)
         + controls + '</div>'
         + plotly_frag
         + legend
@@ -613,7 +612,6 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
         height=_CHART_HEIGHT, showlegend=False,
         paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
         margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
-        annotations=[_unit_annotation("pp")],
     )
     _cb_today = pd.Timestamp.now().normalize()
     _cb_cutoff = _cb_today - pd.DateOffset(years=10)
@@ -663,7 +661,7 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
     html = (
         '<div class="chart-panel">'
         '<div class="chart-header">'
-        '<div class="chart-title">' + chart.title + '</div>'
+        + _title_block_html(chart.title, "pp", div_id)
         + controls + '</div>'
         + plotly_frag
         + legend
@@ -767,7 +765,6 @@ def _build_wage_panel(chart: "WageSpec", data: dict,
         height=_CHART_HEIGHT, showlegend=False,
         paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
         margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
-        annotations=[_unit_annotation("%")],
     )
     fig.update_xaxes(showgrid=False, zeroline=False)
     _wg_today = pd.Timestamp.now().normalize()
@@ -839,7 +836,7 @@ def _build_wage_panel(chart: "WageSpec", data: dict,
     html = (
         '<div class="chart-panel">'
         '<div class="chart-header">'
-        '<div class="chart-title">' + chart.title + '</div>'
+        + _title_block_html(chart.title, "%", div_id)
         + controls + '</div>'
         + plotly_frag
         + legend
@@ -922,7 +919,6 @@ def _build_cpi_panel(chart: "CpiSpec", data: dict,
         height=_CHART_HEIGHT, showlegend=False,
         paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
         margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
-        annotations=[_unit_annotation(_CPI_TRANSFORM_UNITS[chart.default_transform])],
     )
     fig.update_xaxes(showgrid=False, zeroline=False)
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False, nticks=7)
@@ -974,7 +970,7 @@ def _build_cpi_panel(chart: "CpiSpec", data: dict,
     html = (
         '<div class="chart-panel">'
         '<div class="chart-header">'
-        '<div class="chart-title">' + chart.title + '</div>'
+        + _title_block_html(chart.title, _CPI_TRANSFORM_UNITS[chart.default_transform], div_id)
         + controls + '</div>'
         + plotly_frag
         + legend
@@ -1060,12 +1056,22 @@ _CSS = """\
     gap: 10px;
     margin-bottom: 2px;
   }
+  .chart-title-block {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
   .chart-title {
     font-size: 0.8rem;
     font-weight: 600;
     color: #222;
-    flex: 1;
-    min-width: 0;
+  }
+  .chart-subtitle {
+    font-size: 0.75rem;
+    color: #555;
+    line-height: 1.1;
+    margin-top: 1px;
   }
   .chart-controls {
     display: flex;
@@ -1247,7 +1253,10 @@ function _computeYRange(div, xStartMs, xEndMs) {
     }
   }
   if (!found) return null;
-  var pad = Math.max((ymax - ymin) * 0.08, 0.1);
+  // Pad is a small fraction of the visible span so tight-range series like
+  // USD/CAD don't get drowned in whitespace. No absolute minimum: zoom in.
+  var span = ymax - ymin;
+  var pad = span > 0 ? span * 0.05 : 0.001;
   var floor = (Y_FLOORS && typeof Y_FLOORS[div.id] === "number") ? Y_FLOORS[div.id] : null;
   var lo = ymin - pad;
   if (floor !== null) lo = Math.max(lo, floor);
@@ -1429,7 +1438,8 @@ function cpiXformClick(btn, chartId, transformIdx, unitLabel) {
   btn.classList.add("active");
   div._cpiTransform = transformIdx;
   _cpiApplyVisibility(div);
-  Plotly.relayout(div, {"annotations[0].text": unitLabel});
+  var subtitleDiv = document.getElementById("unit-" + chartId);
+  if (subtitleDiv) subtitleDiv.textContent = unitLabel;
   var rb = document.getElementById("rb-" + chartId);
   if (rb) {
     var ab = rb.querySelector(".ctrl-btn.active");
@@ -1501,7 +1511,6 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
         height=_CHART_HEIGHT, showlegend=False,
         paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
         margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
-        annotations=[_unit_annotation(chart.unit_label)],
     )
     _fmt_today = pd.Timestamp.now().normalize()
     _fmt_vals: list = []
@@ -1578,7 +1587,7 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
     html = (
         '<div class="chart-panel">'
         '<div class="chart-header">'
-        '<div class="chart-title">' + chart.title + '</div>'
+        + _title_block_html(chart.title, chart.unit_label, div_id)
         + controls + '</div>'
         + plotly_frag
         + legend
@@ -1637,8 +1646,8 @@ def _assemble_page(page: PageSpec, chart_panels: list[str],
         '<div class="btn-group" id="gc-range">'
         '<button class="ctrl-btn" onclick="gcRange(2,this)">2Y</button>'
         '<button class="ctrl-btn" onclick="gcRange(5,this)">5Y</button>'
-        '<button class="ctrl-btn" onclick="gcRange(10,this)">10Y</button>'
-        '<button class="ctrl-btn active" onclick="gcRange(null,this)">Max</button>'
+        '<button class="ctrl-btn active" onclick="gcRange(10,this)">10Y</button>'
+        '<button class="ctrl-btn" onclick="gcRange(null,this)">Max</button>'
         "</div></div>\n"
     )
 
