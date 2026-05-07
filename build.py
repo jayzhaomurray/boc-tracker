@@ -101,6 +101,32 @@ def _hover_template(transform: str, frequency: str) -> str:
     return f"%{{x|{date_fmt}}}<br>%{{y:.2f}}{suffix}<extra></extra>"
 
 
+def _compute_y_ranges(chart: ChartSpec, df: pd.DataFrame) -> dict:
+    """Pre-compute y-axis ranges per transform index and time window at build time."""
+    transforms = compute_transforms(df, chart.frequency)
+    available = FREQ_TRANSFORMS[chart.frequency]
+    today = pd.Timestamp.now().normalize()
+    result = {}
+    for i, key in enumerate(available):
+        s = transforms.get(key)
+        if s is None:
+            continue
+        s = s.dropna()
+        if s.empty:
+            continue
+        by_years = {}
+        for years in [2, 5, 10]:
+            cutoff = today - pd.DateOffset(years=years)
+            sub = s[s.index >= cutoff].dropna()
+            if sub.empty:
+                continue
+            ymin, ymax = float(sub.min()), float(sub.max())
+            pad = max((ymax - ymin) * 0.08, abs(ymax) * 0.02, 0.01)
+            by_years[years] = [round(ymin - pad, 4), round(ymax + pad, 4)]
+        result[i] = by_years
+    return result
+
+
 def _resolve_default(chart: ChartSpec) -> str:
     available = FREQ_TRANSFORMS[chart.frequency]
     if chart.default_transform in available:
@@ -304,29 +330,30 @@ _CSS = """\
 _JS_TEMPLATE = """\
 <script>
 var ALL_CHARTS = {chart_ids_js};
+var Y_RANGES = {y_ranges_js};
 
 function applyRange(chartId, years) {
   var div = document.getElementById(chartId);
   if (!div) return;
   if (years === null) {
-    Plotly.relayout(div, {"xaxis.autorange": true});
+    Plotly.relayout(div, {"xaxis.autorange": true, "yaxis.autorange": true});
   } else {
     var e = new Date(), s = new Date(e);
     s.setFullYear(s.getFullYear() - years);
-    Plotly.relayout(div, {
+    var update = {
       "xaxis.range": [s.toISOString().slice(0, 10), e.toISOString().slice(0, 10)],
-      "xaxis.autorange": false
-    });
-  }
-  var rb = document.getElementById("rb-" + chartId);
-  if (rb) {
-    rb.querySelectorAll(".ctrl-btn").forEach(function(b) {
-      b.classList.remove("active");
-      var m = b.getAttribute("onclick").match(/,([\\w]+)\\)$/);
-      if (m && m[1] === (years === null ? "null" : String(years))) {
-        b.classList.add("active");
-      }
-    });
+      "xaxis.autorange": false,
+      "yaxis.autorange": false
+    };
+    var traceIdx = 0;
+    for (var i = 0; i < (div.data || []).length; i++) {
+      if (div.data[i].visible !== false) { traceIdx = i; break; }
+    }
+    var cr = Y_RANGES[chartId];
+    if (cr && cr[String(traceIdx)] && cr[String(traceIdx)][String(years)]) {
+      update["yaxis.range"] = cr[String(traceIdx)][String(years)];
+    }
+    Plotly.relayout(div, update);
   }
 }
 
@@ -345,6 +372,14 @@ function xformClick(btn, chartId, idx) {
   });
   btn.classList.add("active");
   Plotly.restyle(div, {visible: div.data.map(function(_, i) { return i === idx; })});
+  var rb = document.getElementById("rb-" + chartId);
+  if (rb) {
+    var activeRangeBtn = rb.querySelector(".ctrl-btn.active");
+    if (activeRangeBtn) {
+      var m = activeRangeBtn.getAttribute("onclick").match(/,(\\w+)\\)$/);
+      if (m && m[1] !== "null") applyRange(chartId, parseInt(m[1]));
+    }
+  }
 }
 
 function gcRange(years, btn) {
@@ -352,7 +387,19 @@ function gcRange(years, btn) {
     b.classList.remove("active");
   });
   btn.classList.add("active");
-  ALL_CHARTS.forEach(function(id) { applyRange(id, years); });
+  ALL_CHARTS.forEach(function(id) {
+    var rb = document.getElementById("rb-" + id);
+    if (rb) {
+      rb.querySelectorAll(".ctrl-btn").forEach(function(b) { b.classList.remove("active"); });
+      rb.querySelectorAll(".ctrl-btn").forEach(function(b) {
+        var m = b.getAttribute("onclick").match(/,(\\w+)\\)$/);
+        if (m && (years === null ? m[1] === "null" : m[1] === String(years))) {
+          b.classList.add("active");
+        }
+      });
+    }
+    applyRange(id, years);
+  });
 }
 </script>
 """
@@ -361,9 +408,12 @@ function gcRange(years, btn) {
 # ── Page assembly ─────────────────────────────────────────────────────────────
 
 def _assemble_page(page: PageSpec, chart_panels: list[str],
-                   chart_ids: list[str], last_updated: str) -> str:
+                   chart_ids: list[str], last_updated: str,
+                   y_ranges: dict) -> str:
+    import json
     chart_ids_js = "[" + ",".join('"' + cid + '"' for cid in chart_ids) + "]"
-    js = _JS_TEMPLATE.replace("{chart_ids_js}", chart_ids_js)
+    y_ranges_js = json.dumps(y_ranges)
+    js = _JS_TEMPLATE.replace("{chart_ids_js}", chart_ids_js).replace("{y_ranges_js}", y_ranges_js)
 
     header = (
         '<div class="site-header">'
@@ -454,12 +504,14 @@ PAGES = [
 def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
     chart_ids = ["chart-" + str(i) for i in range(len(page.charts))]
     panels = []
+    y_ranges: dict = {}
     for i, chart in enumerate(page.charts):
-        panels.append(_chart_panel_html(chart, data[chart.series], i,
-                                        include_plotlyjs=(i == 0)))
+        df = data[chart.series]
+        panels.append(_chart_panel_html(chart, df, i, include_plotlyjs=(i == 0)))
+        y_ranges["chart-" + str(i)] = _compute_y_ranges(chart, df)
 
     last_updated = datetime.now(timezone.utc).strftime("%B %d, %Y at %H:%M UTC")
-    html = _assemble_page(page, panels, chart_ids, last_updated)
+    html = _assemble_page(page, panels, chart_ids, last_updated, y_ranges)
 
     with open(page.output_file, "w", encoding="utf-8") as f:
         f.write(html)
