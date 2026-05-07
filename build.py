@@ -84,13 +84,26 @@ class WageSpec:
 
 
 @dataclass
-class CpiAllItemsSpec:
-    """CPI All Items with both SA and NSA available; transform buttons + legend toggle."""
+class CpiLine:
+    series: str          # CSV filename without .csv
+    label: str           # legend label
+    color: str           # hex color
+    visible: bool = False
+
+
+@dataclass
+class CpiSpec:
+    """CPI chart with multiple series (headline + breakdown), transform buttons, legend toggle.
+    Each line gets each transform computed; visibility = (active transform) AND (legend on)."""
     title: str
+    lines: list                       # list[CpiLine]
     footnote: str = ""
-    default_transform: str = "mom"   # one of: level, mom, ar_3m, yoy
-    default_years: int | None = 2
-    SERIES = ["cpi_all_items", "cpi_all_items_nsa"]
+    default_transform: str = "yoy"    # one of: level, mom, ar_3m, yoy
+    default_years: int | None = 10
+
+    @property
+    def SERIES(self):
+        return [l.series for l in self.lines]
 
 
 @dataclass
@@ -834,29 +847,38 @@ def _cpi_compute_transform(v: pd.Series, key: str) -> pd.Series:
     raise ValueError(key)
 
 
-def _build_cpi_all_items_panel(chart: "CpiAllItemsSpec", data: dict,
-                                chart_idx: int, include_plotlyjs: bool) -> tuple:
+def _build_cpi_panel(chart: "CpiSpec", data: dict,
+                     chart_idx: int, include_plotlyjs: bool) -> tuple:
     div_id = "chart-" + str(chart_idx)
-    sa  = data["cpi_all_items"].set_index("date")["value"]
-    nsa = data["cpi_all_items_nsa"].set_index("date")["value"]
+    lines = chart.lines
+    n_lines = len(lines)
+    n_t = len(_CPI_TRANSFORMS)
+    default_t_idx = _CPI_TRANSFORMS.index(chart.default_transform)
 
-    # 8 traces: indices 0..3 = SA × {Level, M/M, 3M AR, Y/Y}; 4..7 = NSA × same
-    versions = [("SA",  sa,  "#1565c0"), ("NSA", nsa, "#c62828")]
-    default_t = chart.default_transform
-    default_t_idx = _CPI_TRANSFORMS.index(default_t)
+    # Pre-compute every transform for every line
+    transformed = {}
+    for line in lines:
+        s = data[line.series].set_index("date")["value"]
+        transformed[line.series] = {
+            t: _cpi_compute_transform(s, t) for t in _CPI_TRANSFORMS
+        }
 
+    # Build N_LINES × N_TRANSFORMS = N traces. Trace order: line-major.
+    # Index i = line_idx * n_t + transform_idx
     fig = go.Figure()
-    for v_idx, (label, series, color) in enumerate(versions):
+    for line_idx, line in enumerate(lines):
         for t_idx, t_key in enumerate(_CPI_TRANSFORMS):
-            s = _cpi_compute_transform(series, t_key)
-            visible = (v_idx == 0) and (t_idx == default_t_idx)  # SA only, default transform
+            s = transformed[line.series][t_key]
+            visible = line.visible and (t_idx == default_t_idx)
             pct_t = t_key in {"mom", "ar_3m", "yoy"}
             suffix = "%" if pct_t else ""
             fig.add_trace(go.Scatter(
                 x=s.index, y=s.values,
-                line=dict(color=color, width=2),
+                line=dict(color=line.color, width=2),
                 visible=visible,
-                hovertemplate="%{x|%b %Y}<br>%{y:.2f}" + suffix + "<extra>" + label + " " + _CPI_TRANSFORM_LABELS[t_key] + "</extra>",
+                hovertemplate="%{x|%b %Y}<br>%{y:.2f}" + suffix + "<extra>"
+                              + line.label + " " + _CPI_TRANSFORM_LABELS[t_key]
+                              + "</extra>",
                 showlegend=False,
             ))
 
@@ -865,8 +887,6 @@ def _build_cpi_all_items_panel(chart: "CpiAllItemsSpec", data: dict,
         paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
         margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
     )
-    # Axis formatting per default transform — Plotly will adjust on transform switch
-    # via the JS handler, but we set sensible defaults for the initial view.
     fig.update_xaxes(showgrid=False, zeroline=False)
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False, nticks=7)
 
@@ -885,7 +905,8 @@ def _build_cpi_all_items_panel(chart: "CpiAllItemsSpec", data: dict,
         suffix = "%" if t_key in {"mom", "ar_3m", "yoy"} else ""
         xform_btns += (
             '<button class="ctrl-btn' + active + '"'
-            ' onclick="cpiXformClick(this,\'' + div_id + '\',' + str(t_idx) + ',\'' + suffix + '\')">'
+            ' onclick="cpiXformClick(this,\'' + div_id + '\',' + str(t_idx)
+            + ',\'' + suffix + '\')">'
             + label + '</button>'
         )
     xform_btns += '</div>'
@@ -899,16 +920,15 @@ def _build_cpi_all_items_panel(chart: "CpiAllItemsSpec", data: dict,
                 'background:' + color + ';border-radius:1px;vertical-align:middle;'
                 'margin-right:5px"></span>')
 
-    legend = (
-        '<div class="chart-legend" id="leg-' + div_id + '">'
-        + '<button class="legend-item active"'
-        + ' onclick="cpiVersionToggle(this,\'' + div_id + '\',0)">'
-        + _swatch("#1565c0") + 'Seasonally adjusted</button>'
-        + '<button class="legend-item"'
-        + ' onclick="cpiVersionToggle(this,\'' + div_id + '\',1)">'
-        + _swatch("#c62828") + 'Not seasonally adjusted</button>'
-        + '</div>'
-    )
+    legend_items = []
+    for line_idx, line in enumerate(lines):
+        active = " active" if line.visible else ""
+        legend_items.append(
+            '<button class="legend-item' + active + '"'
+            ' onclick="cpiLineToggle(this,\'' + div_id + '\',' + str(line_idx) + ')">'
+            + _swatch(line.color) + line.label + '</button>'
+        )
+    legend = '<div class="chart-legend" id="leg-' + div_id + '">' + "".join(legend_items) + '</div>'
 
     footnote_html = (
         '<div class="chart-footnote">' + chart.footnote + '</div>'
@@ -924,28 +944,29 @@ def _build_cpi_all_items_panel(chart: "CpiAllItemsSpec", data: dict,
         + footnote_html + '</div>\n'
     )
 
-    # Y-ranges per transform per window. Both SA and NSA mapped to the same range,
-    # so visibility logic in JS doesn't need to pick between them.
+    # Y-ranges per (line, transform, window). For each transform, compute the
+    # range covering all lines together, and store the same range under every
+    # trace index of that transform — so the JS lookup picks the same value
+    # regardless of which line is the first visible.
     today = pd.Timestamp.now().normalize()
-    sa_t  = {t: _cpi_compute_transform(sa,  t) for t in _CPI_TRANSFORMS}
-    nsa_t = {t: _cpi_compute_transform(nsa, t) for t in _CPI_TRANSFORMS}
     y_ranges: dict = {}
-    for v_idx in range(2):
-        for t_idx, t_key in enumerate(_CPI_TRANSFORMS):
-            trace_idx = v_idx * 4 + t_idx
-            yr_dict: dict = {}
-            for years in [2, 5, 10]:
-                cutoff = today - pd.DateOffset(years=years)
-                merged = pd.concat([
-                    sa_t[t_key][sa_t[t_key].index >= cutoff].dropna(),
-                    nsa_t[t_key][nsa_t[t_key].index >= cutoff].dropna(),
-                ])
-                if merged.empty:
-                    continue
-                ymin, ymax = float(merged.min()), float(merged.max())
-                pad = max((ymax - ymin) * 0.08, 0.05)
-                yr_dict[years] = [round(ymin - pad, 4), round(ymax + pad, 4)]
-            y_ranges[str(trace_idx)] = yr_dict
+    for t_idx, t_key in enumerate(_CPI_TRANSFORMS):
+        per_window: dict = {}
+        for years in [2, 5, 10]:
+            cutoff = today - pd.DateOffset(years=years)
+            chunks = []
+            for line in lines:
+                s = transformed[line.series][t_key]
+                chunks.append(s[s.index >= cutoff].dropna())
+            merged = pd.concat(chunks) if chunks else pd.Series(dtype=float)
+            if merged.empty:
+                continue
+            ymin, ymax = float(merged.min()), float(merged.max())
+            pad = max((ymax - ymin) * 0.08, 0.05)
+            per_window[years] = [round(ymin - pad, 4), round(ymax + pad, 4)]
+        for line_idx in range(n_lines):
+            trace_idx = line_idx * n_t + t_idx
+            y_ranges[str(trace_idx)] = per_window
 
     return html, y_ranges
 
@@ -1198,13 +1219,29 @@ function gcRange(years, btn) {
   });
 }
 
+function _cpiInitVisible(div) {
+  if (div._cpiVisible) return;
+  var nT = 4;
+  var nLines = div.data.length / nT;
+  div._cpiVisible = [];
+  for (var k = 0; k < nLines; k++) {
+    var anyOn = false;
+    for (var t = 0; t < nT; t++) {
+      if (div.data[k * nT + t].visible !== false) { anyOn = true; break; }
+    }
+    div._cpiVisible.push(anyOn);
+  }
+}
+
 function _cpiApplyVisibility(div) {
-  var t = (div._cpiTransform === undefined) ? 1 : div._cpiTransform;
-  var v = div._cpiVisible || [true, false];
+  _cpiInitVisible(div);
+  var nT = 4;
+  var t = (div._cpiTransform === undefined) ? 3 : div._cpiTransform;
+  var v = div._cpiVisible;
   var vis = [];
-  for (var i = 0; i < 8; i++) {
-    var tIdx = i % 4;
-    var vIdx = Math.floor(i / 4);
+  for (var i = 0; i < div.data.length; i++) {
+    var tIdx = i % nT;
+    var vIdx = Math.floor(i / nT);
     vis.push(tIdx === t && v[vIdx]);
   }
   Plotly.restyle(div, {visible: vis});
@@ -1229,12 +1266,12 @@ function cpiXformClick(btn, chartId, transformIdx, ticksuffix) {
   }
 }
 
-function cpiVersionToggle(btn, chartId, versionIdx) {
+function cpiLineToggle(btn, chartId, lineIdx) {
   var div = document.getElementById(chartId);
-  if (!div._cpiVisible) div._cpiVisible = [true, false];
+  _cpiInitVisible(div);
   var isActive = btn.classList.contains("active");
   btn.classList.toggle("active");
-  div._cpiVisible[versionIdx] = !isActive;
+  div._cpiVisible[lineIdx] = !isActive;
   _cpiApplyVisibility(div);
 }
 </script>
@@ -1471,6 +1508,20 @@ PAGES = [
         tagline="Tracking the indicators behind Bank of Canada policy decisions",
         output_file="index.html",
         charts=[
+            CpiSpec(
+                title="CPI",
+                lines=[
+                    CpiLine("cpi_all_items",      "Headline",       "#1565c0", visible=True),
+                    CpiLine("cpi_all_items_nsa",  "Headline (NSA)", "#90a4ae"),
+                    CpiLine("cpi_food",           "Food",           "#ef6c00"),
+                    CpiLine("cpi_energy",         "Energy",         "#6a1b9a"),
+                    CpiLine("cpi_goods",          "Goods",          "#00838f"),
+                    CpiLine("cpi_services",       "Services",       "#2e7d32"),
+                ],
+                default_transform="yoy",
+                default_years=10,
+                footnote="Canada CPI, 2002=100. Headline is the all-items index; sub-aggregates are food, energy, goods, and services. Headline (SA) is seasonally adjusted; the NSA toggle exists for comparison in M/M view (Y/Y is identical).",
+            ),
             CoreInflationSpec(
                 title="Core Inflation",
                 footnote="Year-over-year %. Shaded band shows range across BoC core measures (trim, median, common, CPIX, CPIXFET).",
@@ -1500,12 +1551,6 @@ PAGES = [
                 smooth_window=20,
                 date_fmt="%b %d, %Y",
                 footnote="2-year benchmark government bond yields.",
-            ),
-            CpiAllItemsSpec(
-                title="CPI — All Items",
-                default_transform="mom",
-                default_years=2,
-                footnote="All-items CPI index, Canada, 2002=100. Seasonally adjusted shown by default; toggle the legend to compare with the not-seasonally-adjusted series.",
             ),
             ChartSpec(
                 series="unemployment_rate",
@@ -1568,8 +1613,8 @@ def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
             panel, cyr = _build_wage_panel(chart, data, i, i == 0)
             panels.append(panel)
             y_ranges[cid] = cyr
-        elif isinstance(chart, CpiAllItemsSpec):
-            panel, cyr = _build_cpi_all_items_panel(chart, data, i, i == 0)
+        elif isinstance(chart, CpiSpec):
+            panel, cyr = _build_cpi_panel(chart, data, i, i == 0)
             panels.append(panel)
             y_ranges[cid] = cyr
         elif isinstance(chart, MultiLineSpec):
@@ -1586,7 +1631,7 @@ def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
         cid = "chart-" + str(i)
         if isinstance(chart, CpiBreadthSpec):
             default_ranges[cid] = 10
-        elif isinstance(chart, (ChartSpec, MultiLineSpec, WageSpec, CoreInflationSpec, CpiAllItemsSpec)) and chart.default_years is not None:
+        elif isinstance(chart, (ChartSpec, MultiLineSpec, WageSpec, CoreInflationSpec, CpiSpec)) and chart.default_years is not None:
             default_ranges[cid] = chart.default_years
 
     last_updated = datetime.now(timezone.utc).strftime("%B %d, %Y at %H:%M UTC")
@@ -1607,8 +1652,8 @@ def main():
                 all_series.update(CoreInflationSpec.SERIES)
             elif isinstance(chart, WageSpec):
                 all_series.update(WageSpec.SERIES)
-            elif isinstance(chart, CpiAllItemsSpec):
-                all_series.update(CpiAllItemsSpec.SERIES)
+            elif isinstance(chart, CpiSpec):
+                all_series.update(chart.SERIES)
             elif isinstance(chart, CpiBreadthSpec):
                 has_breadth = True
             elif isinstance(chart, MultiLineSpec):
