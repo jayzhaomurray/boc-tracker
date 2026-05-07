@@ -376,14 +376,7 @@ Current approach in `build.py`:
 
 ### Color palette
 
-| Usage | Hex |
-|---|---|
-| Canada / BoC / primary series | `#1565c0` |
-| US / Fed / opposing series | `#c62828` |
-| CPI-trim overlay | `#546e7a` |
-| CPI-median overlay | `#78909c` |
-| LFS-Micro (BoC composition-adjusted) | `#4a148c` |
-| WTI / Brent / WCS | `#c62828` / `#e57373` / `#6d4c41` |
+The full color palette and rules for when to use each are codified in `markdown-files/chart_style_guide.md` §4. HANDOFF doesn't duplicate to avoid drift; check the style guide as the source of truth.
 
 ---
 
