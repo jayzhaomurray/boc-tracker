@@ -7,6 +7,9 @@ on:
     - cron: "0 15 * * *"    # 11:00 AM EDT / 10:00 AM EST — BoC daily yields
   workflow_dispatch:         # manual trigger (also uses --wait)
 
+permissions:
+  contents: write   # required for git-auto-commit-action to push back to main
+
 jobs:
   build:
     runs-on: ubuntu-latest
