@@ -73,7 +73,7 @@ The `analyses/` folder is for one-off research and reference data. Scripts there
 
 ```bash
 # Step 1: download fresh data from APIs (run when you want to update data)
-$env:FRED_API_KEY = "c0c26d8fd7f30f1d70d59bbaa2002836"   # PowerShell; set once per session
+$env:FRED_API_KEY = "<your-key>"                          # PowerShell; or set persistently via [Environment]::SetEnvironmentVariable
 python fetch.py
 
 # Step 2 (optional but recommended): regenerate the dashboard blurbs
@@ -287,7 +287,7 @@ class PageSpec:
     sections: dict = field(default_factory=dict)   # {chart_index: section_id}
 ```
 
-`sections` maps a chart index to a section identifier defined in `SECTION_HEADINGS`. When `build_page` reaches that index, it prepends a section heading and the section's blurb (loaded from `data/blurbs.json`) above the chart panel. Currently only `{0: "inflation"}` is wired in; future sections (`policy`, `labour`, `external`) reserve slots in `SECTION_HEADINGS` but aren't yet placed at chart indices.
+`sections` maps a chart index to a section identifier defined in `SECTION_HEADINGS`. When `build_page` reaches that index, it prepends a section heading and (if a blurb exists in `data/blurbs.json`) the blurb above the chart panel. All four section headings are placed today (`{0: "policy", 3: "inflation", 6: "labour", 8: "financial"}`). Only `inflation` has a generated blurb; the other three render as headings only until their framework is verified and `analyze.py` is wired to generate them.
 
 ### Current PAGES definition (9 charts, 4 section headings, 1 blurb)
 
@@ -513,8 +513,7 @@ Built and runnable. End-to-end:
 ## What has NOT been implemented
 
 - [ ] **Framework verification for non-Inflation sections** — Policy Rates, Labour, Financial Conditions still need their thresholds and signals verified
-- [ ] **`analyze.py` for non-Inflation sections** — only `inflation` is registered in the `SECTIONS` dict; need `compute_*_values` + `format_*_values` for `policy`, `labour`, `external`
-- [ ] **Section headings for the other three sections** — `PageSpec.sections` only maps `{0: "inflation"}` so far
+- [ ] **`analyze.py` for non-Inflation sections** — only `inflation` is registered in the `SECTIONS` dict; need `compute_*_values` + `format_*_values` for `policy`, `labour`, `external`. Section *headings* for all four sections are already placed; only blurbs are pending.
 - [ ] **AI-generated content disclaimer** — short note in the About section
 - [ ] **`ANTHROPIC_API_KEY` in GitHub Actions** — currently the cron runs `fetch.py` and `build.py` only; `analyze.py` is not wired into CI
 - [ ] **Multiple pages** — PAGES list has one entry; infrastructure is ready
@@ -627,3 +626,19 @@ The original A-tier roadmap items not yet built:
 10. **GitHub Actions doesn't run `analyze.py`** — the cron only runs `fetch.py` and `build.py`. Until `analyze.py` is wired into the workflow with `ANTHROPIC_API_KEY` as a secret, blurbs do not auto-update on each release; they stay frozen at whatever was last committed to `data/blurbs.json`.
 
 11. **Author display name** — `AUTHOR_DISPLAY_NAME = "jayzhaomurray"` in `build.py`.
+
+---
+
+## Deferred quality fixes
+
+Identified during a code-quality review (May 2026). Real issues, not nits — addressed when convenient.
+
+1. **`analyze.py:105` — latent KeyError on partial CPI release.** `above3 = above3[valid]` filters `above3` to months where all 60 depth-3 components have ≥13 months of valid history. If `latest` (the headline CPI's last month) refers to a month where one component is delayed, `above3.loc[latest]` raises `KeyError`. Crashes `compute_inflation_values` during partial-release windows. Latent because `analyze.py` isn't wired into CI yet — but it'll bite the moment it is. **Fix:** snap `latest` to the last index in `above3` (`latest_breadth = above3.index.max()`), or fall back if `latest not in above3.index`.
+
+2. **JS `nT = 4` hardcoded in CPI handlers (`build.py` JS section, `_cpiInitVisible`/`_cpiApplyVisibility`/`cpiXformClick`).** Currently correct because `_CPI_TRANSFORMS` has 4 entries; the Python side uses `len(_CPI_TRANSFORMS)`, the JS side does not. Adding or reordering a transform silently misindexes traces. **Fix:** template `nT` from Python, e.g. inject `var nT = {len(_CPI_TRANSFORMS)};` into the JS block.
+
+3. **`_nice_dtick` — unreachable `else: nice = 0.5` branch (Python and JS copies).** `norm = rough / 10**floor(log10(rough))` is always in [1, 10), so `norm < 1.0` cannot occur. Trivial cleanup.
+
+4. **Bare `except Exception:` swallows errors.**
+   - `analyze.py:268` (`_load_existing_blurbs` or similar) silently treats a corrupt `blurbs.json` as `{}`, so the next write overwrites all prior blurbs. **Fix:** narrow to `JSONDecodeError`, log a warning, and back up the corrupt file before overwriting.
+   - `fetch.py:228` (`_latest_saved_date`) silently masks all CSV read errors. Fine for the wait-mode polling case, but a real read error (permissions, schema change) is invisible. Lower priority.

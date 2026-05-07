@@ -213,47 +213,6 @@ def _hover_template(transform: str, frequency: str, decimals: int = 2) -> str:
     return f"%{{x|{date_fmt}}}<br>%{{y:.{decimals}f}}{suffix}<extra></extra>"
 
 
-def _compute_y_ranges(chart: ChartSpec, df: pd.DataFrame) -> dict:
-    """Pre-compute y-axis ranges per transform index and time window at build time."""
-    transforms = compute_transforms(df, chart.frequency)
-    available = FREQ_TRANSFORMS[chart.frequency]
-    today = pd.Timestamp.now().normalize()
-    result = {}
-    for i, key in enumerate(available):
-        s = transforms.get(key)
-        if s is None:
-            continue
-        s = s.dropna()
-        if s.empty:
-            continue
-        by_years = {}
-        for years in [2, 5, 10]:
-            cutoff = today - pd.DateOffset(years=years)
-            sub = s[s.index >= cutoff].dropna()
-            if sub.empty:
-                continue
-            ymin, ymax = float(sub.min()), float(sub.max())
-            pad = max((ymax - ymin) * 0.08, abs(ymax) * 0.02, 0.01)
-            by_years[years] = [round(ymin - pad, 4), round(ymax + pad, 4)]
-        result[i] = by_years
-    return result
-
-
-def _ytick_format(vals: pd.Series) -> str:
-    """Minimum decimal places that remain consistent across all y-axis ticks."""
-    v = vals.dropna()
-    if v.empty:
-        return ".1f"
-    span = float(v.max() - v.min())
-    step = span / 4 if span > 0 else 1.0   # ~5 ticks → 4 intervals
-    if step >= 1.0:
-        return ".0f"
-    elif step >= 0.1:
-        return ".1f"
-    else:
-        return ".2f"
-
-
 def _nice_dtick(ymin: float, ymax: float, target: int = 5) -> float:
     """Round-number tick interval giving at least target ticks over [ymin, ymax].
     Rounds DOWN to the nearest nice step so tick count stays >= target."""
@@ -420,7 +379,7 @@ def _chart_panel_html(chart: ChartSpec, df: pd.DataFrame, chart_idx: int,
 # ── Core inflation one-off chart ─────────────────────────────────────────────
 
 def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
-                                chart_idx: int, include_plotlyjs: bool) -> tuple:
+                                chart_idx: int, include_plotlyjs: bool) -> str:
     div_id = "chart-" + str(chart_idx)
 
     headline_yoy = (
@@ -552,32 +511,13 @@ def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
         + footnote_html + '</div>\n'
     )
 
-    # Pre-compute y-ranges for date range buttons
-    today = pd.Timestamp.now().normalize()
-    all_yoy = pd.concat([
-        headline_yoy.rename("headline"), trim.rename("trim"),
-        median.rename("median"), common.rename("common"),
-        cpix.rename("cpix"), cpixfet.rename("cpixfet"),
-    ], axis=1)
-    yr_dict: dict = {}
-    for years in [2, 5, 10]:
-        cutoff = today - pd.DateOffset(years=years)
-        vals = all_yoy[all_yoy.index >= cutoff].stack().dropna()
-        if vals.empty:
-            continue
-        ymin, ymax = float(vals.min()), float(vals.max())
-        pad = max((ymax - ymin) * 0.08, 0.1)
-        yr_dict[years] = [round(ymin - pad, 4), round(ymax + pad, 4)]
-    # Store under all trace indices so lookup works regardless of which is first visible
-    y_ranges = {str(i): yr_dict for i in range(5)}
-
-    return html, y_ranges
+    return html
 
 
 # ── CPI breadth chart ────────────────────────────────────────────────────────
 
 def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
-                              chart_idx: int, include_plotlyjs: bool) -> tuple:
+                              chart_idx: int, include_plotlyjs: bool) -> str:
     div_id = "chart-" + str(chart_idx)
 
     with open(DATA_DIR / "cpi_breadth_mapping.json") as f:
@@ -686,26 +626,13 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
         + footnote_html + '</div>\n'
     )
 
-    today = pd.Timestamp.now().normalize()
-    combined = pd.concat([above_3, below_1], axis=1)
-    yr_dict: dict = {}
-    for years in [2, 5, 10]:
-        cutoff = today - pd.DateOffset(years=years)
-        vals = combined[combined.index >= cutoff].stack().dropna()
-        if vals.empty:
-            continue
-        ymin, ymax = float(vals.min()), float(vals.max())
-        pad = max((ymax - ymin) * 0.08, 1.0)
-        yr_dict[years] = [round(ymin - pad, 2), round(ymax + pad, 2)]
-    y_ranges = {str(i): yr_dict for i in range(2)}
-
-    return html, y_ranges
+    return html
 
 
 # ── Wage growth chart ────────────────────────────────────────────────────────
 
 def _build_wage_panel(chart: "WageSpec", data: dict,
-                      chart_idx: int, include_plotlyjs: bool) -> tuple:
+                      chart_idx: int, include_plotlyjs: bool) -> str:
     div_id = "chart-" + str(chart_idx)
 
     # Y/Y % for level series; lfs_micro is already Y/Y from BoC Valet
@@ -862,24 +789,7 @@ def _build_wage_panel(chart: "WageSpec", data: dict,
         + footnote_html + '</div>\n'
     )
 
-    # Pre-compute y-ranges for all 6 traces
-    today = pd.Timestamp.now().normalize()
-    all_yoy = pd.concat([
-        lfs_all.rename("lfs_all"), lfs_perm.rename("lfs_perm"),
-        seph.rename("seph"), lfs_micro.rename("lfs_micro"), svc_cpi.rename("svc_cpi"),
-    ], axis=1, sort=True)
-    yr_dict: dict = {}
-    for years in [2, 5, 10]:
-        cutoff = today - pd.DateOffset(years=years)
-        vals = all_yoy[all_yoy.index >= cutoff].stack().dropna()
-        if vals.empty:
-            continue
-        ymin, ymax = float(vals.min()), float(vals.max())
-        pad = max((ymax - ymin) * 0.08, 0.1)
-        yr_dict[years] = [round(ymin - pad, 4), round(ymax + pad, 4)]
-    y_ranges = {str(i): yr_dict for i in range(7)}
-
-    return html, y_ranges
+    return html
 
 
 # ── CPI All Items chart (SA + NSA, transforms + legend toggle) ───────────────
@@ -899,7 +809,7 @@ def _cpi_compute_transform(v: pd.Series, key: str) -> pd.Series:
 
 
 def _build_cpi_panel(chart: "CpiSpec", data: dict,
-                     chart_idx: int, include_plotlyjs: bool) -> tuple:
+                     chart_idx: int, include_plotlyjs: bool) -> str:
     div_id = "chart-" + str(chart_idx)
     lines = chart.lines
     n_lines = len(lines)
@@ -997,31 +907,7 @@ def _build_cpi_panel(chart: "CpiSpec", data: dict,
         + footnote_html + '</div>\n'
     )
 
-    # Y-ranges per (line, transform, window). For each transform, compute the
-    # range covering all lines together, and store the same range under every
-    # trace index of that transform — so the JS lookup picks the same value
-    # regardless of which line is the first visible.
-    today = pd.Timestamp.now().normalize()
-    y_ranges: dict = {}
-    for t_idx, t_key in enumerate(_CPI_TRANSFORMS):
-        per_window: dict = {}
-        for years in [2, 5, 10]:
-            cutoff = today - pd.DateOffset(years=years)
-            chunks = []
-            for line in lines:
-                s = transformed[line.series][t_key]
-                chunks.append(s[s.index >= cutoff].dropna())
-            merged = pd.concat(chunks) if chunks else pd.Series(dtype=float)
-            if merged.empty:
-                continue
-            ymin, ymax = float(merged.min()), float(merged.max())
-            pad = max((ymax - ymin) * 0.08, 0.05)
-            per_window[years] = [round(ymin - pad, 4), round(ymax + pad, 4)]
-        for line_idx in range(n_lines):
-            trace_idx = line_idx * n_t + t_idx
-            y_ranges[str(trace_idx)] = per_window
-
-    return html, y_ranges
+    return html
 
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
@@ -1486,7 +1372,7 @@ function cpiLineToggle(btn, chartId, lineIdx) {
 # ── Multi-line chart ─────────────────────────────────────────────────────────
 
 def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
-                           chart_idx: int, include_plotlyjs: bool) -> tuple:
+                           chart_idx: int, include_plotlyjs: bool) -> str:
     div_id = "chart-" + str(chart_idx)
     lines = [line for line in chart.lines if line.series in data]
     n = len(lines)
@@ -1625,27 +1511,7 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
         + footnote_html + '</div>\n'
     )
 
-    # Y-ranges: union of all lines for each window, stored under all trace indices
-    total_traces = 2 * n if has_smooth else n
-    today = pd.Timestamp.now().normalize()
-    yr_dict: dict = {}
-    for years in [2, 5, 10]:
-        cutoff = today - pd.DateOffset(years=years)
-        vals = pd.concat([
-            data[line.series]["value"][data[line.series]["date"] >= cutoff]
-            for line in lines
-        ]).dropna()
-        if vals.empty:
-            continue
-        ymin, ymax = float(vals.min()), float(vals.max())
-        if chart.ymin is not None:
-            ymin = max(ymin, chart.ymin)
-        pad = max((ymax - ymin) * 0.08, 0.1)
-        lo = ymin - pad if chart.ymin is None else max(ymin - pad, chart.ymin)
-        yr_dict[years] = [round(lo, 4), round(ymax + pad, 4)]
-    y_ranges = {str(i): yr_dict for i in range(total_traces)}
-
-    return html, y_ranges
+    return html
 
 
 # ── Page assembly ─────────────────────────────────────────────────────────────
@@ -1898,36 +1764,22 @@ def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
     blurbs = _load_blurbs()
     chart_ids = ["chart-" + str(i) for i in range(len(page.charts))]
     panels = []
-    y_ranges: dict = {}
     for i, chart in enumerate(page.charts):
-        cid = "chart-" + str(i)
-        # Insert a section heading + blurb above this chart, if configured.
         if i in page.sections:
             panels.append(_render_section(page.sections[i], blurbs))
         if isinstance(chart, CoreInflationSpec):
-            panel, cyr = _build_core_inflation_panel(chart, data, i, i == 0)
-            panels.append(panel)
-            y_ranges[cid] = cyr
+            panels.append(_build_core_inflation_panel(chart, data, i, i == 0))
         elif isinstance(chart, CpiBreadthSpec):
-            panel, cyr = _build_cpi_breadth_panel(chart, data, i, i == 0)
-            panels.append(panel)
-            y_ranges[cid] = cyr
+            panels.append(_build_cpi_breadth_panel(chart, data, i, i == 0))
         elif isinstance(chart, WageSpec):
-            panel, cyr = _build_wage_panel(chart, data, i, i == 0)
-            panels.append(panel)
-            y_ranges[cid] = cyr
+            panels.append(_build_wage_panel(chart, data, i, i == 0))
         elif isinstance(chart, CpiSpec):
-            panel, cyr = _build_cpi_panel(chart, data, i, i == 0)
-            panels.append(panel)
-            y_ranges[cid] = cyr
+            panels.append(_build_cpi_panel(chart, data, i, i == 0))
         elif isinstance(chart, MultiLineSpec):
-            panel, cyr = _build_multiline_panel(chart, data, i, i == 0)
-            panels.append(panel)
-            y_ranges[cid] = cyr
+            panels.append(_build_multiline_panel(chart, data, i, i == 0))
         else:
             df = data[chart.series]
             panels.append(_chart_panel_html(chart, df, i, include_plotlyjs=(i == 0)))
-            y_ranges[cid] = _compute_y_ranges(chart, df)
 
     default_ranges: dict = {}
     y_floors: dict = {}
