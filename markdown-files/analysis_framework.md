@@ -2,9 +2,41 @@
 
 Internal analytical brief for generating dashboard blurbs. Each section defines the question being answered, the signals to evaluate, the thresholds that matter, and what to surface in the output.
 
-Blurbs should read as a thoughtful analyst writing for an informed reader — not a data reporter listing numbers. Embed numbers in analytical sentences. Prioritize the most important signal or tension in the data, not a comprehensive tour of every indicator. When two indicators are telling different stories, say so. 2–4 sentences per section. Write in present tense based on the latest available data.
+The framework must work in any part of the cycle — high inflation or low, hiking or cutting, tight labour market or slack. Do not assume a direction is desirable or expected. Describe what the data shows and what it implies.
 
-The framework must work in any part of the cycle — high inflation or low, hiking or cutting, tight labour market or slack. Do not assume a direction is desirable or expected. Describe what the data shows and what it implies; let the reader draw conclusions.
+---
+
+## Blurb structure
+
+Each blurb follows this shape:
+
+1. **Sentence 1 — Takeaway.** The bottom-line conclusion. Synthesize, do not just describe. When measures disagree, defer to the BoC's preferred core measures rather than the model's opinion. Never forecast (no "will continue to..."), never prescribe policy (no "the BoC should..."), never call something "transitory" or "persistent" beyond what the current data shows.
+2. **Sentence 2 — Anchor.** The most recognized number for the section: headline CPI for inflation, BoC overnight rate for policy, unemployment rate for labour, USD/CAD or oil Y/Y for external conditions.
+3. **Sentence 3 (and possibly 4) — Support.** The strongest evidence for the takeaway, in order of importance.
+4. **Closing sentence — Nuance or tension.** The most important caveat or contradicting signal. Plain language. No parallel construction unless it earns it.
+
+Length: 3 sentences typically; 4 if there is a real tension that needs the closing slot.
+
+---
+
+## Writing style
+
+Blurbs should read like an analyst writing for an informed reader, not a journalist explaining analysis.
+
+- **Plain verbs.** *Was, is, sits, runs.* Avoid *ran at, has returned to, pulled back, firmed up.* State positions, not journeys.
+- **Semicolons for parallel facts of equal weight.** Two independent observations get a semicolon, not a subordinating clause.
+- **No explanatory codas.** Do not add *"indicating X"* or *"the read here is Y."* Let the data carry the inference.
+- **Conventional shorthand.** *y/y, m/m, q/q, 3-month, pp, bps.* Not *year-over-year, three-month, percentage points, basis points.*
+- **Plain hedges.** *Roughly, near, broadly.* Not *broadly returned to, hints at, appears to be.*
+- **Embed numbers in analytical sentences.** Do not lead with *"As of March, headline CPI was 2.3%."* Instead: *"Headline CPI was 2.3% y/y in March."* The number is part of a sentence, not the sentence's reason for existing.
+
+---
+
+## Verification, not speculation
+
+If a claim can be verified with available data, verify it before stating it. The framework signals point at likely causes (e.g., *"if headline below core, food or energy is masking pressure"*); these are starting points for analysis, not conclusions to be repeated. When the framework points at a candidate cause, look at the actual food and energy Y/Y numbers and state which is the driver. Never guess at a category attribution when the category-level data is on hand.
+
+Main-page blurbs work from top-level aggregates only — never from individual CPI components or sub-categories. If a question requires component-level decomposition, it belongs on a future deep-dive page, not the main blurb.
 
 ---
 
@@ -12,15 +44,19 @@ The framework must work in any part of the cycle — high inflation or low, hiki
 
 **Question:** How does inflation compare to the BoC's 2% target, and what is the underlying trend?
 
-**Data:** cpi_all_items (M/M, 3M AR, Y/Y), cpi_trim, cpi_median, cpi_common, cpix, cpixfet, cpi_breadth (share above 3%, share below 1%)
+**Data:** cpi_all_items (M/M, 3M AR, Y/Y), cpi_trim, cpi_median, cpi_common, cpix, cpixfet, cpi_food (Y/Y), cpi_energy (Y/Y), cpi_goods (Y/Y), cpi_services (Y/Y), cpi_breadth (share above 3%, share below 1%). M/M and 3M AR are computed on the SA cpi_all_items series; Y/Y is identical between SA and NSA.
 
 **Signals to evaluate:**
 
 - Where are core measures relative to 2%? How far above or below, and are they moving toward or away from target?
-- Is the band of core measures tight or wide? A tight band means the measures are telling a consistent story. A wide band means the choice of measure matters — note which are highest and lowest and what that implies.
-- Is headline CPI above or below core? If headline > core, energy or food is adding to the headline number. If headline < core, energy or food is masking underlying pressure. Note which reading is more representative.
-- CPI breadth: is the share of basket components above 3% elevated or depressed relative to the 1996–2019 historical average? Is the share below 1% elevated or depressed? Elevated breadth above 3% means price pressure is broad. Elevated breadth below 1% means disinflation is broad.
-- Is M/M momentum consistent with 2% annualized? ~0.17%/month is the neutral threshold. Sustained prints above 0.3% signal acceleration; sustained prints below 0.1% signal deceleration.
+- Is the band of core measures tight or wide? A tight band means the measures are telling a consistent story. A wide band means the choice of measure matters.
+- Is headline CPI above or below core, and what is driving the gap? When headline diverges from core by more than ~0.3pp, look at food Y/Y and energy Y/Y to identify the driver. State the actual food and energy Y/Y numbers; do not guess at attribution. Goods Y/Y vs services Y/Y can also be informative if the gap is not in food or energy.
+- CPI breadth: classify the breadth signal into one of four states using the deviations from the 1996–2019 historical averages. Define `tilt = (above-3% share deviation) − (below-1% share deviation)`. The four states are:
+  - **Broad-based pressure** — share above 3% elevated *and* share below 1% depressed (positive tilt). Many components running hot, few cold.
+  - **Broad-based softening** — share above 3% depressed *and* share below 1% elevated (negative tilt). Many cold, few hot.
+  - **Clustered near target** — both shares near their historical norms (small tilt, both deviations near zero). Most components in the 1–3% middle range.
+  - **Polarized** — both shares elevated. Rare; some components hot *and* some cold simultaneously, with few in the middle.
+- Is M/M momentum consistent with 2% annualized? ~0.17%/month is the neutral threshold (precisely 0.165%). Sustained prints above 0.3% signal acceleration; sustained prints below 0.1% signal deceleration.
 - Is the 3-month annualized rate above or below 2%? This is the cleanest read on current momentum independent of base effects.
 
 **Thresholds:**
@@ -28,8 +64,11 @@ The framework must work in any part of the cycle — high inflation or low, hiki
 - 1–3% = BoC control range
 - ~0.17%/month ≈ 2% annualized
 - Tight band = all core measures within ~0.5pp of each other
+- Headline-core gap > 0.3pp = look at food/energy/services for the driver
 
-**What to surface:** Lead with where core measures sit relative to 2% and whether they are moving toward or away from target. Note whether the convergence or divergence is genuine (tight band) or an artefact of averaging wide dispersion. Mention breadth if it adds something the core level does not (confirming or contradicting the direction). Use M/M or 3M AR if they diverge materially from the Y/Y read.
+**What to surface:** Open with a takeaway that synthesizes the picture (sentence 1). Anchor on headline CPI Y/Y (sentence 2), with core context if it changes the read. Bring in supporting evidence — breadth, M/M, 3M AR — in order of importance. When headline and core diverge, name the driver using the verified food or energy Y/Y figure rather than the framework's hypothetical "energy or food is masking" language. Defer to core measures over headline as the more representative read on persistent inflation, since this is the BoC's own convention.
+
+When citing breadth in the blurb, lead with the state name (*broad-based pressure*, *broad-based softening*, *clustered near target*, or *polarized*). The two-threshold comparison is for evaluating the signal internally; the blurb output uses the synthesis. When both threshold signals point the same way, cite one of them as evidence and drop the other — the second is redundant. When the two signals disagree (polarized state, or a transition where one has normalized but the other has not), cite both since they are telling different stories. Phrase the components as "running well above target" / "running well below target" rather than "above 3%" / "below 1%" — the precise threshold belongs on the chart, not in the prose.
 
 ---
 

@@ -46,6 +46,9 @@ STATSCAN_SERIES = {
     "lfs_wages_permanent": 105812715,  # Table 14-10-0320-02: LFS avg hourly wages, permanent employees, SA
     "seph_earnings":       79311153,   # Table 14-10-0223-01: SEPH avg weekly earnings, all employees, Canada, SA
     "cpi_services":        41691230,   # Table 18-10-0004-01: CPI Services, Canada, NSA (2002=100)
+    "cpi_food":            41690974,   # Table 18-10-0004-01: CPI Food, Canada, NSA (2002=100)
+    "cpi_energy":          41691239,   # Table 18-10-0004-01: CPI Energy, Canada, NSA (2002=100)
+    "cpi_goods":           41691222,   # Table 18-10-0004-01: CPI Goods, Canada, NSA (2002=100)
 }
 
 BOC_VALET_SERIES = {
