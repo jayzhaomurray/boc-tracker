@@ -161,7 +161,30 @@ class ChartSpec:
 
 ### CoreInflationSpec
 
-A one-off composite chart for the core inflation panel. No configurable fields beyond `title`. Hardcoded to load `cpi_all_items`, `cpi_trim`, `cpi_median`, `cpi_common`, `cpix`, `cpixfet`. Displays headline CPI Y/Y as a blue line, a shaded band showing the min–max range of the five core measures, and toggle-able individual lines for trim and median. Add a `CoreInflationSpec` to any page's `charts` list to include it.
+A one-off composite chart for the core inflation panel. No configurable fields beyond `title`. Hardcoded to load `cpi_all_items`, `cpi_trim`, `cpi_median`, `cpi_common`, `cpix`, `cpixfet`. Built by `_build_core_inflation_panel()` in `build.py`.
+
+**Trace index map** (order matters for `toggleTrace` calls):
+| Index | Series | Default visibility |
+|---|---|---|
+| 0 | range lower bound (min of 5 core measures) | visible |
+| 1 | range upper bound (max of 5 core measures, fills to trace 0) | visible |
+| 2 | Total CPI Y/Y (blue line, `#1f6aa5`) | visible |
+| 3 | CPI-trim (dark gray, `#444444`) | hidden |
+| 4 | CPI-median (mid gray, `#888888`) | hidden |
+
+**Legend:** displayed below the chart (not in the header) as clickable items with color swatches. Each legend item uses `toggleTrace(btn, chartId, indices)` for independent show/hide. Active items are full opacity; inactive are 35% opacity. The legend items are:
+- Total CPI → indices `[2]` → active by default
+- CPI-trim → indices `[3]` → inactive by default
+- CPI-median → indices `[4]` → inactive by default
+- Range of core measures → indices `[0,1]` → active by default
+
+**Header controls:** date range buttons only (2Y / 5Y / 10Y / Max) — no transform buttons.
+
+**Reference line:** solid horizontal line at y=2 (the BoC's 2% inflation target).
+
+**Y-axis:** `ticksuffix="%"` applied. Y_RANGES stored under all trace indices 0–4 with identical values (union of all six Y/Y series) so the lookup works regardless of which trace is first visible after toggling.
+
+Add a `CoreInflationSpec` to any page's `charts` list to include it.
 
 ### CpiBreadthSpec
 
@@ -271,14 +294,54 @@ PAGES = [
 
 All transforms are computed at build time and embedded in the HTML as separate Plotly traces. Only the default transform is initially visible. Toggle buttons use Plotly's `restyle` method targeting specific trace indices — this means clicking a button on one chart does not affect other charts.
 
-Each chart with `static=False` and more than one available transform gets its own `updatemenus` button group, positioned at the top of its subplot panel using paper coordinates derived from `fig.layout[yaxis_key].domain`.
+**Buttons are plain HTML `<button>` elements**, not Plotly `updatemenus`. They sit outside the Plotly canvas in a `.chart-controls` div in the chart header. This was the only way to achieve full CSS control over button placement and styling. Plotly's native controls were abandoned after they couldn't be positioned reliably outside the chart area.
+
+Transform buttons (Level / M/M / 3M AR / Y/Y) are "radio" style — one active at a time, handled by `xformClick(btn, chartId, idx)` in JS. Date range buttons (2Y / 5Y / 10Y / Max) are handled by `rangeClick(btn, chartId, years)` and `gcRange(years, btn)` (global override at top of page).
+
+For composite one-off charts, independent show/hide toggles use `toggleTrace(btn, chartId, indices)` where `indices` is an array of Plotly trace indices to flip. Multiple indices can be passed to toggle a group (e.g., `[0,1]` for the range band's upper+lower traces). Active = series visible; inactive = dimmed to 35% opacity.
 
 This was a deliberate decision: **no live calculation at click time**. All data is pre-baked into the HTML. The file is heavier but completely self-contained once loaded.
+
+### Y-axis scaling on date range change
+
+Plotly's `yaxis.autorange: true` computes the range from the full dataset regardless of the visible x window — it does not filter to the selected date range. Three browser-side approaches to work around this all failed.
+
+**Current solution: pre-computed y-ranges baked into the HTML.**
+
+`_compute_y_ranges(chart, df)` runs at build time and computes the y min/max for each combination of (transform index, time window). Results are embedded in the page as:
+
+```javascript
+var Y_RANGES = {
+  "chart-0": {"0": {"2": [1.2, 3.1], "5": [0.8, 4.2], "10": [-0.5, 4.5]}, ...},
+  ...
+};
+```
+
+`applyRange(chartId, years)` finds the first visible trace index, looks up `Y_RANGES[chartId][traceIdx][years]`, and passes it directly to `Plotly.relayout` as `yaxis.range`. For `Max`, it calls `Plotly.relayout` with `yaxis.autorange: true` instead (full dataset autorange is correct for Max).
+
+For composite one-off charts, the y_ranges dict is returned alongside the panel HTML from the builder function and stored under all trace indices (0 through N) so the lookup works regardless of which trace happens to be first visible.
+
+Padding formula: `max((ymax - ymin) * 0.08, 0.1)` applied symmetrically.
+
+### Shared formatting constants
+
+Extracted to module level so all charts — standard and one-off — stay consistent:
+
+```python
+_CHART_HEIGHT  = 260
+_CHART_MARGINS = dict(l=48, r=16, t=8, b=32)
+_FONT_STACK    = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+```
+
+Change these to affect every chart on every page simultaneously.
 
 ### Decisions that were considered and rejected
 
 - **Type-based transforms** (level/rate/financial types with different transform sets): rejected in favour of frequency-based transforms. Simpler, more predictable, no exceptions to remember.
 - **`mom_ar` (month-over-month annualized)**: removed. Monthly transforms are `level`, `mom`, `ar_3m`, `yoy` only.
+- **Plotly `updatemenus` for transform buttons**: rejected. Could not be positioned outside the chart canvas with CSS. Replaced with plain HTML buttons.
+- **Plotly `rangeselector`**: rejected for the same reason. Replaced with HTML buttons calling `applyRange()`.
+- **Browser-side y-axis fitting** (`fitYToX`): tried three implementations, all failed because Plotly's `yaxis.autorange` ignores the current x range. Replaced with pre-computed Y_RANGES lookup table.
 
 ---
 
@@ -296,14 +359,25 @@ No other code changes needed. Navigation between pages (a header nav bar) has no
 
 ## Architecture: HTML generation
 
-`build.py` uses Plotly's `fig.write_html()` with `include_plotlyjs="cdn"` to produce the base HTML, then post-processes it with string replacement to inject:
-- Custom CSS (centered layout, font stack, header and about-section styles)
-- A `.site-header` div above the chart (title, tagline, last-updated timestamp)
-- A `.about` div below the chart (attribution, links to GitHub and data sources)
+`build.py` assembles the full HTML page as a single string. The structure is:
 
-The three replacement anchors are `</head>`, `<body>`, and `</body>`. Plotly's output always contains these as bare tags so the replacements are reliable.
+```
+<!DOCTYPE html>
+  <head> CSS </head>
+  <body>
+    site-header (title, tagline, last-updated)
+    global-controls (All charts — 2Y / 5Y / 10Y / Max)
+    [chart panels, one per chart in page.charts]
+    about section
+    <script> JS including Y_RANGES and ALL_CHARTS </script>
+  </body>
+```
 
-Using `include_plotlyjs="cdn"` keeps the HTML file small (~50KB vs ~3MB with embedded JS). The page requires an internet connection to load Plotly, which is acceptable since it's hosted on GitHub Pages.
+Each chart panel is produced by `_chart_panel_html()` (for `ChartSpec`) or the equivalent one-off builder. The panel calls `fig.to_html(full_html=False, include_plotlyjs=..., div_id=..., config={"displayModeBar": False})` to get just the Plotly div fragment, then wraps it in the title/controls/legend HTML.
+
+Plotly JS is loaded from CDN (`include_plotlyjs="cdn"`) for the first chart in the page only; subsequent charts pass `include_plotlyjs=False`. This keeps the HTML file small (~50KB vs ~3MB with embedded JS). The page requires an internet connection to load Plotly, which is acceptable since it's hosted on GitHub Pages.
+
+`config={"displayModeBar": False}` disables Plotly's hover toolbar (download, zoom, pan icons).
 
 ---
 
@@ -367,35 +441,31 @@ jobs:
 
 This runs `fetch.py` and `build.py` on a schedule and auto-commits the updated CSVs and `index.html`. GitHub Pages then serves the new file automatically.
 
-### 4. Add charts — in recommended build order
+### 2. Add charts — in recommended build order
 
 See the full expansion roadmap section below for the complete chart list. The recommended order:
 
-**Step A — StatsCan CPI fetch (already done for headline; extend it)**
+**Step A — Remaining BoC Valet additions**
 
-Everything in the inflation theme comes from the same StatsCan Table 18-10-0006-01. Adding the four core measures (CPI-trim, CPI-median, CPIX, CPIXFET) and the share-of-components-above-3% chart are all unlocked once you have that fetch wired up.
+The overnight policy rate and BCNEx (non-energy commodity index) are straightforward Valet pulls. Add entries to `BOC_VALET_SERIES` in `fetch.py` and new `ChartSpec`s in `build.py`. CPI-trim, CPI-median, CPIX, CPIXFET, and the breadth chart are already done.
 
-**Step B — BoC Valet additions**
-
-CPI-trim and CPI-median are actually published directly by the BoC on Valet — no calculation needed. Look them up at https://www.bankofcanada.ca/valet/lists/series/json (search "trim" and "median"). The overnight policy rate and BCNEx (non-energy commodity index) are also on Valet.
-
-**Step C — StatsCan Labour Force Survey**
+**Step B — StatsCan Labour Force Survey**
 
 Table 14-10-0064 (wage growth) and Table 14-10-0023 (employment by industry) come from the LFS. The pace-to-keep-employment-rate-constant is a calculation on top of LFS data.
 
-**Step D — EIA and FRED**
+**Step C — EIA and FRED**
 
 Oil prices (Brent, WTI) via the EIA API require a free API key from eia.gov. US unemployment and payrolls via FRED also require a free key from fred.stlouisfed.org. Both take 10 minutes to register.
 
-**Step E — BoC survey publications (BOS, BLP, CSCE)**
+**Step D — BoC survey publications (BOS, BLP, CSCE)**
 
 No REST API. The BoC publishes results as PDFs with companion CSV files at predictable URL patterns on bankofcanada.ca. Quarterly for BOS and CSCE; monthly for BLP.
 
-**Step F — StatsCan trade data by HS code**
+**Step E — StatsCan trade data by HS code**
 
 Table 12-10-0011 for goods exports. Stripping HS 7108 (gold) gives exports ex-gold. Grouping by HS codes for steel, aluminum, copper, lumber, motor vehicles gives sectoral exports.
 
-### 5. Multi-page split (when chart count warrants it)
+### 3. Multi-page split (when chart count warrants it)
 
 Planned theme split:
 - `index.html` — inflation (CPI, core measures, breadth, expectations)
@@ -415,9 +485,10 @@ Drawn from `boc_mpr_tracking_priority.md` and `boc_mpr_data_methodology.md`. Cha
 
 | Chart | Theme | Difficulty | Data access | Source | Notes |
 |---|---|---|---|---|---|
-| Headline CPI + CPI ex-indirect-taxes | Inflation | 1 | Free API | StatsCan WDS Table 18-10-0004; BoC Valet | Both series are pre-published. Headline CPI is already in the dashboard. |
-| Core inflation: CPI-trim, CPI-median, CPIX, CPIXFET | Inflation | 1 | Free API | BoC Valet (trim, median); StatsCan (CPIX, CPIXFET) | All four are computed and published. BoC Valet series keys: search "trim" and "median" at the Valet series list. |
-| Share of CPI components above 3% / below 1% | Inflation | 2 | Free API | StatsCan WDS Table 18-10-0006 | Fetch all ~150 subcomponents; count those above 3% and below 1% each month. Use `static=True` — the output is a single derived series, no toggles needed. |
+| ~~Headline CPI~~ | ~~Inflation~~ | — | — | — | **Done.** All-items CPI in dashboard, opens on Y/Y. |
+| ~~Core inflation: CPI-trim, CPI-median, CPIX, CPIXFET~~ | ~~Inflation~~ | — | — | — | **Done.** `CoreInflationSpec` panel with range band and individual toggles. |
+| ~~Share of CPI components above 3% / below 1%~~ | ~~Inflation~~ | — | — | — | **Done.** `CpiBreadthSpec` panel; 59 weighted depth-3 components; deviation from 1996–2019 avg. |
+| Headline CPI + CPI ex-indirect-taxes | Inflation | 1 | Free API | StatsCan WDS Table 18-10-0004; BoC Valet | CPI ex-indirect-taxes not yet added. Add as a second line on the all-items panel or a separate ChartSpec. |
 | Inflation expectations (BOS, BLP, CSCE) | Inflation | 2 | Free release | BoC publications page | BoC publishes CSVs alongside PDFs. No REST API. BLP is monthly; BOS and CSCE are quarterly. Consensus Economics (paid) is substitutable with these three free BoC surveys. |
 | Oil prices: Brent / WTI | Costs/commodities | 1 | Free API | EIA API | Free registration at eia.gov required. Series: `PET.RBRTE.D` (Brent), `PET.RCLC1.D` (WTI). Daily. |
 | WCS (Western Canada Select) oil price | Costs/commodities | 1 | Free release | Government of Alberta daily price page | No clean API; scrape or download manually. WCS trades at a discount to WTI and matters for Canadian terms of trade specifically. |
@@ -479,3 +550,5 @@ Several of the above charts output a derived number per period (a percentage, a 
 7. **BoC survey data (BOS, BLP, CSCE)** — these are published as PDFs with companion CSV files at predictable URL patterns on bankofcanada.ca. There is no REST API. Fetching them requires downloading the CSV directly.
 
 8. **Consensus Economics** — the only meaningful paid data source in the A-tier list. The BoC's own three surveys (BOS, BLP, CSCE) are a sufficient free substitute for tracking inflation expectations.
+
+9. **BoC breadth calibration reference** — `data/SPEECH_MEND20251002_C3.csv` is a manually downloaded CSV from a BoC speech (Deputy Governor Mend, Oct 2, 2025). It contains the BoC's published version of the breadth chart (deviation from historical average, two series: share above 3% and share below 1%) from Jan 2019 to Aug 2025. It is **not fetched by `fetch.py`** and is **not committed to git** — it lives only in the local working directory. It was used to validate our breadth methodology: our 2022 peak deviation (+46 pp) matches their published value (+47 pp) within 1 pp. Keep the file locally for future calibration checks. If it gets lost, it can be re-downloaded from the BoC website linked in the CSV header (`https://www.bankofcanada.ca/?p=248443`).
