@@ -425,8 +425,8 @@ def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
         '<div class="chart-title">' + chart.title + '</div>'
         + controls + '</div>'
         + plotly_frag
-        + footnote_html
-        + legend + '</div>\n'
+        + legend
+        + footnote_html + '</div>\n'
     )
 
     # Pre-compute y-ranges for date range buttons
@@ -549,8 +549,8 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
         '<div class="chart-title">' + chart.title + '</div>'
         + controls + '</div>'
         + plotly_frag
-        + footnote_html
-        + legend + '</div>\n'
+        + legend
+        + footnote_html + '</div>\n'
     )
 
     today = pd.Timestamp.now().normalize()
@@ -930,8 +930,8 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
         '<div class="chart-title">' + chart.title + '</div>'
         + controls + '</div>'
         + plotly_frag
-        + footnote_html
-        + legend + '</div>\n'
+        + legend
+        + footnote_html + '</div>\n'
     )
 
     # Y-ranges: union of all lines for each window, stored under all trace indices
@@ -993,8 +993,9 @@ def _assemble_page(page: PageSpec, chart_panels: list[str],
         "<strong>About this dashboard</strong> &mdash; "
         'Built by <a href="https://github.com/' + AUTHOR_DISPLAY_NAME + '">'
         + AUTHOR_DISPLAY_NAME + "</a> using public data from "
-        '<a href="https://www150.statcan.gc.ca">Statistics Canada</a> and the '
-        '<a href="https://www.bankofcanada.ca/valet/docs">Bank of Canada Valet API</a>. '
+        '<a href="https://www150.statcan.gc.ca">Statistics Canada</a>, the '
+        '<a href="https://www.bankofcanada.ca/valet/docs">Bank of Canada Valet API</a>, '
+        'and the <a href="https://fred.stlouisfed.org">Federal Reserve (FRED)</a>. '
         'Raw data available as CSV in the '
         '<a href="https://github.com/' + AUTHOR_DISPLAY_NAME + '/boc-tracker/tree/main/data">'
         "GitHub repository</a>."
@@ -1039,8 +1040,8 @@ PAGES = [
             MultiLineSpec(
                 title="Policy Rates",
                 lines=[
-                    LineConfig("overnight_rate", "BoC overnight",              "#1565c0"),
-                    LineConfig("fed_funds",       "Fed funds target (midpoint)", "#c62828"),
+                    LineConfig("overnight_rate", "BoC", "#1565c0"),
+                    LineConfig("fed_funds",       "Fed", "#c62828"),
                 ],
                 default_years=10,
                 line_shape="hv",
@@ -1055,7 +1056,7 @@ PAGES = [
                 default_years=10,
                 smooth_window=20,
                 date_fmt="%b %d, %Y",
-                footnote="2-year benchmark government bond yields. Canada: Bank of Canada Valet; US: Federal Reserve.",
+                footnote="2-year benchmark government bond yields.",
             ),
             ChartSpec(
                 series="cpi_all_items",
@@ -1072,7 +1073,7 @@ PAGES = [
                 frequency="monthly",
                 color="#1565c0",
                 static=True,
-                footnote="Canada, seasonally adjusted (Statistics Canada, LFS).",
+                footnote="Canada, seasonally adjusted.",
             ),
         ],
     ),
