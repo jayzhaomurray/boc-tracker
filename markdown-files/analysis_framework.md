@@ -124,9 +124,9 @@ When citing breadth in the blurb, lead with the state name (*broad-based pressur
 
 ---
 
-## External Conditions
+## Financial Conditions
 
-**Question:** How are commodity prices and the exchange rate affecting the Canadian price picture?
+**Question:** How are commodity prices, the exchange rate, and (in the future) other market signals affecting the Canadian economic picture?
 
 **Data:** wti (daily), brent (daily), wcs (monthly), usdcad (daily, CAD per USD — higher = weaker CAD)
 

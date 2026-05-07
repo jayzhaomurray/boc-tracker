@@ -21,10 +21,10 @@ import plotly.graph_objects as go
 BLURBS_PATH = Path("data/blurbs.json")
 
 SECTION_HEADINGS = {
+    "policy":    "Monetary Policy",
     "inflation": "Inflation",
-    "policy":    "Policy & Markets",
     "labour":    "Labour Market",
-    "external":  "External Conditions",
+    "financial": "Financial Conditions",
 }
 
 DATA_DIR = Path("data")
@@ -1692,8 +1692,29 @@ PAGES = [
         title="Bank of Canada Tracker",
         tagline="Tracking the indicators behind Bank of Canada policy decisions",
         output_file="index.html",
-        sections={0: "inflation"},
+        sections={0: "policy", 2: "inflation", 5: "labour", 7: "financial"},
         charts=[
+            MultiLineSpec(
+                title="Policy Rates",
+                lines=[
+                    LineConfig("overnight_rate", "BoC", "#1565c0"),
+                    LineConfig("fed_funds",       "Fed", "#c62828"),
+                ],
+                default_years=10,
+                line_shape="hv",
+                footnote="BoC overnight rate target; Fed funds midpoint of target range.",
+            ),
+            MultiLineSpec(
+                title="2-Year Yields",
+                lines=[
+                    LineConfig("yield_2yr", "Canada 2Y", "#1565c0"),
+                    LineConfig("us_2yr",    "US 2Y",     "#c62828"),
+                ],
+                default_years=10,
+                smooth_window=20,
+                date_fmt="%b %d, %Y",
+                footnote="2-year benchmark government bond yields.",
+            ),
             CoreInflationSpec(
                 title="Core Inflation",
                 footnote="Year-over-year %. Shaded band shows range across BoC core measures (trim, median, common, CPIX, CPIXFET).",
@@ -1716,27 +1737,6 @@ PAGES = [
             CpiBreadthSpec(
                 title="CPI Breadth",
                 footnote="Deviation from 1996–2019 average. Weighted share of 60 basket components with year-over-year change above 3% or below 1%.",
-            ),
-            MultiLineSpec(
-                title="Policy Rates",
-                lines=[
-                    LineConfig("overnight_rate", "BoC", "#1565c0"),
-                    LineConfig("fed_funds",       "Fed", "#c62828"),
-                ],
-                default_years=10,
-                line_shape="hv",
-                footnote="BoC overnight rate target; Fed funds midpoint of target range.",
-            ),
-            MultiLineSpec(
-                title="2-Year Yields",
-                lines=[
-                    LineConfig("yield_2yr", "Canada 2Y", "#1565c0"),
-                    LineConfig("us_2yr",    "US 2Y",     "#c62828"),
-                ],
-                default_years=10,
-                smooth_window=20,
-                date_fmt="%b %d, %Y",
-                footnote="2-year benchmark government bond yields.",
             ),
             ChartSpec(
                 series="unemployment_rate",
