@@ -60,6 +60,27 @@ class CpiBreadthSpec:
     title: str
 
 
+@dataclass
+class LineConfig:
+    series: str          # CSV filename without .csv
+    label: str           # legend label
+    color: str           # hex color
+    visible: bool = True
+
+
+@dataclass
+class MultiLineSpec:
+    """Generic multi-line chart with per-line toggle buttons."""
+    title: str
+    lines: list               # list[LineConfig]
+    ticksuffix: str = "%"
+    hoverformat: str = ".2f"
+    default_years: int | None = None
+    line_shape: str = "linear"          # "linear" | "hv" (step)
+    smooth_window: int | None = None    # rolling average window; None = no smooth button
+    date_fmt: str = "%b %Y"            # hover date format
+
+
 # ── Transform system ──────────────────────────────────────────────────────────
 
 FREQ_TRANSFORMS: dict[str, list[str]] = {
@@ -236,10 +257,6 @@ def _chart_panel_html(chart: ChartSpec, df: pd.DataFrame, chart_idx: int,
                       include_plotlyjs: bool) -> str:
     div_id = "chart-" + str(chart_idx)
     fig = _build_chart_fig(chart, df)
-    if chart.default_years is not None:
-        end_dt = pd.Timestamp.now().normalize()
-        start_dt = end_dt - pd.DateOffset(years=chart.default_years)
-        fig.update_xaxes(range=[start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")])
     plotly_frag = fig.to_html(
         full_html=False,
         include_plotlyjs="cdn" if include_plotlyjs else False,
@@ -304,21 +321,21 @@ def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
     # Trace 2: headline CPI Y/Y (always visible)
     fig.add_trace(go.Scatter(
         x=headline_yoy.index, y=headline_yoy.values,
-        line=dict(color="#1f6aa5", width=2),
+        line=dict(color="#1565c0", width=2),
         hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>Total CPI</extra>",
         showlegend=False, visible=True,
     ))
     # Trace 3: CPI-trim (hidden by default)
     fig.add_trace(go.Scatter(
         x=trim.index, y=trim.values,
-        line=dict(color="#444444", width=1.5),
+        line=dict(color="#546e7a", width=1.5),
         hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>CPI-trim</extra>",
         showlegend=False, visible=False,
     ))
     # Trace 4: CPI-median (hidden by default)
     fig.add_trace(go.Scatter(
         x=median.index, y=median.values,
-        line=dict(color="#888888", width=1.5),
+        line=dict(color="#78909c", width=1.5),
         hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>CPI-median</extra>",
         showlegend=False, visible=False,
     ))
@@ -361,13 +378,13 @@ def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
         '<div class="chart-legend">'
         + '<button class="legend-item active"'
         + ' onclick="toggleTrace(this,\'' + div_id + '\',[2])">'
-        + _swatch_line("#1f6aa5") + 'Total CPI</button>'
+        + _swatch_line("#1565c0") + 'Total CPI</button>'
         + '<button class="legend-item"'
         + ' onclick="toggleTrace(this,\'' + div_id + '\',[3])">'
-        + _swatch_line("#444444") + 'CPI-trim</button>'
+        + _swatch_line("#546e7a") + 'CPI-trim</button>'
         + '<button class="legend-item"'
         + ' onclick="toggleTrace(this,\'' + div_id + '\',[4])">'
-        + _swatch_line("#888888") + 'CPI-median</button>'
+        + _swatch_line("#78909c") + 'CPI-median</button>'
         + '<button class="legend-item active"'
         + ' onclick="toggleTrace(this,\'' + div_id + '\',[0,1])">'
         + swatch_range + 'Range of core measures</button>'
@@ -445,13 +462,13 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=above_3.index, y=above_3.values,
-        name="above_3", line=dict(color="#e74c3c", width=2),
+        name="above_3", line=dict(color="#e65100", width=2),
         hovertemplate="%{x|%b %Y}<br>%{y:.1f} pp<extra>Above 3%</extra>",
         showlegend=False, visible=True,
     ))
     fig.add_trace(go.Scatter(
         x=below_1.index, y=below_1.values,
-        name="below_1", line=dict(color="#2980b9", width=2),
+        name="below_1", line=dict(color="#00838f", width=2),
         hovertemplate="%{x|%b %Y}<br>%{y:.1f} pp<extra>Below 1%</extra>",
         showlegend=False, visible=True,
     ))
@@ -461,12 +478,7 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
         paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
         margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
     )
-    end_dt = pd.Timestamp.now().normalize()
-    start_dt = end_dt - pd.DateOffset(years=10)
-    fig.update_xaxes(
-        showgrid=False, zeroline=False,
-        range=[start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")],
-    )
+    fig.update_xaxes(showgrid=False, zeroline=False)
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False,
                      ticksuffix=" pp", tickformat=".1f")
 
@@ -490,10 +502,10 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
         '<div class="chart-legend">'
         + '<button class="legend-item active"'
         + ' onclick="toggleTrace(this,\'' + div_id + '\',[0])">'
-        + _swatch("#e74c3c") + 'Share above 3%</button>'
+        + _swatch("#e65100") + 'Share above 3%</button>'
         + '<button class="legend-item active"'
         + ' onclick="toggleTrace(this,\'' + div_id + '\',[1])">'
-        + _swatch("#2980b9") + 'Share below 1%</button>'
+        + _swatch("#00838f") + 'Share below 1%</button>'
         + '</div>'
     )
 
@@ -635,6 +647,12 @@ _JS_TEMPLATE = """\
 <script>
 var ALL_CHARTS = {chart_ids_js};
 var Y_RANGES = {y_ranges_js};
+var DEFAULT_RANGES = {default_ranges_js};
+document.addEventListener("DOMContentLoaded", function() {
+  Object.keys(DEFAULT_RANGES).forEach(function(id) {
+    applyRange(id, DEFAULT_RANGES[id]);
+  });
+});
 
 function applyRange(chartId, years) {
   var div = document.getElementById(chartId);
@@ -696,6 +714,45 @@ function toggleTrace(btn, chartId, indices) {
   Plotly.restyle(div, {visible: vis});
 }
 
+function mlXformClick(btn, chartId, mode, lineCount) {
+  var div = document.getElementById(chartId);
+  btn.closest(".btn-group").querySelectorAll(".ctrl-btn").forEach(function(b) {
+    b.classList.remove("active");
+  });
+  btn.classList.add("active");
+  div._mlMode = mode;
+  var vis = div.data.map(function() { return false; });
+  var leg = document.getElementById("leg-" + chartId);
+  if (leg) {
+    leg.querySelectorAll(".legend-item").forEach(function(item, i) {
+      if (item.classList.contains("active")) {
+        if (mode === "raw") vis[i] = true;
+        else vis[lineCount + i] = true;
+      }
+    });
+  }
+  Plotly.restyle(div, {visible: vis});
+  var rb = document.getElementById("rb-" + chartId);
+  if (rb) {
+    var ab = rb.querySelector(".ctrl-btn.active");
+    if (ab) {
+      var m = ab.getAttribute("onclick").match(/,(\\w+)\\)$/);
+      if (m && m[1] !== "null") applyRange(chartId, parseInt(m[1]));
+    }
+  }
+}
+
+function mlToggle(btn, chartId, lineIdx, lineCount) {
+  var div = document.getElementById(chartId);
+  var isActive = btn.classList.contains("active");
+  btn.classList.toggle("active");
+  var mode = div._mlMode || "raw";
+  var vis = div.data.map(function(t) { return t.visible !== false; });
+  vis[lineIdx] = !isActive && mode === "raw";
+  vis[lineCount + lineIdx] = !isActive && mode === "smooth";
+  Plotly.restyle(div, {visible: vis});
+}
+
 function gcRange(years, btn) {
   btn.closest(".btn-group").querySelectorAll(".ctrl-btn").forEach(function(b) {
     b.classList.remove("active");
@@ -719,14 +776,137 @@ function gcRange(years, btn) {
 """
 
 
+# ── Multi-line chart ─────────────────────────────────────────────────────────
+
+def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
+                           chart_idx: int, include_plotlyjs: bool) -> tuple:
+    div_id = "chart-" + str(chart_idx)
+    lines = [line for line in chart.lines if line.series in data]
+    n = len(lines)
+    has_smooth = chart.smooth_window is not None and n > 0
+
+    fig = go.Figure()
+
+    # Raw traces (indices 0..n-1)
+    for line in lines:
+        df = data[line.series]
+        fig.add_trace(go.Scatter(
+            x=df["date"], y=df["value"],
+            name=line.label,
+            line=dict(color=line.color, width=2),
+            line_shape=chart.line_shape,
+            visible=True if line.visible else "legendonly",
+            hovertemplate="%{x|" + chart.date_fmt + "}<br>%{y:" + chart.hoverformat + "}" + chart.ticksuffix + "<extra>" + line.label + "</extra>",
+            showlegend=False,
+        ))
+
+    # Smooth traces (indices n..2n-1), hidden by default
+    if has_smooth:
+        for line in lines:
+            df = data[line.series]
+            smooth = df["value"].rolling(chart.smooth_window, min_periods=chart.smooth_window // 2).mean()
+            smooth_label = line.label + " (" + str(chart.smooth_window) + "d avg)"
+            fig.add_trace(go.Scatter(
+                x=df["date"], y=smooth,
+                name=smooth_label,
+                line=dict(color=line.color, width=2),
+                line_shape="linear",
+                visible=False,
+                hovertemplate="%{x|" + chart.date_fmt + "}<br>%{y:" + chart.hoverformat + "}" + chart.ticksuffix + "<extra>" + smooth_label + "</extra>",
+                showlegend=False,
+            ))
+
+    fig.update_layout(
+        height=_CHART_HEIGHT, showlegend=False,
+        paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
+        margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
+    )
+    fig.update_xaxes(showgrid=False, zeroline=False)
+    fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False,
+                     ticksuffix=chart.ticksuffix, tickformat=chart.hoverformat)
+
+    plotly_frag = fig.to_html(
+        full_html=False,
+        include_plotlyjs="cdn" if include_plotlyjs else False,
+        div_id=div_id,
+        config={"displayModeBar": False},
+    )
+
+    range_btns = _range_buttons_html(div_id, default_years=chart.default_years)
+    if has_smooth:
+        xform_btns = (
+            '<div class="btn-group" id="xb-' + div_id + '">'
+            + '<button class="ctrl-btn active" onclick="mlXformClick(this,\'' + div_id + '\',\'raw\',' + str(n) + ')">Level</button>'
+            + '<button class="ctrl-btn" onclick="mlXformClick(this,\'' + div_id + '\',\'smooth\',' + str(n) + ')">' + str(chart.smooth_window) + 'd Avg</button>'
+            + '</div>'
+        )
+        controls = '<div class="chart-controls">' + xform_btns + '<div class="btn-sep"></div>' + range_btns + '</div>'
+    else:
+        controls = '<div class="chart-controls">' + range_btns + '</div>'
+
+    def _swatch(color: str) -> str:
+        return (
+            '<span style="display:inline-block;width:22px;height:2.5px;'
+            'background:' + color + ';border-radius:1px;vertical-align:middle;'
+            'margin-right:5px"></span>'
+        )
+
+    legend_items = []
+    for i, line in enumerate(lines):
+        active = " active" if line.visible else ""
+        if has_smooth:
+            handler = 'mlToggle(this,\'' + div_id + '\',' + str(i) + ',' + str(n) + ')'
+        else:
+            handler = 'toggleTrace(this,\'' + div_id + '\',[' + str(i) + '])'
+        legend_items.append(
+            '<button class="legend-item' + active + '"'
+            ' onclick="' + handler + '">'
+            + _swatch(line.color) + line.label + '</button>'
+        )
+    legend = '<div class="chart-legend" id="leg-' + div_id + '">' + "".join(legend_items) + '</div>'
+
+    html = (
+        '<div class="chart-panel">'
+        '<div class="chart-header">'
+        '<div class="chart-title">' + chart.title + '</div>'
+        + controls + '</div>'
+        + plotly_frag + legend + '</div>\n'
+    )
+
+    # Y-ranges: union of all lines for each window, stored under all trace indices
+    total_traces = 2 * n if has_smooth else n
+    today = pd.Timestamp.now().normalize()
+    yr_dict: dict = {}
+    for years in [2, 5, 10]:
+        cutoff = today - pd.DateOffset(years=years)
+        vals = pd.concat([
+            data[line.series]["value"][data[line.series]["date"] >= cutoff]
+            for line in lines
+        ]).dropna()
+        if vals.empty:
+            continue
+        ymin, ymax = float(vals.min()), float(vals.max())
+        pad = max((ymax - ymin) * 0.08, 0.1)
+        yr_dict[years] = [round(ymin - pad, 4), round(ymax + pad, 4)]
+    y_ranges = {str(i): yr_dict for i in range(total_traces)}
+
+    return html, y_ranges
+
+
 # ── Page assembly ─────────────────────────────────────────────────────────────
 
 def _assemble_page(page: PageSpec, chart_panels: list[str],
                    chart_ids: list[str], last_updated: str,
-                   y_ranges: dict) -> str:
+                   y_ranges: dict, default_ranges: dict) -> str:
     chart_ids_js = "[" + ",".join('"' + cid + '"' for cid in chart_ids) + "]"
     y_ranges_js = json.dumps(y_ranges)
-    js = _JS_TEMPLATE.replace("{chart_ids_js}", chart_ids_js).replace("{y_ranges_js}", y_ranges_js)
+    default_ranges_js = json.dumps(default_ranges)
+    js = (
+        _JS_TEMPLATE
+        .replace("{chart_ids_js}", chart_ids_js)
+        .replace("{y_ranges_js}", y_ranges_js)
+        .replace("{default_ranges_js}", default_ranges_js)
+    )
 
     header = (
         '<div class="site-header">'
@@ -793,11 +973,30 @@ PAGES = [
             CpiBreadthSpec(
                 title="CPI Breadth — Deviation from 1996–2019 Average: Share of Basket Above 3% or Below 1% (pp)",
             ),
+            MultiLineSpec(
+                title="Policy Rates — Bank of Canada Overnight vs Fed Funds (%)",
+                lines=[
+                    LineConfig("overnight_rate", "BoC overnight",              "#1565c0"),
+                    LineConfig("fed_funds",       "Fed funds target (midpoint)", "#c62828"),
+                ],
+                default_years=10,
+                line_shape="hv",
+            ),
+            MultiLineSpec(
+                title="2-Year Government Bond Yields — Canada vs United States (%)",
+                lines=[
+                    LineConfig("yield_2yr", "Canada 2Y", "#1976d2"),
+                    LineConfig("us_2yr",    "US 2Y",     "#e53935"),
+                ],
+                default_years=10,
+                smooth_window=20,
+                date_fmt="%b %d, %Y",
+            ),
             ChartSpec(
                 series="cpi_all_items",
                 title="Consumer Price Index — All Items, Canada (2002=100)",
                 frequency="monthly",
-                color="#1f6aa5",
+                color="#1565c0",
                 default_transform="mom",
                 default_years=2,
             ),
@@ -805,15 +1004,8 @@ PAGES = [
                 series="unemployment_rate",
                 title="Unemployment Rate — Canada, Seasonally Adjusted (%)",
                 frequency="monthly",
-                color="#c0392b",
+                color="#6a1b9a",
                 static=True,
-            ),
-            ChartSpec(
-                series="yield_2yr",
-                title="2-Year Government of Canada Benchmark Bond Yield (%)",
-                frequency="daily",
-                color="#27ae60",
-                default_years=10,
             ),
         ],
     ),
@@ -836,13 +1028,25 @@ def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
             panel, cyr = _build_cpi_breadth_panel(chart, data, i, i == 0)
             panels.append(panel)
             y_ranges[cid] = cyr
+        elif isinstance(chart, MultiLineSpec):
+            panel, cyr = _build_multiline_panel(chart, data, i, i == 0)
+            panels.append(panel)
+            y_ranges[cid] = cyr
         else:
             df = data[chart.series]
             panels.append(_chart_panel_html(chart, df, i, include_plotlyjs=(i == 0)))
             y_ranges[cid] = _compute_y_ranges(chart, df)
 
+    default_ranges: dict = {}
+    for i, chart in enumerate(page.charts):
+        cid = "chart-" + str(i)
+        if isinstance(chart, CpiBreadthSpec):
+            default_ranges[cid] = 10
+        elif isinstance(chart, (ChartSpec, MultiLineSpec)) and chart.default_years is not None:
+            default_ranges[cid] = chart.default_years
+
     last_updated = datetime.now(timezone.utc).strftime("%B %d, %Y at %H:%M UTC")
-    html = _assemble_page(page, panels, chart_ids, last_updated, y_ranges)
+    html = _assemble_page(page, panels, chart_ids, last_updated, y_ranges, default_ranges)
 
     with open(page.output_file, "w", encoding="utf-8") as f:
         f.write(html)
@@ -859,6 +1063,12 @@ def main():
                 all_series.update(CoreInflationSpec.SERIES)
             elif isinstance(chart, CpiBreadthSpec):
                 has_breadth = True
+            elif isinstance(chart, MultiLineSpec):
+                for line in chart.lines:
+                    if (DATA_DIR / f"{line.series}.csv").exists():
+                        all_series.add(line.series)
+                    else:
+                        print(f"  Warning: {line.series}.csv missing — run fetch.py. Line will be skipped.")
             else:
                 all_series.add(chart.series)
     data: dict[str, pd.DataFrame] = {}

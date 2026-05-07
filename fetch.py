@@ -10,6 +10,7 @@ Output: data/cpi_all_items.csv
 
 import argparse
 import json
+import os
 import time
 import requests
 import pandas as pd
@@ -20,6 +21,8 @@ DATA_DIR.mkdir(exist_ok=True)
 
 MAX_RETRIES  = 10   # maximum StatsCan poll attempts before giving up
 RETRY_DELAY  = 30   # seconds between retries
+
+FRED_API_KEY = os.environ.get("FRED_API_KEY", "")
 
 
 # ── Series configuration ──────────────────────────────────────────────────────
@@ -41,13 +44,19 @@ STATSCAN_SERIES = {
 }
 
 BOC_VALET_SERIES = {
-    "yield_2yr":  ("BD.CDN.2YR.DQ.YLD",  "1990-01-01"),  # 2-yr GoC benchmark bond yield, daily
-    "cpi_trim":   ("CPI_TRIM",            "1990-01-01"),  # CPI-trim, Y/Y %, monthly
-    "cpi_median": ("CPI_MEDIAN",          "1990-01-01"),  # CPI-median, Y/Y %, monthly
-    "cpi_common": ("CPI_COMMON",          "1990-01-01"),  # CPI-common, Y/Y %, monthly
-    "cpix":       ("ATOM_V41693242",      "1990-01-01"),  # CPIX (excl. 8 volatile), Y/Y %, monthly
-    "cpixfet":    ("STATIC_CPIXFET",      "1990-01-01"),  # CPIXFET (excl. food & energy), Y/Y %, monthly
+    "yield_2yr":      ("BD.CDN.2YR.DQ.YLD",    "1990-01-01"),  # 2-yr GoC benchmark bond yield, daily
+    "overnight_rate": ("STATIC_ATABLE_V39079",  "1990-01-01"),  # BoC overnight rate target, monthly
+    "cpi_trim":       ("CPI_TRIM",              "1990-01-01"),  # CPI-trim, Y/Y %, monthly
+    "cpi_median":     ("CPI_MEDIAN",            "1990-01-01"),  # CPI-median, Y/Y %, monthly
+    "cpi_common":     ("CPI_COMMON",            "1990-01-01"),  # CPI-common, Y/Y %, monthly
+    "cpix":           ("ATOM_V41693242",        "1990-01-01"),  # CPIX (excl. 8 volatile), Y/Y %, monthly
+    "cpixfet":        ("STATIC_CPIXFET",        "1990-01-01"),  # CPIXFET (excl. food & energy), Y/Y %, monthly
 }
+
+FRED_SERIES = {
+    "us_2yr": ("DGS2", "1990-01-01"),  # 2-yr US Treasury constant maturity, daily
+}
+# fed_funds is fetched separately as target midpoint — see fetch_fed_funds_target()
 
 
 # ── Fetchers ──────────────────────────────────────────────────────────────────
@@ -94,6 +103,43 @@ def fetch_boc_valet(series_key: str, start_date: str) -> pd.DataFrame:
     df = pd.DataFrame(records)
     df["date"] = pd.to_datetime(df["date"])
     return df.sort_values("date").reset_index(drop=True)
+
+
+def fetch_fred(series_id: str, start_date: str) -> pd.DataFrame:
+    url = "https://api.stlouisfed.org/fred/series/observations"
+    r = requests.get(url, params={
+        "series_id": series_id,
+        "observation_start": start_date,
+        "api_key": FRED_API_KEY,
+        "file_type": "json",
+    }, timeout=30)
+    r.raise_for_status()
+    obs = r.json()["observations"]
+    records = [
+        {"date": o["date"], "value": float(o["value"])}
+        for o in obs if o["value"] != "."
+    ]
+    df = pd.DataFrame(records)
+    df["date"] = pd.to_datetime(df["date"])
+    return df.sort_values("date").reset_index(drop=True)
+
+
+def fetch_fed_funds_target() -> pd.DataFrame:
+    """Fed funds target: FEDFUNDS monthly (pre-2008) + midpoint of DFEDTARU/DFEDTARL daily (post-2008)."""
+    monthly = fetch_fred("FEDFUNDS", "1990-01-01")   # monthly effective rate ≈ target pre-2008
+    upper   = fetch_fred("DFEDTARU", "2008-01-01")   # daily upper bound, from Dec 2008
+    lower   = fetch_fred("DFEDTARL", "2008-01-01")   # daily lower bound, from Dec 2008
+    mid = (
+        upper.set_index("date")["value"]
+        .add(lower.set_index("date")["value"])
+        .div(2)
+        .reset_index()
+    )
+    mid.columns = ["date", "value"]
+    cutoff = mid["date"].min() if not mid.empty else pd.Timestamp("2008-12-16")
+    pre = monthly[monthly["date"] < cutoff]
+    combined = pd.concat([pre, mid]).sort_values("date").reset_index(drop=True)
+    return combined
 
 
 def fetch_cpi_components() -> pd.DataFrame:
@@ -174,6 +220,22 @@ def main(wait: bool = False):
         path = DATA_DIR / f"{name}.csv"
         df.to_csv(path, index=False)
         print(f"  -> {len(df)} rows saved to {path}")
+
+    if FRED_API_KEY:
+        print("Fetching fed_funds (target midpoint) from FRED...")
+        df = fetch_fed_funds_target()
+        path = DATA_DIR / "fed_funds.csv"
+        df.to_csv(path, index=False)
+        print(f"  -> {len(df)} rows saved to {path}")
+
+        for name, (series_id, start_date) in FRED_SERIES.items():
+            print(f"Fetching {name} from FRED...")
+            df = fetch_fred(series_id, start_date)
+            path = DATA_DIR / f"{name}.csv"
+            df.to_csv(path, index=False)
+            print(f"  -> {len(df)} rows saved to {path}")
+    else:
+        print("Skipping FRED series (FRED_API_KEY not set).")
 
     path = DATA_DIR / "cpi_components.csv"
     prior = _latest_saved_date(path) if wait else None
