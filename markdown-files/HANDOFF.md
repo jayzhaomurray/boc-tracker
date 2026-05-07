@@ -35,7 +35,7 @@ boc-tracker/
 │   ├── cpi_common.csv
 │   ├── cpix.csv
 │   ├── cpixfet.csv
-│   ├── cpi_components.csv       ← wide CSV: 500 months × 59 depth-3 CPI components
+│   ├── cpi_components.csv       ← wide CSV: 500 months × 60 depth-3 CPI components (1 filtered at build time)
 │   └── cpi_breadth_mapping.json ← component metadata: vector IDs, basket weights, names
 └── markdown-files/       ← reference docs and this handoff
     ├── HANDOFF.md
@@ -130,7 +130,7 @@ Defined in `fetch.py` under `STATSCAN_SERIES` and `BOC_VALET_SERIES`:
 | `cpi_common` | BoC Valet | `CPI_COMMON` | CPI-common, Y/Y %, monthly |
 | `cpix` | BoC Valet | `ATOM_V41693242` | CPIX (excl. 8 volatile), Y/Y %, monthly |
 | `cpixfet` | BoC Valet | `STATIC_CPIXFET` | CPIXFET (excl. food & energy), Y/Y %, monthly |
-| `cpi_components` | StatsCan | 59 vectors (see mapping JSON) | Wide CSV: one column per CPI component, 500 months |
+| `cpi_components` | StatsCan | 60 vectors (see mapping JSON) | Wide CSV: one column per CPI component, 500 months; 1 excluded at build time |
 
 To add a new StatsCan series: add an entry to `STATSCAN_SERIES` in `fetch.py`, run `fetch.py`, then add a `ChartSpec` in `build.py`.
 
@@ -391,6 +391,7 @@ Plotly JS is loaded from CDN (`include_plotlyjs="cdn"`) for the first chart in t
 - [x] Multi-page infrastructure (PAGES list, build_page loop)
 - [x] Custom page header, tagline, last-updated timestamp, About section
 - [x] GitHub repo and GitHub Pages deployment
+- [x] **GitHub Actions workflow** — `.github/workflows/update.yml`; daily cron at 12:00 UTC + manual `workflow_dispatch`; auto-commits refreshed CSVs and rebuilt HTML via `stefanzweifel/git-auto-commit-action@v5`
 - [x] **Core inflation panel** (`CoreInflationSpec`) — headline CPI Y/Y + shaded range of 5 core measures + toggle-able trim/median lines
 - [x] **CPI breadth chart** (`CpiBreadthSpec`) — weighted share of 59 depth-3 components above 3% / below 1%, expressed as deviation from 1996–2019 average. Calibrated against BoC published chart (within 1 pp at 2022 peak).
 - [x] **2-year yield** (BoC Valet)
@@ -399,7 +400,6 @@ Plotly JS is loaded from CDN (`include_plotlyjs="cdn"`) for the first chart in t
 
 ## What has NOT been implemented
 
-- [ ] **GitHub Actions workflow** — daily automated refresh. The file `.github/workflows/update.yml` does not exist yet. Data must be refreshed manually by running `fetch.py` and `build.py` and pushing.
 - [ ] **More charts** — the dashboard has 5 charts. The A-tier priority list has 13. See expansion roadmap below.
 - [ ] **Multiple pages** — the PAGES list has one entry. Infrastructure is ready.
 - [ ] **Navigation bar** — if multiple pages are added, there's no nav between them yet.
@@ -411,37 +411,7 @@ Plotly JS is loaded from CDN (`include_plotlyjs="cdn"`) for the first chart in t
 
 ## Next steps, in priority order
 
-### 1. Set up GitHub Actions for daily refresh
-
-Create `.github/workflows/update.yml`:
-
-```yaml
-name: Update dashboard
-
-on:
-  schedule:
-    - cron: "0 12 * * *"   # daily at 12:00 UTC
-  workflow_dispatch:         # also allows manual trigger from GitHub UI
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install -r requirements.txt
-      - run: python fetch.py
-      - run: python build.py
-      - uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Auto-update: refresh data and rebuild dashboard"
-```
-
-This runs `fetch.py` and `build.py` on a schedule and auto-commits the updated CSVs and `index.html`. GitHub Pages then serves the new file automatically.
-
-### 2. Add charts — in recommended build order
+### 1. Add charts — in recommended build order
 
 See the full expansion roadmap section below for the complete chart list. The recommended order:
 
@@ -465,7 +435,7 @@ No REST API. The BoC publishes results as PDFs with companion CSV files at predi
 
 Table 12-10-0011 for goods exports. Stripping HS 7108 (gold) gives exports ex-gold. Grouping by HS codes for steel, aluminum, copper, lumber, motor vehicles gives sectoral exports.
 
-### 3. Multi-page split (when chart count warrants it)
+### 2. Multi-page split (when chart count warrants it)
 
 Planned theme split:
 - `index.html` — inflation (CPI, core measures, breadth, expectations)
