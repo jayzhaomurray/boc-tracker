@@ -195,10 +195,10 @@ def _build_chart_fig(chart: ChartSpec, df: pd.DataFrame) -> go.Figure:
 
 # ── HTML button helpers ───────────────────────────────────────────────────────
 
-def _range_buttons_html(div_id: str) -> str:
+def _range_buttons_html(div_id: str, default_years=None) -> str:
     out = '<div class="btn-group" id="rb-' + div_id + '">'
     for label, years in [("2Y", 2), ("5Y", 5), ("10Y", 10), ("Max", None)]:
-        active = " active" if years is None else ""
+        active = " active" if years == default_years else ""
         y_arg = "null" if years is None else str(years)
         out += (
             '<button class="ctrl-btn' + active + '"'
@@ -441,13 +441,13 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
     fig.add_trace(go.Scatter(
         x=above_3.index, y=above_3.values,
         name="above_3", line=dict(color="#e74c3c", width=2),
-        hovertemplate="%{x|%b %Y}<br>%{y:+.1f} pp<extra>Above 3%</extra>",
+        hovertemplate="%{x|%b %Y}<br>%{y:.1f} pp<extra>Above 3%</extra>",
         showlegend=False, visible=True,
     ))
     fig.add_trace(go.Scatter(
         x=below_1.index, y=below_1.values,
         name="below_1", line=dict(color="#2980b9", width=2),
-        hovertemplate="%{x|%b %Y}<br>%{y:+.1f} pp<extra>Below 1%</extra>",
+        hovertemplate="%{x|%b %Y}<br>%{y:.1f} pp<extra>Below 1%</extra>",
         showlegend=False, visible=True,
     ))
     fig.add_hline(y=0, line_color="#aaa", line_width=1)
@@ -456,8 +456,14 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
         paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
         margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
     )
-    fig.update_xaxes(showgrid=False, zeroline=False)
-    fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False, ticksuffix=" pp")
+    end_dt = pd.Timestamp.now().normalize()
+    start_dt = end_dt - pd.DateOffset(years=10)
+    fig.update_xaxes(
+        showgrid=False, zeroline=False,
+        range=[start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")],
+    )
+    fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False,
+                     ticksuffix=" pp", tickformat=".1f")
 
     plotly_frag = fig.to_html(
         full_html=False,
@@ -466,7 +472,7 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
         config={"displayModeBar": False},
     )
 
-    controls = '<div class="chart-controls">' + _range_buttons_html(div_id) + '</div>'
+    controls = '<div class="chart-controls">' + _range_buttons_html(div_id, default_years=10) + '</div>'
 
     def _swatch(color: str) -> str:
         return (
