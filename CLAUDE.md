@@ -20,6 +20,14 @@ Read these four documents in order before doing anything substantive. They are t
 - **Skip plan mode for genuinely small changes.** Adding one toggleable line to an existing chart doesn't need the 5-step planning workflow. Plan mode is for design decisions, not implementation steps.
 - **Concise commit messages.** 5–10 lines max for routine changes; long-form only for genuinely complex commits. (Past sessions have over-explained.)
 - **Never silently break a principle, never silently rewrite one.** chart_style_guide.md §7 has the exception/revision protocol. Surface the case, propose either revising the principle (if it'll recur) or documenting an exception.
+- **Keep HANDOFF.md current as part of the same commit that changes reality.** Don't let the doc drift. Triggers:
+  - Adding/removing a chart, adding a data series, renaming a section: update HANDOFF's "Current PAGES definition" and/or the data series table.
+  - Completing a Next Steps item or verifying a framework section: cross it off / move it.
+  - Architectural changes (new spec class, new pipeline step, new helper): document in HANDOFF's architecture section.
+  - Tiny commits (typo, single-color tweak, comment fix) don't need HANDOFF updates.
+  - Level of detail: enough that a fresh session reading HANDOFF understands current state, not a per-commit changelog.
+  - Model: routine HANDOFF updates (table row, marking a todo done, adding a sub-bullet) run fine on Sonnet via subagent — delegate it after the main code commit. Major restructuring (re-prioritising the entire Next Steps list, rewriting an architecture section because the architecture changed) needs Opus on the main thread.
+  - Same applies to the other canonical docs when the change touches their domain: chart_style_guide.md when introducing a new chart treatment pattern; analysis_framework.md when adding a new section signal; reading_guide.md when a section's chart contents change.
 
 ## Analytical bar
 
