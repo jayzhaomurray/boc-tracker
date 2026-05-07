@@ -1614,7 +1614,7 @@ PAGES = [
                 default_years=10,
                 smooth_window=20,
                 date_fmt="%b %d, %Y",
-                footnote="2-year benchmark government bond yields. Toggle 'Canada 2Y − Overnight' for the BoC market-implied path (negative = pricing net cuts); toggle 'Canada 2Y − US 2Y' for the cross-country differential (negative = Canadian rates expected lower than US, weighs on CAD).",
+                footnote="2-year benchmark government bond yields. Toggle 'Canada 2Y − Overnight' for a <em>directional</em> read of the market-implied BoC path — negative = pricing net cuts, positive = pricing hold or hikes. The 2Y embeds a term premium, so this is directional only; not a precise basis-point forecast. Treat with extra caution during QE/QT transitions or stress regimes when premium movements distort the signal. See the BoC's <a href=\"https://www.bankofcanada.ca/rates/indicators/financial-stability-indicators/\" target=\"_blank\" rel=\"noopener\">Financial Stability Indicators</a> for model-decomposed estimates. 'Canada 2Y − US 2Y' is the cross-country differential (negative = Canadian rates lower than US, broadly CAD-negative).",
             ),
             MultiLineSpec(
                 title="BoC Balance Sheet",
