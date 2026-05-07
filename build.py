@@ -1618,24 +1618,24 @@ PAGES = [
         output_file="index.html",
         sections={0: "inflation"},
         charts=[
+            CoreInflationSpec(
+                title="Core Inflation",
+                footnote="Year-over-year %. Shaded band shows range across BoC core measures (trim, median, common, CPIX, CPIXFET).",
+                default_years=10,
+            ),
             CpiSpec(
-                title="CPI",
+                title="CPI Components",
                 lines=[
                     CpiLine("cpi_all_items",      "Headline",       "#1565c0", visible=True),
                     CpiLine("cpi_all_items_nsa",  "Headline (NSA)", "#90a4ae"),
-                    CpiLine("cpi_food",           "Food",           "#ef6c00"),
-                    CpiLine("cpi_energy",         "Energy",         "#6a1b9a"),
+                    CpiLine("cpi_food",           "Food",           "#ef6c00", visible=True),
+                    CpiLine("cpi_energy",         "Energy",         "#6a1b9a", visible=True),
                     CpiLine("cpi_goods",          "Goods",          "#00838f"),
                     CpiLine("cpi_services",       "Services",       "#2e7d32"),
                 ],
                 default_transform="yoy",
                 default_years=10,
-                footnote="Canada CPI, 2002=100. Headline is the all-items index; sub-aggregates are food, energy, goods, and services. Headline (SA) is seasonally adjusted; the NSA toggle exists for comparison in M/M view (Y/Y is identical).",
-            ),
-            CoreInflationSpec(
-                title="Core Inflation",
-                footnote="Year-over-year %. Shaded band shows range across BoC core measures (trim, median, common, CPIX, CPIXFET).",
-                default_years=10,
+                footnote="Canada CPI by category.",
             ),
             CpiBreadthSpec(
                 title="CPI Breadth",
