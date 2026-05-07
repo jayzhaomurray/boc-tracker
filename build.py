@@ -1162,7 +1162,9 @@ function _dtickFormat(dt) {
 function _computeYRange(div, xStartMs, xEndMs) {
   var ymin = Infinity, ymax = -Infinity, found = false;
   for (var i = 0; i < div.data.length; i++) {
-    if (div.data[i].visible === false) continue;
+    var v = div.data[i].visible;
+    // Plotly's visible can be true/false/undefined/'legendonly'; only count drawn traces.
+    if (v === false || v === 'legendonly') continue;
     var trace = div.data[i];
     var xs = trace.x, ys = trace.y;
     if (!xs || !ys) continue;
