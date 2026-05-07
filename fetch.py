@@ -34,7 +34,12 @@ STATSCAN_SERIES = {
 }
 
 BOC_VALET_SERIES = {
-    "yield_2yr": ("BD.CDN.2YR.DQ.YLD", "1990-01-01"),  # 2-yr GoC benchmark bond yield, daily
+    "yield_2yr":  ("BD.CDN.2YR.DQ.YLD",  "1990-01-01"),  # 2-yr GoC benchmark bond yield, daily
+    "cpi_trim":   ("CPI_TRIM",            "1990-01-01"),  # CPI-trim, Y/Y %, monthly
+    "cpi_median": ("CPI_MEDIAN",          "1990-01-01"),  # CPI-median, Y/Y %, monthly
+    "cpi_common": ("CPI_COMMON",          "1990-01-01"),  # CPI-common, Y/Y %, monthly
+    "cpix":       ("ATOM_V41693242",      "1990-01-01"),  # CPIX (excl. 8 volatile), Y/Y %, monthly
+    "cpixfet":    ("STATIC_CPIXFET",      "1990-01-01"),  # CPIXFET (excl. food & energy), Y/Y %, monthly
 }
 
 

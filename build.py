@@ -19,6 +19,11 @@ import plotly.graph_objects as go
 DATA_DIR = Path("data")
 AUTHOR_DISPLAY_NAME = "jayzhaomurray"
 
+# ── Shared formatting constants ───────────────────────────────────────────────
+_CHART_HEIGHT  = 260
+_CHART_MARGINS = dict(l=48, r=16, t=8, b=32)
+_FONT_STACK    = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+
 
 # ── Data structures ───────────────────────────────────────────────────────────
 
@@ -37,7 +42,14 @@ class PageSpec:
     title: str
     tagline: str
     output_file: str
-    charts: list[ChartSpec]
+    charts: list  # ChartSpec | CoreInflationSpec
+
+
+@dataclass
+class CoreInflationSpec:
+    """One-off composite chart: headline CPI + core measures range + individual toggles."""
+    title: str
+    SERIES = ["cpi_all_items", "cpi_trim", "cpi_median", "cpi_common", "cpix", "cpixfet"]
 
 
 # ── Transform system ──────────────────────────────────────────────────────────
@@ -161,12 +173,12 @@ def _build_chart_fig(chart: ChartSpec, df: pd.DataFrame) -> go.Figure:
         ))
 
     fig.update_layout(
-        height=260,
+        height=_CHART_HEIGHT,
         showlegend=False,
         paper_bgcolor="#ffffff",
         plot_bgcolor="#fafafa",
-        margin=dict(l=48, r=16, t=8, b=32),
-        font=dict(family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"),
+        margin=_CHART_MARGINS,
+        font=dict(family=_FONT_STACK),
     )
     fig.update_xaxes(showgrid=False, zeroline=False)
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False)
@@ -242,6 +254,145 @@ def _chart_panel_html(chart: ChartSpec, df: pd.DataFrame, chart_idx: int,
     )
 
 
+# ── Core inflation one-off chart ─────────────────────────────────────────────
+
+def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
+                                chart_idx: int, include_plotlyjs: bool) -> tuple:
+    div_id = "chart-" + str(chart_idx)
+
+    headline_yoy = (
+        data["cpi_all_items"].set_index("date")["value"]
+        .pct_change(12) * 100
+    )
+    trim    = data["cpi_trim"].set_index("date")["value"]
+    median  = data["cpi_median"].set_index("date")["value"]
+    common  = data["cpi_common"].set_index("date")["value"]
+    cpix    = data["cpix"].set_index("date")["value"]
+    cpixfet = data["cpixfet"].set_index("date")["value"]
+
+    core_df  = pd.concat([trim, median, common, cpix, cpixfet], axis=1)
+    range_max = core_df.max(axis=1).dropna()
+    range_min = core_df.min(axis=1).dropna()
+
+    fig = go.Figure()
+
+    # Trace 0: range lower (no fill, invisible line)
+    fig.add_trace(go.Scatter(
+        x=range_min.index, y=range_min.values,
+        line=dict(width=0), fill=None,
+        showlegend=False, hoverinfo="skip", visible=True,
+    ))
+    # Trace 1: range upper (fill to lower = shaded band)
+    fig.add_trace(go.Scatter(
+        x=range_max.index, y=range_max.values,
+        fill="tonexty", fillcolor="rgba(180,180,180,0.35)",
+        line=dict(width=0),
+        showlegend=False, hoverinfo="skip", visible=True,
+    ))
+    # Trace 2: headline CPI Y/Y (always visible)
+    fig.add_trace(go.Scatter(
+        x=headline_yoy.index, y=headline_yoy.values,
+        line=dict(color="#1f6aa5", width=2),
+        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>Total CPI</extra>",
+        showlegend=False, visible=True,
+    ))
+    # Trace 3: CPI-trim (hidden by default)
+    fig.add_trace(go.Scatter(
+        x=trim.index, y=trim.values,
+        line=dict(color="#444444", width=1.5),
+        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>CPI-trim</extra>",
+        showlegend=False, visible=False,
+    ))
+    # Trace 4: CPI-median (hidden by default)
+    fig.add_trace(go.Scatter(
+        x=median.index, y=median.values,
+        line=dict(color="#888888", width=1.5),
+        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>CPI-median</extra>",
+        showlegend=False, visible=False,
+    ))
+
+    fig.add_hline(y=2, line_color="#555", line_width=1)
+    fig.update_layout(
+        height=_CHART_HEIGHT, showlegend=False,
+        paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
+        margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
+    )
+    fig.update_xaxes(showgrid=False, zeroline=False)
+    fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False,
+                     ticksuffix="%")
+
+    plotly_frag = fig.to_html(
+        full_html=False,
+        include_plotlyjs="cdn" if include_plotlyjs else False,
+        div_id=div_id,
+        config={"displayModeBar": False},
+    )
+
+    controls = (
+        '<div class="chart-controls">' + _range_buttons_html(div_id) + '</div>'
+    )
+
+    def _swatch_line(color: str) -> str:
+        return (
+            '<span style="display:inline-block;width:22px;height:2.5px;'
+            'background:' + color + ';border-radius:1px;vertical-align:middle;'
+            'margin-right:5px"></span>'
+        )
+
+    swatch_range = (
+        '<span style="display:inline-block;width:22px;height:11px;'
+        'background:rgba(180,180,180,0.45);border-radius:2px;vertical-align:middle;'
+        'margin-right:5px"></span>'
+    )
+
+    legend = (
+        '<div class="chart-legend">'
+        + '<button class="legend-item active"'
+        + ' onclick="toggleTrace(this,\'' + div_id + '\',[2])">'
+        + _swatch_line("#1f6aa5") + 'Total CPI</button>'
+        + '<button class="legend-item"'
+        + ' onclick="toggleTrace(this,\'' + div_id + '\',[3])">'
+        + _swatch_line("#444444") + 'CPI-trim</button>'
+        + '<button class="legend-item"'
+        + ' onclick="toggleTrace(this,\'' + div_id + '\',[4])">'
+        + _swatch_line("#888888") + 'CPI-median</button>'
+        + '<button class="legend-item active"'
+        + ' onclick="toggleTrace(this,\'' + div_id + '\',[0,1])">'
+        + swatch_range + 'Range of core measures</button>'
+        + '</div>'
+    )
+
+    html = (
+        '<div class="chart-panel">'
+        '<div class="chart-header">'
+        '<div class="chart-title">' + chart.title + '</div>'
+        + controls + '</div>'
+        + plotly_frag
+        + legend + '</div>\n'
+    )
+
+    # Pre-compute y-ranges for date range buttons
+    today = pd.Timestamp.now().normalize()
+    all_yoy = pd.concat([
+        headline_yoy.rename("headline"), trim.rename("trim"),
+        median.rename("median"), common.rename("common"),
+        cpix.rename("cpix"), cpixfet.rename("cpixfet"),
+    ], axis=1)
+    yr_dict: dict = {}
+    for years in [2, 5, 10]:
+        cutoff = today - pd.DateOffset(years=years)
+        vals = all_yoy[all_yoy.index >= cutoff].stack().dropna()
+        if vals.empty:
+            continue
+        ymin, ymax = float(vals.min()), float(vals.max())
+        pad = max((ymax - ymin) * 0.08, 0.1)
+        yr_dict[years] = [round(ymin - pad, 4), round(ymax + pad, 4)]
+    # Store under all trace indices so lookup works regardless of which is first visible
+    y_ranges = {str(i): yr_dict for i in range(5)}
+
+    return html, y_ranges
+
+
 # ── CSS ───────────────────────────────────────────────────────────────────────
 
 _CSS = """\
@@ -310,6 +461,31 @@ _CSS = """\
   .ctrl-btn:hover { background: #e8e8e8; }
   .ctrl-btn.active { background: #dce9f7; border-color: #aac4e8; color: #1a5276; }
   .ctrl-btn.active + .ctrl-btn { border-left-color: #aac4e8; }
+
+  .chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    padding: 7px 2px 2px;
+    border-top: 1px solid #eee;
+    margin-top: 2px;
+  }
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.75rem;
+    color: #555;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 3px 5px;
+    border-radius: 3px;
+    opacity: 0.35;
+    transition: opacity 0.15s, background 0.1s;
+    font-family: inherit;
+  }
+  .legend-item.active { opacity: 1; }
+  .legend-item:hover { background: #f0f0f0; }
 
   .about {
     margin-top: 40px;
@@ -380,6 +556,16 @@ function xformClick(btn, chartId, idx) {
       if (m && m[1] !== "null") applyRange(chartId, parseInt(m[1]));
     }
   }
+}
+
+function toggleTrace(btn, chartId, indices) {
+  var div = document.getElementById(chartId);
+  if (!div) return;
+  var isActive = btn.classList.contains("active");
+  btn.classList.toggle("active");
+  var vis = div.data.map(function(t) { return t.visible !== false; });
+  indices.forEach(function(i) { vis[i] = !isActive; });
+  Plotly.restyle(div, {visible: vis});
 }
 
 function gcRange(years, btn) {
@@ -474,6 +660,9 @@ PAGES = [
         tagline="Tracking the indicators behind Bank of Canada policy decisions",
         output_file="index.html",
         charts=[
+            CoreInflationSpec(
+                title="Core Inflation Measures — Canada (Year-over-year %)",
+            ),
             ChartSpec(
                 series="cpi_all_items",
                 title="Consumer Price Index — All Items, Canada (2002=100)",
@@ -506,9 +695,15 @@ def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
     panels = []
     y_ranges: dict = {}
     for i, chart in enumerate(page.charts):
-        df = data[chart.series]
-        panels.append(_chart_panel_html(chart, df, i, include_plotlyjs=(i == 0)))
-        y_ranges["chart-" + str(i)] = _compute_y_ranges(chart, df)
+        cid = "chart-" + str(i)
+        if isinstance(chart, CoreInflationSpec):
+            panel, cyr = _build_core_inflation_panel(chart, data, i, i == 0)
+            panels.append(panel)
+            y_ranges[cid] = cyr
+        else:
+            df = data[chart.series]
+            panels.append(_chart_panel_html(chart, df, i, include_plotlyjs=(i == 0)))
+            y_ranges[cid] = _compute_y_ranges(chart, df)
 
     last_updated = datetime.now(timezone.utc).strftime("%B %d, %Y at %H:%M UTC")
     html = _assemble_page(page, panels, chart_ids, last_updated, y_ranges)
@@ -520,7 +715,13 @@ def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
 
 def main():
     print("Loading data...")
-    all_series = {chart.series for page in PAGES for chart in page.charts}
+    all_series: set[str] = set()
+    for page in PAGES:
+        for chart in page.charts:
+            if isinstance(chart, CoreInflationSpec):
+                all_series.update(CoreInflationSpec.SERIES)
+            else:
+                all_series.add(chart.series)
     data: dict[str, pd.DataFrame] = {}
     for name in sorted(all_series):
         path = DATA_DIR / f"{name}.csv"
