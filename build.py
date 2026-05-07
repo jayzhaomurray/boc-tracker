@@ -462,13 +462,13 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=above_3.index, y=above_3.values,
-        name="above_3", line=dict(color="#e65100", width=2),
+        name="above_3", line=dict(color="#c62828", width=2),
         hovertemplate="%{x|%b %Y}<br>%{y:.1f} pp<extra>Above 3%</extra>",
         showlegend=False, visible=True,
     ))
     fig.add_trace(go.Scatter(
         x=below_1.index, y=below_1.values,
-        name="below_1", line=dict(color="#00838f", width=2),
+        name="below_1", line=dict(color="#1565c0", width=2),
         hovertemplate="%{x|%b %Y}<br>%{y:.1f} pp<extra>Below 1%</extra>",
         showlegend=False, visible=True,
     ))
@@ -502,10 +502,10 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
         '<div class="chart-legend">'
         + '<button class="legend-item active"'
         + ' onclick="toggleTrace(this,\'' + div_id + '\',[0])">'
-        + _swatch("#e65100") + 'Share above 3%</button>'
+        + _swatch("#c62828") + 'Share above 3%</button>'
         + '<button class="legend-item active"'
         + ' onclick="toggleTrace(this,\'' + div_id + '\',[1])">'
-        + _swatch("#00838f") + 'Share below 1%</button>'
+        + _swatch("#1565c0") + 'Share below 1%</button>'
         + '</div>'
     )
 
@@ -985,8 +985,8 @@ PAGES = [
             MultiLineSpec(
                 title="2-Year Government Bond Yields — Canada vs United States (%)",
                 lines=[
-                    LineConfig("yield_2yr", "Canada 2Y", "#1976d2"),
-                    LineConfig("us_2yr",    "US 2Y",     "#e53935"),
+                    LineConfig("yield_2yr", "Canada 2Y", "#1565c0"),
+                    LineConfig("us_2yr",    "US 2Y",     "#c62828"),
                 ],
                 default_years=10,
                 smooth_window=20,
@@ -1004,7 +1004,7 @@ PAGES = [
                 series="unemployment_rate",
                 title="Unemployment Rate — Canada, Seasonally Adjusted (%)",
                 frequency="monthly",
-                color="#6a1b9a",
+                color="#1565c0",
                 static=True,
             ),
         ],
