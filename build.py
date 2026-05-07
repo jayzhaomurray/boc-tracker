@@ -9,7 +9,7 @@ Output: index.html  (plus any other files defined in PAGES)
 """
 
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -17,6 +17,15 @@ import json
 import math
 import pandas as pd
 import plotly.graph_objects as go
+
+BLURBS_PATH = Path("data/blurbs.json")
+
+SECTION_HEADINGS = {
+    "inflation": "Inflation",
+    "policy":    "Policy & Markets",
+    "labour":    "Labour Market",
+    "external":  "External Conditions",
+}
 
 DATA_DIR = Path("data")
 AUTHOR_DISPLAY_NAME = "jayzhaomurray"
@@ -46,7 +55,9 @@ class PageSpec:
     title: str
     tagline: str
     output_file: str
-    charts: list  # ChartSpec | CoreInflationSpec
+    charts: list  # ChartSpec | CoreInflationSpec | ...
+    # Map chart-index -> section_id; renders a heading + blurb above that chart.
+    sections: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -996,6 +1007,25 @@ _CSS = """\
   }
   .gc-label { font-size: 0.75rem; color: #aaa; }
 
+  .section-divider { margin-top: 28px; margin-bottom: 14px; }
+  .section-divider:first-of-type { margin-top: 8px; }
+  .section-heading {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #eee;
+  }
+  .section-blurb {
+    font-size: 0.9rem;
+    color: #333;
+    line-height: 1.65;
+    margin: 0 0 8px;
+  }
+
   .chart-panel { margin-bottom: 24px; }
   .chart-header {
     display: flex;
@@ -1584,6 +1614,7 @@ PAGES = [
         title="Bank of Canada Tracker",
         tagline="Tracking the indicators behind Bank of Canada policy decisions",
         output_file="index.html",
+        sections={0: "inflation"},
         charts=[
             CpiSpec(
                 title="CPI",
@@ -1672,12 +1703,38 @@ PAGES = [
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+def _load_blurbs() -> dict:
+    if not BLURBS_PATH.exists():
+        return {}
+    try:
+        return json.loads(BLURBS_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _render_section(section_id: str, blurbs: dict) -> str:
+    heading = SECTION_HEADINGS.get(section_id, section_id.title())
+    blurb = blurbs.get(section_id, {})
+    text = blurb.get("text", "").strip()
+    body = '<div class="section-blurb">' + text + '</div>' if text else ''
+    return (
+        '<div class="section-divider">'
+        '<div class="section-heading">' + heading + '</div>'
+        + body +
+        '</div>\n'
+    )
+
+
 def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
+    blurbs = _load_blurbs()
     chart_ids = ["chart-" + str(i) for i in range(len(page.charts))]
     panels = []
     y_ranges: dict = {}
     for i, chart in enumerate(page.charts):
         cid = "chart-" + str(i)
+        # Insert a section heading + blurb above this chart, if configured.
+        if i in page.sections:
+            panels.append(_render_section(page.sections[i], blurbs))
         if isinstance(chart, CoreInflationSpec):
             panel, cyr = _build_core_inflation_panel(chart, data, i, i == 0)
             panels.append(panel)
