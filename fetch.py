@@ -39,8 +39,13 @@ FRED_API_KEY = os.environ.get("FRED_API_KEY", "")
 #          Browse all series keys at: bankofcanada.ca/valet/lists/series/json
 
 STATSCAN_SERIES = {
-    "cpi_all_items":     41690914,  # Table 18-10-0006-01: All-items CPI, Canada, not SA (2002=100)
-    "unemployment_rate": 2062815,   # Table 14-10-0287-01: Unemployment rate, Canada, SA (%)
+    "cpi_all_items":       41690914,   # Table 18-10-0006-01: All-items CPI, Canada, SA (2002=100)
+    "cpi_all_items_nsa":   41690973,   # Table 18-10-0004-01: All-items CPI, Canada, NSA (2002=100)
+    "unemployment_rate":    2062815,   # Table 14-10-0287-01: Unemployment rate, Canada, SA (%)
+    "lfs_wages_all":      105812645,   # Table 14-10-0320-02: LFS avg hourly wages, all employees 15+, SA
+    "lfs_wages_permanent": 105812715,  # Table 14-10-0320-02: LFS avg hourly wages, permanent employees, SA
+    "seph_earnings":       79311153,   # Table 14-10-0223-01: SEPH avg weekly earnings, all employees, Canada, SA
+    "cpi_services":        41691230,   # Table 18-10-0004-01: CPI Services, Canada, NSA (2002=100)
 }
 
 BOC_VALET_SERIES = {
@@ -50,11 +55,15 @@ BOC_VALET_SERIES = {
     "cpi_median":     ("CPI_MEDIAN",            "1990-01-01"),  # CPI-median, Y/Y %, monthly
     "cpi_common":     ("CPI_COMMON",            "1990-01-01"),  # CPI-common, Y/Y %, monthly
     "cpix":           ("ATOM_V41693242",        "1990-01-01"),  # CPIX (excl. 8 volatile), Y/Y %, monthly
-    "cpixfet":        ("STATIC_CPIXFET",        "1990-01-01"),  # CPIXFET (excl. food & energy), Y/Y %, monthly
+    "cpixfet":          ("STATIC_CPIXFET",        "1990-01-01"),  # CPIXFET (excl. food & energy), Y/Y %, monthly
+    "lfs_micro":        ("INDINF_LFSMICRO_M",    "2000-01-01"),  # BoC LFS-Micro composition-adjusted wage growth, Y/Y %, monthly
 }
 
 FRED_SERIES = {
-    "us_2yr": ("DGS2", "1990-01-01"),  # 2-yr US Treasury constant maturity, daily
+    "us_2yr": ("DGS2",           "1990-01-01"),  # 2-yr US Treasury constant maturity, daily
+    "usdcad": ("DEXCAUS",        "1990-01-01"),  # USD/CAD exchange rate (CAD per USD), daily
+    "wti":    ("DCOILWTICO",     "1990-01-01"),  # WTI crude oil, USD/barrel, daily
+    "brent":  ("DCOILBRENTEU",   "1990-01-01"),  # Brent crude oil, USD/barrel, daily
 }
 # fed_funds is fetched separately as target midpoint — see fetch_fed_funds_target()
 
@@ -181,6 +190,23 @@ def fetch_cpi_components() -> pd.DataFrame:
     return df.sort_index()
 
 
+def fetch_wcs() -> pd.DataFrame:
+    """Western Canada Select crude price (monthly) from Alberta Economic Dashboard API."""
+    r = requests.get(
+        "https://api.economicdata.alberta.ca/data?table=OilPrices",
+        timeout=30,
+    )
+    r.raise_for_status()
+    records = []
+    for raw in r.json():
+        item = {k.strip(): v for k, v in raw.items()}  # strip trailing whitespace from keys
+        if item.get("Type") == "WCS":
+            records.append({"date": item["Date"][:10], "value": item["Value"]})
+    df = pd.DataFrame(records)
+    df["date"] = pd.to_datetime(df["date"])
+    return df.sort_values("date").reset_index(drop=True)
+
+
 # ── Retry helper ──────────────────────────────────────────────────────────────
 
 def _latest_saved_date(path: Path) -> pd.Timestamp | None:
@@ -236,6 +262,12 @@ def main(wait: bool = False):
             print(f"  -> {len(df)} rows saved to {path}")
     else:
         print("Skipping FRED series (FRED_API_KEY not set).")
+
+    print("Fetching wcs (Western Canada Select) from Alberta Economic Dashboard...")
+    df = fetch_wcs()
+    path = DATA_DIR / "wcs.csv"
+    df.to_csv(path, index=False)
+    print(f"  -> {len(df)} rows saved to {path}")
 
     path = DATA_DIR / "cpi_components.csv"
     prior = _latest_saved_date(path) if wait else None

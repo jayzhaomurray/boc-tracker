@@ -14,6 +14,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 
 import json
+import math
 import pandas as pd
 import plotly.graph_objects as go
 
@@ -53,6 +54,7 @@ class CoreInflationSpec:
     """One-off composite chart: headline CPI + core measures range + individual toggles."""
     title: str
     footnote: str = ""
+    default_years: int | None = None
     SERIES = ["cpi_all_items", "cpi_trim", "cpi_median", "cpi_common", "cpix", "cpixfet"]
 
 
@@ -69,6 +71,26 @@ class LineConfig:
     label: str           # legend label
     color: str           # hex color
     visible: bool = True
+    smooth: bool = True  # False = keep raw data in smooth mode (e.g. monthly series on a daily chart)
+
+
+@dataclass
+class WageSpec:
+    """Composite chart: range band across wage measures + individual toggles + Services CPI overlay."""
+    title: str
+    footnote: str = ""
+    default_years: int | None = 10
+    SERIES = ["lfs_wages_all", "lfs_wages_permanent", "seph_earnings", "lfs_micro", "cpi_services"]
+
+
+@dataclass
+class CpiAllItemsSpec:
+    """CPI All Items with both SA and NSA available; transform buttons + legend toggle."""
+    title: str
+    footnote: str = ""
+    default_transform: str = "mom"   # one of: level, mom, ar_3m, yoy
+    default_years: int | None = 2
+    SERIES = ["cpi_all_items", "cpi_all_items_nsa"]
 
 
 @dataclass
@@ -83,6 +105,7 @@ class MultiLineSpec:
     smooth_window: int | None = None    # rolling average window; None = no smooth button
     date_fmt: str = "%b %Y"            # hover date format
     footnote: str = ""
+    ymin: float | None = None           # hard floor for y-axis (pre-computed ranges + autorange)
 
 
 # ── Transform system ──────────────────────────────────────────────────────────
@@ -187,6 +210,33 @@ def _ytick_format(vals: pd.Series) -> str:
         return ".2f"
 
 
+def _nice_dtick(ymin: float, ymax: float, target: int = 5) -> float:
+    """Round-number tick interval giving at least target ticks over [ymin, ymax].
+    Rounds DOWN to the nearest nice step so tick count stays >= target."""
+    span = ymax - ymin
+    if span <= 0:
+        return 1.0
+    rough = span / target
+    mag = 10 ** math.floor(math.log10(rough))
+    norm = rough / mag
+    # Round DOWN: pick the largest nice number that is <= norm
+    if norm >= 5.0:   nice = 5.0
+    elif norm >= 2.5: nice = 2.5
+    elif norm >= 2.0: nice = 2.0
+    elif norm >= 1.0: nice = 1.0
+    else:             nice = 0.5
+    return nice * mag
+
+
+def _dtick_format(dtick: float) -> str:
+    """Tickformat string whose precision matches dtick (so all ticks show the same decimals)."""
+    s = f"{dtick:.10f}".rstrip("0")
+    if "." not in s or s.endswith("."):
+        return ".0f"
+    decimals = len(s.split(".")[1])
+    return f".{min(decimals, 2)}f"
+
+
 def _resolve_default(chart: ChartSpec) -> str:
     available = FREQ_TRANSFORMS[chart.frequency]
     if chart.default_transform in available:
@@ -229,7 +279,8 @@ def _build_chart_fig(chart: ChartSpec, df: pd.DataFrame) -> go.Figure:
         font=dict(family=_FONT_STACK),
     )
     fig.update_xaxes(showgrid=False, zeroline=False)
-    fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False)
+
+    fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False, nticks=7)
 
     return fig
 
@@ -371,8 +422,20 @@ def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
         margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
     )
     fig.update_xaxes(showgrid=False, zeroline=False)
+    _ci_today = pd.Timestamp.now().normalize()
+    _ci_cutoff = _ci_today - pd.DateOffset(years=chart.default_years or 10)
+    _ci_all = pd.concat([headline_yoy.rename("a"), trim.rename("b"), median.rename("c"),
+                         common.rename("d"), cpix.rename("e"), cpixfet.rename("f")], axis=1)
+    _ci_ref = _ci_all[_ci_all.index >= _ci_cutoff].stack().dropna()
+    if not _ci_ref.empty:
+        _ci_min, _ci_max = float(_ci_ref.min()), float(_ci_ref.max())
+        _ci_pad = max((_ci_max - _ci_min) * 0.08, 0.1)
+        _ci_dtick = _nice_dtick(_ci_min - _ci_pad, _ci_max + _ci_pad)
+        _ci_tickfmt = _dtick_format(_ci_dtick)
+    else:
+        _ci_dtick, _ci_tickfmt = 1.0, ".0f"
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False,
-                     ticksuffix="%")
+                     ticksuffix="%", tick0=0, dtick=_ci_dtick, tickformat=_ci_tickfmt)
 
     plotly_frag = fig.to_html(
         full_html=False,
@@ -382,7 +445,7 @@ def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
     )
 
     controls = (
-        '<div class="chart-controls">' + _range_buttons_html(div_id) + '</div>'
+        '<div class="chart-controls">' + _range_buttons_html(div_id, default_years=chart.default_years) + '</div>'
     )
 
     def _swatch_line(color: str) -> str:
@@ -507,10 +570,19 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
         paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
         margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
     )
-    ytickfmt = _ytick_format(pd.concat([above_3, below_1]).dropna())
+    _cb_today = pd.Timestamp.now().normalize()
+    _cb_cutoff = _cb_today - pd.DateOffset(years=10)
+    _cb_ref = pd.concat([above_3, below_1], axis=1).loc[_cb_cutoff:].stack().dropna()
+    if not _cb_ref.empty:
+        _cb_min, _cb_max = float(_cb_ref.min()), float(_cb_ref.max())
+        _cb_pad = max((_cb_max - _cb_min) * 0.08, 1.0)
+        _cb_dtick = _nice_dtick(_cb_min - _cb_pad, _cb_max + _cb_pad)
+        _cb_tickfmt = _dtick_format(_cb_dtick)
+    else:
+        _cb_dtick, _cb_tickfmt = 5.0, ".0f"
     fig.update_xaxes(showgrid=False, zeroline=False)
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False,
-                     ticksuffix=" pp", tickformat=ytickfmt)
+                     ticksuffix=" pp", tickformat=_cb_tickfmt, tick0=0, dtick=_cb_dtick)
 
     plotly_frag = fig.to_html(
         full_html=False,
@@ -565,6 +637,315 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
         pad = max((ymax - ymin) * 0.08, 1.0)
         yr_dict[years] = [round(ymin - pad, 2), round(ymax + pad, 2)]
     y_ranges = {str(i): yr_dict for i in range(2)}
+
+    return html, y_ranges
+
+
+# ── Wage growth chart ────────────────────────────────────────────────────────
+
+def _build_wage_panel(chart: "WageSpec", data: dict,
+                      chart_idx: int, include_plotlyjs: bool) -> tuple:
+    div_id = "chart-" + str(chart_idx)
+
+    # Y/Y % for level series; lfs_micro is already Y/Y from BoC Valet
+    lfs_all   = data["lfs_wages_all"].set_index("date")["value"].pct_change(12) * 100
+    lfs_perm  = data["lfs_wages_permanent"].set_index("date")["value"].pct_change(12) * 100
+    seph      = data["seph_earnings"].set_index("date")["value"].pct_change(12) * 100
+    lfs_micro = data["lfs_micro"].set_index("date")["value"]
+    svc_cpi   = data["cpi_services"].set_index("date")["value"].pct_change(12) * 100
+
+    # Clip Services CPI to the earliest date any wage measure has valid data
+    wage_start = min(
+        s.first_valid_index()
+        for s in [lfs_all, lfs_perm, seph, lfs_micro]
+        if s.first_valid_index() is not None
+    )
+    svc_cpi = svc_cpi[svc_cpi.index >= wage_start]
+
+    # Range band: min/max across the four wage measures (NaN-tolerant)
+    wage_df   = pd.concat([lfs_all, lfs_perm, seph, lfs_micro], axis=1, sort=True)
+    range_max = wage_df.max(axis=1).dropna()
+    range_min = wage_df.min(axis=1).dropna()
+
+    fig = go.Figure()
+    # Trace 0: range lower (no fill)
+    fig.add_trace(go.Scatter(
+        x=range_min.index, y=range_min.values,
+        line=dict(width=0), fill=None,
+        showlegend=False, hoverinfo="skip", visible=True,
+    ))
+    # Trace 1: range upper (fills to trace 0)
+    fig.add_trace(go.Scatter(
+        x=range_max.index, y=range_max.values,
+        fill="tonexty", fillcolor="rgba(180,180,180,0.35)",
+        line=dict(width=0),
+        showlegend=False, hoverinfo="skip", visible=True,
+    ))
+    # Trace 2: LFS all employees (visible)
+    fig.add_trace(go.Scatter(
+        x=lfs_all.index, y=lfs_all.values,
+        line=dict(color="#1565c0", width=2),
+        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>LFS All Employees</extra>",
+        showlegend=False, visible=True,
+    ))
+    # Trace 3: LFS permanent employees (hidden)
+    fig.add_trace(go.Scatter(
+        x=lfs_perm.index, y=lfs_perm.values,
+        line=dict(color="#546e7a", width=1.5),
+        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>LFS Permanent</extra>",
+        showlegend=False, visible=False,
+    ))
+    # Trace 4: SEPH average weekly earnings (hidden)
+    fig.add_trace(go.Scatter(
+        x=seph.index, y=seph.values,
+        line=dict(color="#78909c", width=1.5),
+        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>SEPH Weekly Earnings</extra>",
+        showlegend=False, visible=False,
+    ))
+    # Trace 5: LFS-Micro composition-adjusted (hidden)
+    fig.add_trace(go.Scatter(
+        x=lfs_micro.index, y=lfs_micro.values,
+        line=dict(color="#4a148c", width=1.5),
+        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>LFS-Micro (BoC)</extra>",
+        showlegend=False, visible=False,
+    ))
+    # Trace 6: Services CPI Y/Y (visible by default — overlay for wage-price context)
+    fig.add_trace(go.Scatter(
+        x=svc_cpi.index, y=svc_cpi.values,
+        line=dict(color="#c62828", width=1.5, dash="dot"),
+        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>Services CPI</extra>",
+        showlegend=False, visible=True,
+    ))
+
+    fig.add_hline(y=0, line_color="#aaa", line_width=1)
+    fig.update_layout(
+        height=_CHART_HEIGHT, showlegend=False,
+        paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
+        margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
+    )
+    fig.update_xaxes(showgrid=False, zeroline=False)
+    _wg_today = pd.Timestamp.now().normalize()
+    _wg_cutoff = _wg_today - pd.DateOffset(years=chart.default_years or 10)
+    _wg_ref = pd.concat([lfs_all.rename("a"), lfs_perm.rename("b"), seph.rename("c"),
+                         lfs_micro.rename("d"), svc_cpi.rename("e")], axis=1, sort=True)
+    _wg_ref = _wg_ref[_wg_ref.index >= _wg_cutoff].stack().dropna()
+    if not _wg_ref.empty:
+        _wg_min, _wg_max = float(_wg_ref.min()), float(_wg_ref.max())
+        _wg_pad = max((_wg_max - _wg_min) * 0.08, 0.1)
+        _wg_dtick = _nice_dtick(_wg_min - _wg_pad, _wg_max + _wg_pad)
+        _wg_tickfmt = _dtick_format(_wg_dtick)
+    else:
+        _wg_dtick, _wg_tickfmt = 1.0, ".0f"
+    fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False,
+                     ticksuffix="%", tick0=0, dtick=_wg_dtick, tickformat=_wg_tickfmt)
+
+    plotly_frag = fig.to_html(
+        full_html=False,
+        include_plotlyjs="cdn" if include_plotlyjs else False,
+        div_id=div_id,
+        config={"displayModeBar": False},
+    )
+
+    controls = '<div class="chart-controls">' + _range_buttons_html(div_id, default_years=chart.default_years) + '</div>'
+
+    def _swatch_line(color: str, dash: bool = False) -> str:
+        border = "border-top: 2px dashed " + color + ";" if dash else ""
+        bg = "" if dash else "background:" + color + ";"
+        return (
+            '<span style="display:inline-block;width:22px;height:2.5px;'
+            + bg + border +
+            'border-radius:1px;vertical-align:middle;margin-right:5px"></span>'
+        )
+
+    swatch_range = (
+        '<span style="display:inline-block;width:22px;height:11px;'
+        'background:rgba(180,180,180,0.45);border-radius:2px;vertical-align:middle;'
+        'margin-right:5px"></span>'
+    )
+
+    legend = (
+        '<div class="chart-legend">'
+        + '<button class="legend-item active"'
+        + ' onclick="toggleTrace(this,\'' + div_id + '\',[2])">'
+        + _swatch_line("#1565c0") + 'LFS All Employees</button>'
+        + '<button class="legend-item"'
+        + ' onclick="toggleTrace(this,\'' + div_id + '\',[3])">'
+        + _swatch_line("#546e7a") + 'LFS Permanent</button>'
+        + '<button class="legend-item"'
+        + ' onclick="toggleTrace(this,\'' + div_id + '\',[4])">'
+        + _swatch_line("#78909c") + 'SEPH Weekly Earnings</button>'
+        + '<button class="legend-item"'
+        + ' onclick="toggleTrace(this,\'' + div_id + '\',[5])">'
+        + _swatch_line("#4a148c") + 'LFS-Micro (BoC)</button>'
+        + '<button class="legend-item active"'
+        + ' onclick="toggleTrace(this,\'' + div_id + '\',[6])">'
+        + _swatch_line("#c62828", dash=True) + 'Services CPI</button>'
+        + '<button class="legend-item active"'
+        + ' onclick="toggleTrace(this,\'' + div_id + '\',[0,1])">'
+        + swatch_range + 'Range</button>'
+        + '</div>'
+    )
+
+    footnote_html = (
+        '<div class="chart-footnote">' + chart.footnote + '</div>'
+        if chart.footnote else ""
+    )
+    html = (
+        '<div class="chart-panel">'
+        '<div class="chart-header">'
+        '<div class="chart-title">' + chart.title + '</div>'
+        + controls + '</div>'
+        + plotly_frag
+        + legend
+        + footnote_html + '</div>\n'
+    )
+
+    # Pre-compute y-ranges for all 6 traces
+    today = pd.Timestamp.now().normalize()
+    all_yoy = pd.concat([
+        lfs_all.rename("lfs_all"), lfs_perm.rename("lfs_perm"),
+        seph.rename("seph"), lfs_micro.rename("lfs_micro"), svc_cpi.rename("svc_cpi"),
+    ], axis=1, sort=True)
+    yr_dict: dict = {}
+    for years in [2, 5, 10]:
+        cutoff = today - pd.DateOffset(years=years)
+        vals = all_yoy[all_yoy.index >= cutoff].stack().dropna()
+        if vals.empty:
+            continue
+        ymin, ymax = float(vals.min()), float(vals.max())
+        pad = max((ymax - ymin) * 0.08, 0.1)
+        yr_dict[years] = [round(ymin - pad, 4), round(ymax + pad, 4)]
+    y_ranges = {str(i): yr_dict for i in range(7)}
+
+    return html, y_ranges
+
+
+# ── CPI All Items chart (SA + NSA, transforms + legend toggle) ───────────────
+
+_CPI_TRANSFORMS = ["level", "mom", "ar_3m", "yoy"]
+_CPI_TRANSFORM_LABELS = {"level": "Level", "mom": "M/M", "ar_3m": "3M AR", "yoy": "Y/Y"}
+
+
+def _cpi_compute_transform(v: pd.Series, key: str) -> pd.Series:
+    if key == "level":  return v
+    if key == "mom":    return v.pct_change(1) * 100
+    if key == "ar_3m":  return ((v / v.shift(3)) ** 4 - 1) * 100
+    if key == "yoy":    return v.pct_change(12) * 100
+    raise ValueError(key)
+
+
+def _build_cpi_all_items_panel(chart: "CpiAllItemsSpec", data: dict,
+                                chart_idx: int, include_plotlyjs: bool) -> tuple:
+    div_id = "chart-" + str(chart_idx)
+    sa  = data["cpi_all_items"].set_index("date")["value"]
+    nsa = data["cpi_all_items_nsa"].set_index("date")["value"]
+
+    # 8 traces: indices 0..3 = SA × {Level, M/M, 3M AR, Y/Y}; 4..7 = NSA × same
+    versions = [("SA",  sa,  "#1565c0"), ("NSA", nsa, "#c62828")]
+    default_t = chart.default_transform
+    default_t_idx = _CPI_TRANSFORMS.index(default_t)
+
+    fig = go.Figure()
+    for v_idx, (label, series, color) in enumerate(versions):
+        for t_idx, t_key in enumerate(_CPI_TRANSFORMS):
+            s = _cpi_compute_transform(series, t_key)
+            visible = (v_idx == 0) and (t_idx == default_t_idx)  # SA only, default transform
+            pct_t = t_key in {"mom", "ar_3m", "yoy"}
+            suffix = "%" if pct_t else ""
+            fig.add_trace(go.Scatter(
+                x=s.index, y=s.values,
+                line=dict(color=color, width=2),
+                visible=visible,
+                hovertemplate="%{x|%b %Y}<br>%{y:.2f}" + suffix + "<extra>" + label + " " + _CPI_TRANSFORM_LABELS[t_key] + "</extra>",
+                showlegend=False,
+            ))
+
+    fig.update_layout(
+        height=_CHART_HEIGHT, showlegend=False,
+        paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
+        margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
+    )
+    # Axis formatting per default transform — Plotly will adjust on transform switch
+    # via the JS handler, but we set sensible defaults for the initial view.
+    fig.update_xaxes(showgrid=False, zeroline=False)
+    fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False, nticks=7)
+
+    plotly_frag = fig.to_html(
+        full_html=False,
+        include_plotlyjs="cdn" if include_plotlyjs else False,
+        div_id=div_id,
+        config={"displayModeBar": False},
+    )
+
+    # Transform buttons
+    xform_btns = '<div class="btn-group" id="xb-' + div_id + '">'
+    for t_idx, t_key in enumerate(_CPI_TRANSFORMS):
+        active = " active" if t_idx == default_t_idx else ""
+        label = _CPI_TRANSFORM_LABELS[t_key]
+        suffix = "%" if t_key in {"mom", "ar_3m", "yoy"} else ""
+        xform_btns += (
+            '<button class="ctrl-btn' + active + '"'
+            ' onclick="cpiXformClick(this,\'' + div_id + '\',' + str(t_idx) + ',\'' + suffix + '\')">'
+            + label + '</button>'
+        )
+    xform_btns += '</div>'
+
+    range_btns = _range_buttons_html(div_id, default_years=chart.default_years)
+    controls = ('<div class="chart-controls">' + xform_btns
+                + '<div class="btn-sep"></div>' + range_btns + '</div>')
+
+    def _swatch(color: str) -> str:
+        return ('<span style="display:inline-block;width:22px;height:2.5px;'
+                'background:' + color + ';border-radius:1px;vertical-align:middle;'
+                'margin-right:5px"></span>')
+
+    legend = (
+        '<div class="chart-legend" id="leg-' + div_id + '">'
+        + '<button class="legend-item active"'
+        + ' onclick="cpiVersionToggle(this,\'' + div_id + '\',0)">'
+        + _swatch("#1565c0") + 'Seasonally adjusted</button>'
+        + '<button class="legend-item"'
+        + ' onclick="cpiVersionToggle(this,\'' + div_id + '\',1)">'
+        + _swatch("#c62828") + 'Not seasonally adjusted</button>'
+        + '</div>'
+    )
+
+    footnote_html = (
+        '<div class="chart-footnote">' + chart.footnote + '</div>'
+        if chart.footnote else ""
+    )
+    html = (
+        '<div class="chart-panel">'
+        '<div class="chart-header">'
+        '<div class="chart-title">' + chart.title + '</div>'
+        + controls + '</div>'
+        + plotly_frag
+        + legend
+        + footnote_html + '</div>\n'
+    )
+
+    # Y-ranges per transform per window. Both SA and NSA mapped to the same range,
+    # so visibility logic in JS doesn't need to pick between them.
+    today = pd.Timestamp.now().normalize()
+    sa_t  = {t: _cpi_compute_transform(sa,  t) for t in _CPI_TRANSFORMS}
+    nsa_t = {t: _cpi_compute_transform(nsa, t) for t in _CPI_TRANSFORMS}
+    y_ranges: dict = {}
+    for v_idx in range(2):
+        for t_idx, t_key in enumerate(_CPI_TRANSFORMS):
+            trace_idx = v_idx * 4 + t_idx
+            yr_dict: dict = {}
+            for years in [2, 5, 10]:
+                cutoff = today - pd.DateOffset(years=years)
+                merged = pd.concat([
+                    sa_t[t_key][sa_t[t_key].index >= cutoff].dropna(),
+                    nsa_t[t_key][nsa_t[t_key].index >= cutoff].dropna(),
+                ])
+                if merged.empty:
+                    continue
+                ymin, ymax = float(merged.min()), float(merged.max())
+                pad = max((ymax - ymin) * 0.08, 0.05)
+                yr_dict[years] = [round(ymin - pad, 4), round(ymax + pad, 4)]
+            y_ranges[str(trace_idx)] = yr_dict
 
     return html, y_ranges
 
@@ -816,6 +1197,46 @@ function gcRange(years, btn) {
     applyRange(id, years);
   });
 }
+
+function _cpiApplyVisibility(div) {
+  var t = (div._cpiTransform === undefined) ? 1 : div._cpiTransform;
+  var v = div._cpiVisible || [true, false];
+  var vis = [];
+  for (var i = 0; i < 8; i++) {
+    var tIdx = i % 4;
+    var vIdx = Math.floor(i / 4);
+    vis.push(tIdx === t && v[vIdx]);
+  }
+  Plotly.restyle(div, {visible: vis});
+}
+
+function cpiXformClick(btn, chartId, transformIdx, ticksuffix) {
+  var div = document.getElementById(chartId);
+  btn.closest(".btn-group").querySelectorAll(".ctrl-btn").forEach(function(b) {
+    b.classList.remove("active");
+  });
+  btn.classList.add("active");
+  div._cpiTransform = transformIdx;
+  _cpiApplyVisibility(div);
+  Plotly.relayout(div, {"yaxis.ticksuffix": ticksuffix});
+  var rb = document.getElementById("rb-" + chartId);
+  if (rb) {
+    var ab = rb.querySelector(".ctrl-btn.active");
+    if (ab) {
+      var m = ab.getAttribute("onclick").match(/,(\\w+)\\)$/);
+      if (m && m[1] !== "null") applyRange(chartId, parseInt(m[1]));
+    }
+  }
+}
+
+function cpiVersionToggle(btn, chartId, versionIdx) {
+  var div = document.getElementById(chartId);
+  if (!div._cpiVisible) div._cpiVisible = [true, false];
+  var isActive = btn.classList.contains("active");
+  btn.classList.toggle("active");
+  div._cpiVisible[versionIdx] = !isActive;
+  _cpiApplyVisibility(div);
+}
 </script>
 """
 
@@ -848,8 +1269,12 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
     if has_smooth:
         for line in lines:
             df = data[line.series]
-            smooth = df["value"].rolling(chart.smooth_window, min_periods=chart.smooth_window // 2).mean()
-            smooth_label = line.label + " (" + str(chart.smooth_window) + "d avg)"
+            if line.smooth:
+                smooth = df["value"].rolling(chart.smooth_window, min_periods=chart.smooth_window // 2).mean()
+                smooth_label = line.label + " (" + str(chart.smooth_window) + "d avg)"
+            else:
+                smooth = df["value"]  # already low-frequency; show raw in smooth mode
+                smooth_label = line.label
             fig.add_trace(go.Scatter(
                 x=df["date"], y=smooth,
                 name=smooth_label,
@@ -874,11 +1299,24 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
             _fmt_vals.append(_df["value"][_df["date"] >= _cutoff])
         else:
             _fmt_vals.append(_df["value"])
-    ytickfmt = _ytick_format(pd.concat(_fmt_vals)) if _fmt_vals else ".2f"
+    ref_vals = pd.concat(_fmt_vals).dropna() if _fmt_vals else pd.Series(dtype=float)
+    ymin_floor = chart.ymin if chart.ymin is not None else float("-inf")
+    if not ref_vals.empty:
+        rv_min_data = max(float(ref_vals.min()), ymin_floor)
+        rv_max_data = float(ref_vals.max())
+        rv_pad = max((rv_max_data - rv_min_data) * 0.08, 0.1)
+        disp_lo = max(rv_min_data - rv_pad, chart.ymin) if chart.ymin is not None else rv_min_data - rv_pad
+        disp_hi = rv_max_data + rv_pad
+        ml_dtick = _nice_dtick(disp_lo, disp_hi)
+        ml_tickfmt = _dtick_format(ml_dtick)
+    else:
+        ml_dtick, ml_tickfmt = 1.0, ".0f"
 
     fig.update_xaxes(showgrid=False, zeroline=False)
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False,
-                     ticksuffix=chart.ticksuffix, tickformat=ytickfmt)
+                     ticksuffix=chart.ticksuffix, tickformat=ml_tickfmt,
+                     tick0=0, dtick=ml_dtick,
+                     rangemode="nonnegative" if chart.ymin == 0 else "normal")
 
     plotly_frag = fig.to_html(
         full_html=False,
@@ -947,8 +1385,11 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
         if vals.empty:
             continue
         ymin, ymax = float(vals.min()), float(vals.max())
+        if chart.ymin is not None:
+            ymin = max(ymin, chart.ymin)
         pad = max((ymax - ymin) * 0.08, 0.1)
-        yr_dict[years] = [round(ymin - pad, 4), round(ymax + pad, 4)]
+        lo = ymin - pad if chart.ymin is None else max(ymin - pad, chart.ymin)
+        yr_dict[years] = [round(lo, 4), round(ymax + pad, 4)]
     y_ranges = {str(i): yr_dict for i in range(total_traces)}
 
     return html, y_ranges
@@ -995,7 +1436,8 @@ def _assemble_page(page: PageSpec, chart_panels: list[str],
         + AUTHOR_DISPLAY_NAME + "</a> using public data from "
         '<a href="https://www150.statcan.gc.ca">Statistics Canada</a>, the '
         '<a href="https://www.bankofcanada.ca/valet/docs">Bank of Canada Valet API</a>, '
-        'and the <a href="https://fred.stlouisfed.org">Federal Reserve (FRED)</a>. '
+        'the <a href="https://fred.stlouisfed.org">Federal Reserve (FRED)</a>, '
+        'and the <a href="https://economicdashboard.alberta.ca">Alberta Economic Dashboard</a>. '
         'Raw data available as CSV in the '
         '<a href="https://github.com/' + AUTHOR_DISPLAY_NAME + '/boc-tracker/tree/main/data">'
         "GitHub repository</a>."
@@ -1032,6 +1474,7 @@ PAGES = [
             CoreInflationSpec(
                 title="Core Inflation",
                 footnote="Year-over-year %. Shaded band shows range across BoC core measures (trim, median, common, CPIX, CPIXFET).",
+                default_years=10,
             ),
             CpiBreadthSpec(
                 title="CPI Breadth",
@@ -1058,14 +1501,11 @@ PAGES = [
                 date_fmt="%b %d, %Y",
                 footnote="2-year benchmark government bond yields.",
             ),
-            ChartSpec(
-                series="cpi_all_items",
+            CpiAllItemsSpec(
                 title="CPI — All Items",
-                frequency="monthly",
-                color="#1565c0",
                 default_transform="mom",
                 default_years=2,
-                footnote="All-items CPI index, Canada, 2002=100, not seasonally adjusted.",
+                footnote="All-items CPI index, Canada, 2002=100. Seasonally adjusted shown by default; toggle the legend to compare with the not-seasonally-adjusted series.",
             ),
             ChartSpec(
                 series="unemployment_rate",
@@ -1073,7 +1513,35 @@ PAGES = [
                 frequency="monthly",
                 color="#1565c0",
                 static=True,
+                default_years=10,
                 footnote="Canada, seasonally adjusted.",
+            ),
+            WageSpec(
+                title="Wage Growth",
+                footnote="Year-over-year %. LFS: average hourly wages. SEPH: average weekly earnings, all industries. LFS-Micro: BoC composition-adjusted measure. Services CPI overlay for wage-price context.",
+            ),
+            MultiLineSpec(
+                title="Oil Prices",
+                lines=[
+                    LineConfig("wti",   "WTI",   "#c62828"),
+                    LineConfig("brent", "Brent", "#e57373", visible=False),
+                    LineConfig("wcs",   "WCS",   "#6d4c41", visible=False, smooth=False),
+                ],
+                ticksuffix="",
+                hoverformat=".2f",
+                default_years=10,
+                smooth_window=20,
+                date_fmt="%b %d, %Y",
+                ymin=0,
+                footnote="Crude oil prices, USD per barrel. WTI and Brent are daily; WCS (Western Canada Select) is monthly. WTI briefly traded negative in April 2020 (futures contract anomaly); not shown.",
+            ),
+            ChartSpec(
+                series="usdcad",
+                title="USD/CAD",
+                frequency="daily",
+                color="#1565c0",
+                default_years=10,
+                footnote="Canadian dollars per US dollar. Higher = weaker CAD.",
             ),
         ],
     ),
@@ -1096,6 +1564,14 @@ def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
             panel, cyr = _build_cpi_breadth_panel(chart, data, i, i == 0)
             panels.append(panel)
             y_ranges[cid] = cyr
+        elif isinstance(chart, WageSpec):
+            panel, cyr = _build_wage_panel(chart, data, i, i == 0)
+            panels.append(panel)
+            y_ranges[cid] = cyr
+        elif isinstance(chart, CpiAllItemsSpec):
+            panel, cyr = _build_cpi_all_items_panel(chart, data, i, i == 0)
+            panels.append(panel)
+            y_ranges[cid] = cyr
         elif isinstance(chart, MultiLineSpec):
             panel, cyr = _build_multiline_panel(chart, data, i, i == 0)
             panels.append(panel)
@@ -1110,7 +1586,7 @@ def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
         cid = "chart-" + str(i)
         if isinstance(chart, CpiBreadthSpec):
             default_ranges[cid] = 10
-        elif isinstance(chart, (ChartSpec, MultiLineSpec)) and chart.default_years is not None:
+        elif isinstance(chart, (ChartSpec, MultiLineSpec, WageSpec, CoreInflationSpec, CpiAllItemsSpec)) and chart.default_years is not None:
             default_ranges[cid] = chart.default_years
 
     last_updated = datetime.now(timezone.utc).strftime("%B %d, %Y at %H:%M UTC")
@@ -1129,6 +1605,10 @@ def main():
         for chart in page.charts:
             if isinstance(chart, CoreInflationSpec):
                 all_series.update(CoreInflationSpec.SERIES)
+            elif isinstance(chart, WageSpec):
+                all_series.update(WageSpec.SERIES)
+            elif isinstance(chart, CpiAllItemsSpec):
+                all_series.update(CpiAllItemsSpec.SERIES)
             elif isinstance(chart, CpiBreadthSpec):
                 has_breadth = True
             elif isinstance(chart, MultiLineSpec):
@@ -1145,8 +1625,11 @@ def main():
         if not path.exists():
             raise FileNotFoundError(f"Missing {path} -- run fetch.py first.")
         data[name] = pd.read_csv(path, parse_dates=["date"])
-        latest = data[name]["date"].max().strftime("%Y-%m-%d")
-        print(f"  -> {name}: {len(data[name])} rows, latest {latest}")
+        if data[name].empty:
+            print(f"  -> {name}: 0 rows (no data — chart will show empty traces)")
+        else:
+            latest = data[name]["date"].max().strftime("%Y-%m-%d")
+            print(f"  -> {name}: {len(data[name])} rows, latest {latest}")
     if has_breadth:
         path = DATA_DIR / "cpi_components.csv"
         if not path.exists():

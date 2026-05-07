@@ -479,7 +479,7 @@ Plotly JS is loaded from CDN for the first chart only; subsequent charts pass `i
 
 ## What has NOT been implemented
 
-- [ ] **More charts** — the dashboard has 6 charts. The A-tier priority list has 13. See expansion roadmap below.
+- [ ] **More charts** — the dashboard has 6 charts; 3 more are fully designed and ready to build (see next steps)
 - [ ] **Multiple pages** — the PAGES list has one entry. Infrastructure is ready.
 - [ ] **Navigation bar** — if multiple pages are added, there's no nav between them yet.
 - [ ] **Custom domain** — GitHub Pages URL is currently the public URL.
@@ -488,23 +488,67 @@ Plotly JS is loaded from CDN for the first chart only; subsequent charts pass `i
 
 ## Next steps, in priority order
 
-### 1. Add charts — in recommended build order
+### 1. Three charts ready to build (fully designed, data sources confirmed)
 
-**Step A — Remaining BoC Valet additions**
+General design principle agreed: **maximize ease of analysis by overlaying related variables on the same chart** rather than showing single series in isolation.
 
-Non-energy commodity index (BCNEx) is a straight Valet pull. Add to `BOC_VALET_SERIES` and a `ChartSpec` in `build.py`.
+#### A. Wage Growth + Services CPI (new `WageSpec` chart type)
 
-**Step B — StatsCan Labour Force Survey**
+A composite chart modelled after `CoreInflationSpec`: shaded range band across all wage measures, individual toggles for each, Services CPI as an optional overlay (off by default).
 
-Wage growth (Table 14-10-0064) and employment by industry (Table 14-10-0023). Straight vector pulls into ChartSpec.
+**Wage measures — pull from StatsCan directly where available (faster than BoC Valet):**
 
-**Step C — BoC survey publications (BOS, BLP, CSCE)**
+| Series | Source | Table | Notes |
+|---|---|---|---|
+| LFS Average Hourly Wages — All employees | StatsCan | 14-10-0063-01 or 14-10-0064-01 | Released same day as LFS unemployment |
+| LFS Average Hourly Wages — Permanent employees | StatsCan | Same LFS table, different coord | Strips mix-shift between perm/temp workers |
+| SEPH Average Hourly Earnings | StatsCan | 14-10-0203-01 or 14-10-0204-01 | Payroll-based; ~2-month lag regardless of source |
+| National Accounts Hourly Compensation | StatsCan | 36-10-0206-01 or 36-10-0104-01 | Quarterly, with GDP release |
+| LFS-Micro (composition-adjusted) | BoC Valet | Group `INDINF_WAGES_MONTHLY` | BoC-derived measure; not in StatsCan directly |
 
-No REST API. The BoC publishes CSVs alongside PDFs at predictable URL patterns on bankofcanada.ca. Quarterly for BOS and CSCE; monthly for BLP.
+**Services CPI overlay:**
+- Source: StatsCan Table 18-10-0004-01 or 18-10-0006-01, "Services" component
+- Displayed as Y/Y %, same axis as wages
+- Off by default; toggle in legend
+- Analytically: if wages > services CPI → margin compression; if both elevated → wage-price spiral risk
 
-**Step D — StatsCan trade data by HS code**
+**Default visible:** range band + LFS All Employees. Everything else off by default.
 
-Table 12-10-0011 for goods exports. Strip HS 7108 (gold) for exports ex-gold.
+**Note:** National Accounts series is quarterly; should be excluded from the range band calculation (which uses monthly series only) but shown as a separate toggle line.
+
+**Vector IDs to look up during implementation:** All StatsCan vectors above need to be found via `getCubeMetadata` API call during implementation. The BoC Valet group `INDINF_WAGES_MONTHLY` contains the LFS-Micro series — enumerate it at build time to find the right key.
+
+#### B. USD/CAD Exchange Rate
+
+Single-line `ChartSpec` (or possibly a `MultiLineSpec` if we add more FX context later).
+
+- **Convention:** USD/CAD (currently ~1.38) — higher = weaker CAD. Market standard. When tariff shock hits, this chart goes up, which is the intuitive read for an inflationary impulse.
+- **Source:** FRED `DEXCAUS` ("Canadian Dollars to One U.S. Dollar") — this IS USD/CAD
+- **Frequency:** Daily
+- **Transforms:** Level + 20d Avg
+- **Default:** 10Y view
+- **Analytical read:** CAD weakness feeds directly into goods CPI via import price pass-through. Cross-reference with goods CPI acceleration to decompose tariff vs. currency effects.
+
+#### C. Oil Prices — WTI, Brent, WCS (`MultiLineSpec`)
+
+Three lines on one chart with toggles. Daily WTI and Brent from FRED; monthly WCS from Open Alberta.
+
+| Series | Source | ID / URL | Frequency |
+|---|---|---|---|
+| WTI (West Texas Intermediate) | FRED | `DCOILWTICO` | Daily |
+| Brent | FRED | `DCOILBRENTEU` | Daily |
+| WCS (Western Canada Select) | Open Alberta CKAN | See URL below | Monthly |
+
+**WCS data URL (no auth required):**
+`https://open.alberta.ca/dataset/6dc97b50-5bbb-482d-8dd5-c9b23cd770dc/resource/05caae97-5ccb-43d5-8c31-a59ec86df2f2/download/energyprices.csv`
+
+This CSV contains WCS prices in USD/barrel from 1986 to present. Monthly updates. Need to parse the column structure during implementation.
+
+**Spreads to watch (explain in footnote, let user eyeball from chart):**
+- **Brent − WTI** (usually $2–5): widens on US supply glut or Cushing pipeline bottleneck
+- **WTI − WCS differential** (usually $12–25): the Canadian discount; narrowed after Trans Mountain opened in 2024; widening = bad for Alberta revenues
+
+**Display:** All three on same chart, USD/barrel. `line_shape="linear"`. WCS will look stepped relative to daily lines — acceptable and informative. Add 20d smooth toggle (applies to WTI and Brent; WCS is already monthly). Default 10Y.
 
 ### 2. Multi-page split (when chart count warrants it)
 
