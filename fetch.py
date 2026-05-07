@@ -1,19 +1,25 @@
 """
 Fetch data from public APIs and save to CSV files in the data/ folder.
 
-Run:    python fetch.py
+Run:    python fetch.py           (one-shot)
+        python fetch.py --wait    (poll StatsCan until new data appears — use on 8:30 AM runs)
 Output: data/cpi_all_items.csv
         data/unemployment_rate.csv
         data/yield_2yr.csv
 """
 
+import argparse
 import json
+import time
 import requests
 import pandas as pd
 from pathlib import Path
 
 DATA_DIR = Path("data")
 DATA_DIR.mkdir(exist_ok=True)
+
+MAX_RETRIES  = 10   # maximum StatsCan poll attempts before giving up
+RETRY_DELAY  = 30   # seconds between retries
 
 
 # ── Series configuration ──────────────────────────────────────────────────────
@@ -129,13 +135,36 @@ def fetch_cpi_components() -> pd.DataFrame:
     return df.sort_index()
 
 
+# ── Retry helper ──────────────────────────────────────────────────────────────
+
+def _latest_saved_date(path: Path) -> pd.Timestamp | None:
+    """Return the latest date already saved in a CSV (long or wide format), or None."""
+    if not path.exists():
+        return None
+    try:
+        col = pd.read_csv(path, usecols=[0], parse_dates=True)
+        return pd.to_datetime(col.iloc[:, 0]).max()
+    except Exception:
+        return None
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-def main():
+def main(wait: bool = False):
     for name, vector_id in STATSCAN_SERIES.items():
-        print(f"Fetching {name} from Statistics Canada...")
-        df = fetch_statscan(vector_id)
         path = DATA_DIR / f"{name}.csv"
+        prior = _latest_saved_date(path) if wait else None
+        print(f"Fetching {name} from Statistics Canada...")
+        for attempt in range(MAX_RETRIES):
+            df = fetch_statscan(vector_id)
+            if prior is None or df["date"].max() > prior:
+                break
+            if attempt < MAX_RETRIES - 1:
+                print(f"  No update yet (latest: {df['date'].max().date()}), "
+                      f"retrying in {RETRY_DELAY}s [{attempt + 1}/{MAX_RETRIES}]")
+                time.sleep(RETRY_DELAY)
+        else:
+            print(f"  No new data after {MAX_RETRIES} attempts, proceeding.")
         df.to_csv(path, index=False)
         print(f"  -> {len(df)} rows saved to {path}")
 
@@ -146,9 +175,19 @@ def main():
         df.to_csv(path, index=False)
         print(f"  -> {len(df)} rows saved to {path}")
 
-    print("Fetching CPI components (breadth chart)...")
-    df = fetch_cpi_components()
     path = DATA_DIR / "cpi_components.csv"
+    prior = _latest_saved_date(path) if wait else None
+    print("Fetching CPI components (breadth chart)...")
+    for attempt in range(MAX_RETRIES):
+        df = fetch_cpi_components()
+        if prior is None or df.index.max() > prior:
+            break
+        if attempt < MAX_RETRIES - 1:
+            print(f"  No update yet (latest: {df.index.max().date()}), "
+                  f"retrying in {RETRY_DELAY}s [{attempt + 1}/{MAX_RETRIES}]")
+            time.sleep(RETRY_DELAY)
+    else:
+        print(f"  No new data after {MAX_RETRIES} attempts, proceeding.")
     df.to_csv(path)
     print(f"  -> {len(df)} months × {len(df.columns)} components saved to {path}")
 
@@ -156,4 +195,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--wait", action="store_true",
+        help="Poll StatsCan until new data appears (use on scheduled 8:30 AM ET runs)",
+    )
+    main(wait=parser.parse_args().wait)

@@ -2,8 +2,10 @@ name: Update dashboard
 
 on:
   schedule:
-    - cron: "0 12 * * *"   # daily at 12:00 UTC
-  workflow_dispatch:         # allows manual trigger from GitHub Actions UI
+    - cron: "30 12 * * *"   # 8:30 AM EDT (summer) — StatsCan release window
+    - cron: "30 13 * * *"   # 8:30 AM EST (winter) — StatsCan release window
+    - cron: "0 15 * * *"    # 11:00 AM EDT / 10:00 AM EST — BoC daily yields
+  workflow_dispatch:         # manual trigger (also uses --wait)
 
 jobs:
   build:
@@ -17,7 +19,13 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - run: python fetch.py
+      - name: Fetch data
+        run: |
+          if [ "${{ github.event.schedule }}" = "0 15 * * *" ]; then
+            python fetch.py
+          else
+            python fetch.py --wait
+          fi
 
       - run: python build.py
 
