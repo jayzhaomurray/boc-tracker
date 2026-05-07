@@ -1135,6 +1135,44 @@ function _toMillis(x) {
   return new Date(x).getTime();
 }
 
+// Plotly may serialize numeric trace arrays as typed-array objects
+// {dtype: "f8", bdata: "<base64>"} for efficiency. _decodeY normalises
+// either format to an indexable array. Decoded result is cached on the trace.
+function _decodeY(trace) {
+  if (trace._decodedY) return trace._decodedY;
+  var y = trace.y;
+  if (y == null) return null;
+  if (typeof y.length === "number" && !y.bdata) {
+    trace._decodedY = y;
+    return y;
+  }
+  if (y.bdata && y.dtype) {
+    try {
+      var bin = atob(y.bdata);
+      var buf = new ArrayBuffer(bin.length);
+      var bytes = new Uint8Array(buf);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      var arr;
+      switch (y.dtype) {
+        case "f8": arr = new Float64Array(buf); break;
+        case "f4": arr = new Float32Array(buf); break;
+        case "i4": arr = new Int32Array(buf);   break;
+        case "i2": arr = new Int16Array(buf);   break;
+        case "i1": arr = new Int8Array(buf);    break;
+        case "u4": arr = new Uint32Array(buf);  break;
+        case "u2": arr = new Uint16Array(buf);  break;
+        case "u1": arr = new Uint8Array(buf);   break;
+        default: return null;
+      }
+      trace._decodedY = arr;
+      return arr;
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+}
+
 function _niceDtick(ymin, ymax, target) {
   target = target || 5;
   var span = ymax - ymin;
@@ -1166,9 +1204,11 @@ function _computeYRange(div, xStartMs, xEndMs) {
     // Plotly's visible can be true/false/undefined/'legendonly'; only count drawn traces.
     if (v === false || v === 'legendonly') continue;
     var trace = div.data[i];
-    var xs = trace.x, ys = trace.y;
+    var xs = trace.x;
+    var ys = _decodeY(trace);
     if (!xs || !ys) continue;
-    for (var j = 0; j < xs.length; j++) {
+    var n = Math.min(xs.length, ys.length);
+    for (var j = 0; j < n; j++) {
       if (xStartMs != null) {
         var xt = _toMillis(xs[j]);
         if (xt < xStartMs || xt > xEndMs) continue;
