@@ -146,6 +146,8 @@ Beyond the universal rules in sections 2–5, a few principles govern what kind 
 
 **Controls only advertise meaningful interactions.** If a series has only one meaningful read, don't expose toggles that suggest otherwise. Currently on Unemployment Rate (`static=True`) — the level is the news; M/M change of unemployment isn't what people watch. Better to hide a control than to give the reader a button that produces nothing useful.
 
+**Horizontal reference bands for known thresholds.** When a chart has a meaningful threshold range that helps the reader interpret the data (the BoC's neutral rate range of 2.25–3.25% on Policy Rates, in principle a NAIRU range on Unemployment, etc.), draw it as a translucent gray horizontal band (`rgba(180, 180, 180, 0.35)`) across the chart, layered below the data lines. Same fill as the range-band overlay convention; different role — this band is a *static reference value*, not a synthesis of multiple measures. Use sparingly: the threshold has to be widely accepted, citable, and stable. Document the source in the footnote.
+
 ## 7. How this guide is used
 
 This guide codifies what's been learned from nine charts. It will be wrong for the tenth chart in some way that isn't yet visible — that's fine. The guide is meant to evolve.

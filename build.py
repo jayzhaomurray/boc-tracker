@@ -149,6 +149,7 @@ class MultiLineSpec:
     footnote: str = ""
     ymin: float | None = None           # hard floor for y-axis (pre-computed ranges + autorange)
     unit_label: str = "%"               # text shown in top-left of plot area
+    hband: tuple | None = None          # (lo, hi) horizontal shaded reference band, e.g. neutral rate
 
 
 # ── Transform system ──────────────────────────────────────────────────────────
@@ -1474,6 +1475,16 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
 
     fig = go.Figure()
 
+    # Horizontal reference band (e.g. neutral rate range on Policy Rates).
+    # Always visible, drawn under the data lines.
+    if chart.hband is not None:
+        fig.add_hrect(
+            y0=chart.hband[0], y1=chart.hband[1],
+            fillcolor="rgba(180,180,180,0.35)",
+            line_width=0,
+            layer="below",
+        )
+
     # Raw traces (indices 0..n-1)
     for line in lines:
         df = data[line.series]
@@ -1698,22 +1709,25 @@ PAGES = [
                 title="Policy Rates",
                 lines=[
                     LineConfig("overnight_rate", "BoC", "#1565c0"),
-                    LineConfig("fed_funds",       "Fed", "#c62828"),
+                    LineConfig("fed_funds",      "Fed", "#c62828"),
+                    LineConfig("bocfed_spread",  "BoC − Fed", "#7b1fa2", visible=False),
                 ],
                 default_years=10,
                 line_shape="hv",
-                footnote="BoC overnight rate target; Fed funds midpoint of target range.",
+                hband=(2.25, 3.25),
+                footnote="BoC overnight rate target; Fed funds midpoint of target range. Shaded band: BoC's estimated neutral-rate range, 2.25–3.25%.",
             ),
             MultiLineSpec(
                 title="2-Year Yields",
                 lines=[
-                    LineConfig("yield_2yr", "Canada 2Y", "#1565c0"),
-                    LineConfig("us_2yr",    "US 2Y",     "#c62828"),
+                    LineConfig("yield_2yr",                "Canada 2Y",                "#1565c0"),
+                    LineConfig("us_2yr",                   "US 2Y",                    "#c62828"),
+                    LineConfig("can2y_overnight_spread",   "Canada 2Y − Overnight",    "#7b1fa2", visible=False, smooth=False),
                 ],
                 default_years=10,
                 smooth_window=20,
                 date_fmt="%b %d, %Y",
-                footnote="2-year benchmark government bond yields.",
+                footnote="2-year benchmark government bond yields. Toggle 'Canada 2Y − Overnight' for the spread to the BoC's policy rate; negative = market pricing net cuts.",
             ),
             CoreInflationSpec(
                 title="Core Inflation",
@@ -1806,7 +1820,34 @@ def _render_section(section_id: str, blurbs: dict) -> str:
     )
 
 
+def _add_derived_series(data: dict[str, pd.DataFrame]) -> None:
+    """Compute derived series (spreads, etc.) and add to data dict so chart specs
+    can reference them by name like any other series."""
+    # BoC overnight − Fed funds spread, monthly cadence aligned to overnight_rate
+    if "overnight_rate" in data and "fed_funds" in data:
+        ov = data["overnight_rate"].sort_values("date").reset_index(drop=True)
+        ff = data["fed_funds"].sort_values("date").rename(columns={"value": "fed"}).reset_index(drop=True)
+        merged = pd.merge_asof(ov, ff, on="date", direction="backward")
+        spread = pd.DataFrame({
+            "date":  merged["date"],
+            "value": merged["value"] - merged["fed"],
+        }).dropna().reset_index(drop=True)
+        data["bocfed_spread"] = spread
+
+    # Canada 2Y − BoC overnight spread, daily cadence with overnight forward-filled
+    if "yield_2yr" in data and "overnight_rate" in data:
+        y2 = data["yield_2yr"].sort_values("date").reset_index(drop=True)
+        ov = data["overnight_rate"].sort_values("date").rename(columns={"value": "ov"}).reset_index(drop=True)
+        merged = pd.merge_asof(y2, ov, on="date", direction="backward")
+        spread = pd.DataFrame({
+            "date":  merged["date"],
+            "value": merged["value"] - merged["ov"],
+        }).dropna().reset_index(drop=True)
+        data["can2y_overnight_spread"] = spread
+
+
 def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
+    _add_derived_series(data)
     blurbs = _load_blurbs()
     chart_ids = ["chart-" + str(i) for i in range(len(page.charts))]
     panels = []
