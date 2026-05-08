@@ -232,12 +232,33 @@ def _latest_saved_date(path: Path) -> pd.Timestamp | None:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main(wait: bool = False):
+    # Per-series fetches are isolated: a single source going down (network blip,
+    # bad API key, schema change) prints a clear error and continues; existing
+    # CSVs are preserved so the build still has data, just stale where the fetch
+    # failed. The pipeline only fully fails if everything is broken.
+    failed: list[str] = []
+
+    def _safe(label: str, fn, *args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as e:
+            msg = f"{type(e).__name__}: {e}"
+            # GitHub Actions annotation — renders as a red banner in the run UI.
+            print(f"::error title=Fetch failed: {label}::{msg}")
+            print(f"  ERROR fetching {label}: {msg}")
+            print(f"  Existing {label}.csv (if any) preserved; build will use stale data.")
+            failed.append(label)
+            return None
+
     for name, vector_id in STATSCAN_SERIES.items():
         path = DATA_DIR / f"{name}.csv"
         prior = _latest_saved_date(path) if wait else None
         print(f"Fetching {name} from Statistics Canada...")
+        df = None
         for attempt in range(MAX_RETRIES):
-            df = fetch_statscan(vector_id)
+            df = _safe(name, fetch_statscan, vector_id)
+            if df is None:
+                break  # error already reported; stop retrying
             if prior is None or df["date"].max() > prior:
                 break
             if attempt < MAX_RETRIES - 1:
@@ -246,15 +267,18 @@ def main(wait: bool = False):
                 time.sleep(RETRY_DELAY)
         else:
             print(f"  No new data after {MAX_RETRIES} attempts, proceeding.")
-        df.to_csv(path, index=False)
-        print(f"  -> {len(df)} rows saved to {path}")
+        if df is not None:
+            df.to_csv(path, index=False)
+            print(f"  -> {len(df)} rows saved to {path}")
 
     for name, entry in BOC_VALET_SERIES.items():
         series_key = entry[0]
         start_date = entry[1]
         scale      = entry[2] if len(entry) > 2 else 1.0
         print(f"Fetching {name} from Bank of Canada Valet API...")
-        df = fetch_boc_valet(series_key, start_date)
+        df = _safe(name, fetch_boc_valet, series_key, start_date)
+        if df is None:
+            continue
         if scale != 1.0:
             df["value"] = df["value"] * scale
         path = DATA_DIR / f"{name}.csv"
@@ -263,14 +287,17 @@ def main(wait: bool = False):
 
     if FRED_API_KEY:
         print("Fetching fed_funds (target midpoint) from FRED...")
-        df = fetch_fed_funds_target()
-        path = DATA_DIR / "fed_funds.csv"
-        df.to_csv(path, index=False)
-        print(f"  -> {len(df)} rows saved to {path}")
+        df = _safe("fed_funds", fetch_fed_funds_target)
+        if df is not None:
+            path = DATA_DIR / "fed_funds.csv"
+            df.to_csv(path, index=False)
+            print(f"  -> {len(df)} rows saved to {path}")
 
         for name, (series_id, start_date) in FRED_SERIES.items():
             print(f"Fetching {name} from FRED...")
-            df = fetch_fred(series_id, start_date)
+            df = _safe(name, fetch_fred, series_id, start_date)
+            if df is None:
+                continue
             path = DATA_DIR / f"{name}.csv"
             df.to_csv(path, index=False)
             print(f"  -> {len(df)} rows saved to {path}")
@@ -278,16 +305,20 @@ def main(wait: bool = False):
         print("Skipping FRED series (FRED_API_KEY not set).")
 
     print("Fetching wcs (Western Canada Select) from Alberta Economic Dashboard...")
-    df = fetch_wcs()
-    path = DATA_DIR / "wcs.csv"
-    df.to_csv(path, index=False)
-    print(f"  -> {len(df)} rows saved to {path}")
+    df = _safe("wcs", fetch_wcs)
+    if df is not None:
+        path = DATA_DIR / "wcs.csv"
+        df.to_csv(path, index=False)
+        print(f"  -> {len(df)} rows saved to {path}")
 
     path = DATA_DIR / "cpi_components.csv"
     prior = _latest_saved_date(path) if wait else None
     print("Fetching CPI components (breadth chart)...")
+    df = None
     for attempt in range(MAX_RETRIES):
-        df = fetch_cpi_components()
+        df = _safe("cpi_components", fetch_cpi_components)
+        if df is None:
+            break
         if prior is None or df.index.max() > prior:
             break
         if attempt < MAX_RETRIES - 1:
@@ -296,8 +327,18 @@ def main(wait: bool = False):
             time.sleep(RETRY_DELAY)
     else:
         print(f"  No new data after {MAX_RETRIES} attempts, proceeding.")
-    df.to_csv(path)
-    print(f"  -> {len(df)} months × {len(df.columns)} components saved to {path}")
+    if df is not None:
+        df.to_csv(path)
+        print(f"  -> {len(df)} months × {len(df.columns)} components saved to {path}")
+
+    if failed:
+        print()
+        print("=" * 60)
+        print(f"WARNING: {len(failed)} series failed to fetch:")
+        for name in failed:
+            print(f"  - {name}")
+        print("Existing CSVs preserved; build will use stale data for those.")
+        print("=" * 60)
 
     print("\nDone. Run build.py to regenerate index.html.")
 
