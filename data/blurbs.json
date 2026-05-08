@@ -8,5 +8,15 @@
     "as_of": "May 2026",
     "model": "claude-opus-4-7 (manual seed pending API key)",
     "text": "The BoC has held rates at 2.25% for four meetings after a 275bp cutting cycle, and bond markets are starting to price the next move as more likely a hike than another cut. At 2.25%, the policy rate is right at the bottom of the BoC's 2.25-3.25% neutral range and 138 bps below where the Fed sits - an unusually wide gap, since the BoC cut more aggressively after both central banks peaked in July 2023. Canadian 2-year yields have risen over the past quarter and now trade 66 bps above the policy rate. The BoC finished QT in January 2025; total assets stand at $229B, and banks keep $71B in cash at the BoC overnight - slightly above the $20-60B steady-state target."
+  },
+  "labour": {
+    "as_of": "February 2026",
+    "model": "claude-opus-4-7 (autonomous draft, manual seed pending API key)",
+    "text": "The Canadian labour market is softening; the unemployment rate sits at 6.70%, up 10 bps over the past three months and at the 70th percentile of its 5-year range. Wage growth is mixed: raw LFS measures run between 3.4% and 4.2%, but the BoC's composition-adjusted LFS-Micro reads at 2.60%, well below the raw average - the dominant Canadian pattern in which compositional shifts toward higher-paid workers inflate the raw measure. Real wages are positive at roughly 2 percentage points above headline inflation, and wage growth still trades above services CPI by over a percentage point - labour-cost pressures haven't fully passed through to services prices yet."
+  },
+  "financial": {
+    "as_of": "May 2026",
+    "model": "claude-opus-4-7 (autonomous draft, manual seed pending API key)",
+    "text": "Oil is the dominant inflation impulse right now - WTI has rallied 74% over the past year (63% in just the last three months) to $105/bbl, mechanically adding about 2.7 percentage points to headline CPI through gasoline. CAD is roughly flat against USD over the past year (USDCAD at 1.3575, down 2% from a year ago), giving a slight cooling effect on goods CPI rather than a meaningful offset. The petrocurrency relationship continues to be weak post-2016: oil rallied hard while CAD barely moved, with daily-change correlation at +0.10 over the year. WCS is unusual - sitting at a $9 premium to WTI, inverting the typical $10-15 discount."
   }
 }

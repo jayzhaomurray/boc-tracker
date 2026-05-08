@@ -1566,7 +1566,9 @@ def _assemble_page(page: PageSpec, chart_panels: list[str],
         'and the <a href="https://economicdashboard.alberta.ca">Alberta Economic Dashboard</a>. '
         'Raw data available as CSV in the '
         '<a href="https://github.com/' + AUTHOR_DISPLAY_NAME + '/boc-tracker/tree/main/data">'
-        "GitHub repository</a>."
+        "GitHub repository</a>. "
+        "<em>Section blurbs are AI-generated from public data using a fixed analytical framework verified against primary sources. "
+        "Not investment advice.</em>"
         "</div>\n"
     )
 

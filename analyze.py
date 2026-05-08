@@ -570,6 +570,271 @@ Balance sheet (C$B, as of {v['as_of_balance_sheet']}; operating phase: {v['qt_ph
 """
 
 
+# ── Labour Market section ────────────────────────────────────────────────────
+
+def compute_labour_values() -> dict:
+    unemployment = load_series("unemployment_rate")
+    wages_all    = load_series("lfs_wages_all")        # level, SA
+    wages_perm   = load_series("lfs_wages_permanent")  # level, SA
+    seph         = load_series("seph_earnings")        # level, SA
+    lfs_micro    = load_series("lfs_micro")            # already Y/Y from BoC
+    cpi_services = load_series("cpi_services")         # NSA level
+    cpi_all      = load_series("cpi_all_items")        # SA level
+
+    # Y/Y wage and price measures
+    wages_all_yoy  = (wages_all.pct_change(12)  * 100).dropna()
+    wages_perm_yoy = (wages_perm.pct_change(12) * 100).dropna()
+    seph_yoy       = (seph.pct_change(12)       * 100).dropna()
+    services_yoy   = (cpi_services.pct_change(12) * 100).dropna()
+    headline_yoy   = (cpi_all.pct_change(12)    * 100).dropna()
+
+    # Earliest of all latest dates so every value is available
+    latest = min(s.index[-1] for s in [
+        unemployment, wages_all_yoy, wages_perm_yoy, seph_yoy, lfs_micro, services_yoy, headline_yoy
+    ])
+
+    u_now = float(asof(unemployment, latest))
+    u_3m  = float(asof(unemployment, latest - pd.DateOffset(months=3)))
+    u_6m  = float(asof(unemployment, latest - pd.DateOffset(months=6)))
+    u_12m = float(asof(unemployment, latest - pd.DateOffset(months=12)))
+
+    cutoff_5y = latest - pd.DateOffset(years=5)
+    u_window = unemployment[(unemployment.index >= cutoff_5y) & (unemployment.index <= latest)]
+    u_5y_min = float(u_window.min())
+    u_5y_max = float(u_window.max())
+    u_5y_pct = float((u_window <= u_now).mean() * 100)
+
+    wages_all_now  = float(asof(wages_all_yoy, latest))
+    wages_perm_now = float(asof(wages_perm_yoy, latest))
+    seph_now       = float(asof(seph_yoy, latest))
+    lfs_micro_now  = float(asof(lfs_micro, latest))
+    services_now   = float(asof(services_yoy, latest))
+    headline_now   = float(asof(headline_yoy, latest))
+
+    wage_measures = {
+        "lfs_all":       wages_all_now,
+        "lfs_permanent": wages_perm_now,
+        "seph":          seph_now,
+        "lfs_micro":     lfs_micro_now,
+    }
+    wage_band_lo    = min(wage_measures.values())
+    wage_band_hi    = max(wage_measures.values())
+    wage_band_width = wage_band_hi - wage_band_lo
+    wage_avg        = sum(wage_measures.values()) / len(wage_measures)
+    wages_above_3   = sum(1 for v in wage_measures.values() if v > 3.0)
+
+    # LFS-Micro vs raw LFS gap (negative = composition flattering raw, the dominant Canadian pattern)
+    lfs_micro_minus_raw = lfs_micro_now - wages_all_now
+
+    # Real wages (BoC convention: wage Y/Y - headline CPI Y/Y)
+    real_wage_lfs_all   = wages_all_now - headline_now
+    real_wage_lfs_micro = lfs_micro_now - headline_now
+
+    # Wage vs services CPI (leading indicator of services inflation persistence)
+    wage_minus_services  = wages_all_now - services_now
+    micro_minus_services = lfs_micro_now - services_now
+
+    return {
+        "latest_date":               latest.strftime("%B %Y"),
+        "as_of_unemployment":        latest.strftime("%B %Y"),
+        "as_of_wages":               latest.strftime("%B %Y"),
+
+        "unemployment":              u_now,
+        "unemployment_3mo_change":   u_now - u_3m,
+        "unemployment_6mo_change":   u_now - u_6m,
+        "unemployment_12mo_change":  u_now - u_12m,
+        "unemployment_5y_min":       u_5y_min,
+        "unemployment_5y_max":       u_5y_max,
+        "unemployment_5y_percentile": u_5y_pct,
+
+        "wages_lfs_all":             wages_all_now,
+        "wages_lfs_permanent":       wages_perm_now,
+        "wages_seph":                seph_now,
+        "wages_lfs_micro":           lfs_micro_now,
+        "wage_band_lo":              wage_band_lo,
+        "wage_band_hi":              wage_band_hi,
+        "wage_band_width":           wage_band_width,
+        "wage_avg":                  wage_avg,
+        "wages_above_3pct_count":    int(wages_above_3),
+        "wage_threshold":            3.0,
+
+        "lfs_micro_minus_raw_lfs":   lfs_micro_minus_raw,
+
+        "headline_cpi_yoy":          headline_now,
+        "services_cpi_yoy":          services_now,
+        "real_wage_lfs_all":         real_wage_lfs_all,
+        "real_wage_lfs_micro":       real_wage_lfs_micro,
+        "wage_minus_services":       wage_minus_services,
+        "micro_minus_services":      micro_minus_services,
+    }
+
+
+def format_labour_values(v: dict) -> str:
+    return f"""== Latest data ==
+
+Labour market state (as of {v['as_of_unemployment']}):
+  Unemployment rate:             {v['unemployment']:.2f}%
+                                 3-month change: {v['unemployment_3mo_change']:+.2f}pp; 12-month change: {v['unemployment_12mo_change']:+.2f}pp
+                                 Last 5y range: {v['unemployment_5y_min']:.2f}% to {v['unemployment_5y_max']:.2f}%; current at {v['unemployment_5y_percentile']:.0f}th percentile
+  BoC framing reference:         No fixed NAIRU; the Bank uses qualitative reads ("modest excess supply" / "tight") relative to multi-indicator benchmarks (SAN 2025-17). Don't anchor to a single number.
+
+Wage growth (Y/Y, as of {v['as_of_wages']}):
+  LFS, all employees:            {v['wages_lfs_all']:+.2f}%
+  LFS, permanent employees:      {v['wages_lfs_permanent']:+.2f}%
+  SEPH, all employees:           {v['wages_seph']:+.2f}%
+  LFS-Micro (composition-adj):   {v['wages_lfs_micro']:+.2f}%   <- BoC's preferred measure (SAN 2024-23)
+  Wage band:                     low {v['wage_band_lo']:+.2f}%, high {v['wage_band_hi']:+.2f}%, width {v['wage_band_width']:.2f}pp
+  Average across measures:       {v['wage_avg']:+.2f}%
+  Measures above 3% threshold:   {v['wages_above_3pct_count']} of 4   (3% = soft anchor for 2% inflation target with ~1% productivity)
+
+  LFS-Micro minus raw LFS:       {v['lfs_micro_minus_raw_lfs']:+.2f}pp   (negative = composition flattering raw average; this is the dominant Canadian pattern)
+
+Pass-through and real wages:
+  Headline CPI Y/Y:              {v['headline_cpi_yoy']:+.2f}%   (deflator for real wages, BoC convention)
+  Services CPI Y/Y:              {v['services_cpi_yoy']:+.2f}%
+  Real wages (LFS, all):         {v['real_wage_lfs_all']:+.2f}pp   (positive = workers gaining purchasing power)
+  Real wages (LFS-Micro):        {v['real_wage_lfs_micro']:+.2f}pp
+  LFS wages minus services CPI:  {v['wage_minus_services']:+.2f}pp   (positive = wage pressure not yet fully passed through to services prices)
+  LFS-Micro minus services CPI:  {v['micro_minus_services']:+.2f}pp
+
+Coverage gap: this framework tracks unemployment + wage measures + the wage-vs-services-CPI relationship. BoC also explicitly tracks employment rate, involuntary part-time, average hours, job vacancies, newcomer/youth unemployment composition, and unit labour costs (ULC). The view is partial; flag conclusions accordingly when the partial read might mislead.
+"""
+
+
+# ── Financial Conditions (external) section ──────────────────────────────────
+
+def compute_external_values() -> dict:
+    wti      = load_series("wti")       # daily, USD/bbl
+    brent    = load_series("brent")     # daily, USD/bbl
+    wcs      = load_series("wcs")       # monthly, USD/bbl
+    usdcad   = load_series("usdcad")    # daily, CAD per USD
+
+    # Latest available dates per frequency
+    latest_daily = min(s.index[-1] for s in [wti, brent, usdcad])
+    latest_wcs   = wcs.index[-1]
+
+    # Oil
+    wti_now  = float(asof(wti, latest_daily))
+    wti_1y   = float(asof(wti, latest_daily - pd.DateOffset(years=1)))
+    wti_3m   = float(asof(wti, latest_daily - pd.DateOffset(months=3)))
+    wti_yoy_pct       = (wti_now / wti_1y - 1) * 100 if wti_1y > 0 else None
+    wti_3mo_change    = (wti_now / wti_3m - 1) * 100 if wti_3m > 0 else None
+    cpi_impulse_wti   = wti_yoy_pct * 0.037 if wti_yoy_pct is not None else None  # gasoline 3.7% of basket
+
+    brent_now = float(asof(brent, latest_daily))
+
+    wcs_now = float(asof(wcs, latest_wcs))
+    # WTI value at WCS as-of date (closest daily before/at latest_wcs)
+    wti_at_wcs_date = float(asof(wti, latest_wcs))
+    wcs_wti_diff = wti_at_wcs_date - wcs_now  # positive = WCS at a discount to WTI
+
+    # USDCAD
+    usdcad_now  = float(asof(usdcad, latest_daily))
+    usdcad_3m   = float(asof(usdcad, latest_daily - pd.DateOffset(months=3)))
+    usdcad_6m   = float(asof(usdcad, latest_daily - pd.DateOffset(months=6)))
+    usdcad_12m  = float(asof(usdcad, latest_daily - pd.DateOffset(years=1)))
+    usdcad_3mo_change_pct  = (usdcad_now / usdcad_3m  - 1) * 100
+    usdcad_6mo_change_pct  = (usdcad_now / usdcad_6m  - 1) * 100
+    usdcad_12mo_change_pct = (usdcad_now / usdcad_12m - 1) * 100
+
+    in_stress_corridor   = bool(1.45 <= usdcad_now <= 1.47)
+    near_stress_corridor = bool(1.43 <= usdcad_now <= 1.49)
+
+    # CPI pass-through from CAD: ~0.3-0.6 pp per 10% sustained move; using 0.045 pp per 1%
+    # Sign convention: depreciation (USDCAD up) = positive impulse on CPI; appreciation = negative
+    implied_cpi_pp_from_cad = usdcad_12mo_change_pct * 0.045
+
+    # CAD-WTI co-movement over last year (daily change correlation)
+    df_co = wti.to_frame("wti").join(usdcad.to_frame("cad"), how="inner").dropna()
+    recent = df_co[df_co.index >= latest_daily - pd.DateOffset(years=1)]
+    if len(recent) > 30:
+        chg = recent.pct_change().dropna()
+        try:
+            wti_cad_corr = float(chg["wti"].corr(chg["cad"]))
+        except Exception:
+            wti_cad_corr = None
+    else:
+        wti_cad_corr = None
+
+    # Petrocurrency directional alignment over last 3 months
+    wti_dir = "up" if (wti_3mo_change is not None and wti_3mo_change > 1) else \
+              ("down" if (wti_3mo_change is not None and wti_3mo_change < -1) else "flat")
+    cad_dir_usdcad = "up" if usdcad_3mo_change_pct > 1 else \
+                     ("down" if usdcad_3mo_change_pct < -1 else "flat")
+    # USDCAD up = CAD weaker. Petrocurrency: oil up + CAD strong (USDCAD down), or oil down + CAD weak (USDCAD up)
+    if wti_dir == "up" and cad_dir_usdcad == "down":
+        petrocurrency = "aligned (oil up, CAD strengthening)"
+    elif wti_dir == "down" and cad_dir_usdcad == "up":
+        petrocurrency = "aligned (oil down, CAD weakening)"
+    elif wti_dir == "flat" or cad_dir_usdcad == "flat":
+        petrocurrency = "ambiguous (one side roughly flat)"
+    else:
+        petrocurrency = "diverging (CAD and oil moving against the petrocurrency relationship)"
+
+    return {
+        "latest_date":          latest_daily.strftime("%B %Y"),
+        "as_of_daily":          latest_daily.strftime("%B %d, %Y"),
+        "as_of_wcs":            latest_wcs.strftime("%B %Y"),
+
+        "wti":                  wti_now,
+        "wti_yoy_pct":          wti_yoy_pct if wti_yoy_pct is not None else 0.0,
+        "wti_3mo_change_pct":   wti_3mo_change if wti_3mo_change is not None else 0.0,
+        "brent":                brent_now,
+
+        "wcs":                  wcs_now,
+        "wcs_wti_differential": wcs_wti_diff,
+
+        "usdcad":                  usdcad_now,
+        "usdcad_3mo_change_pct":   usdcad_3mo_change_pct,
+        "usdcad_6mo_change_pct":   usdcad_6mo_change_pct,
+        "usdcad_12mo_change_pct":  usdcad_12mo_change_pct,
+        "in_stress_corridor":      in_stress_corridor,
+        "near_stress_corridor":    near_stress_corridor,
+
+        "cpi_impulse_from_wti":         cpi_impulse_wti if cpi_impulse_wti is not None else 0.0,
+        "implied_cpi_pp_from_cad_12mo": implied_cpi_pp_from_cad,
+
+        "wti_3mo_direction":     wti_dir,
+        "cad_3mo_direction":     cad_dir_usdcad,
+        "petrocurrency_alignment": petrocurrency,
+        "wti_cad_correlation_1y": wti_cad_corr if wti_cad_corr is not None else 0.0,
+    }
+
+
+def format_external_values(v: dict) -> str:
+    stress_label = "INSIDE 1.45-1.47" if v['in_stress_corridor'] else \
+                   ("near (1.43-1.49)" if v['near_stress_corridor'] else "no")
+    return f"""== Latest data ==
+
+Oil (as of {v['as_of_daily']}):
+  WTI:                           ${v['wti']:.2f}/bbl
+  WTI Y/Y change:                {v['wti_yoy_pct']:+.1f}%
+  WTI 3-month change:            {v['wti_3mo_change_pct']:+.1f}%
+  Brent:                         ${v['brent']:.2f}/bbl
+  Implied headline CPI impulse:  {v['cpi_impulse_from_wti']:+.2f}pp   (WTI Y/Y * gasoline-basket-weight 3.7%; mechanical, gasoline channel only)
+
+WCS — Western Canada Select (as of {v['as_of_wcs']}):
+  WCS price:                     ${v['wcs']:.2f}/bbl
+  WCS-to-WTI discount:           ${v['wcs_wti_differential']:.2f}/bbl   (typical $10-15; >$20 = pipeline-constrained; <$12 = post-TMX expansion)
+
+USDCAD (as of {v['as_of_daily']}):
+  Level:                         {v['usdcad']:.4f}   (higher = weaker CAD)
+  3-month change:                {v['usdcad_3mo_change_pct']:+.2f}%
+  6-month change:                {v['usdcad_6mo_change_pct']:+.2f}%
+  12-month change:               {v['usdcad_12mo_change_pct']:+.2f}%
+  Stress corridor (1.45-1.47):   {stress_label}
+  Implied 12mo CPI pass-through: {v['implied_cpi_pp_from_cad_12mo']:+.2f}pp   (12mo CAD move * ~0.045pp per 1%; goods CPI; concentrated over 12-18 months)
+
+Petrocurrency relationship:
+  WTI 3mo direction:             {v['wti_3mo_direction']}
+  CAD 3mo direction (USDCAD):    {v['cad_3mo_direction']}   (USDCAD higher = CAD weaker)
+  Alignment:                     {v['petrocurrency_alignment']}
+  WTI-CAD daily-change correlation (last 1y): {v['wti_cad_correlation_1y']:+.2f}   (post-2016 typical: weak; <0.3 absolute = decoupled)
+
+Coverage gap: this framework tracks oil and bilateral USDCAD only. BoC also tracks CEER (multilateral CAD index — sometimes diverges materially from USDCAD), credit spreads, equity markets, and explicit FX risk premium decomposition (which has been the dominant CAD driver in 2024-2025 episodes per BoC SAN 2025-2 and MPR Jan 2025 In Focus). The view is partial; flag conclusions accordingly when the partial read might mislead.
+"""
+
+
 # ── Section registry ─────────────────────────────────────────────────────────
 
 SECTIONS = {
@@ -583,7 +848,16 @@ SECTIONS = {
         "compute":  compute_policy_values,
         "format":   format_policy_values,
     },
-    # Future: "labour", "external"
+    "labour": {
+        "name":     "Labour Market",
+        "compute":  compute_labour_values,
+        "format":   format_labour_values,
+    },
+    "financial": {
+        "name":     "Financial Conditions",
+        "compute":  compute_external_values,
+        "format":   format_external_values,
+    },
 }
 
 
