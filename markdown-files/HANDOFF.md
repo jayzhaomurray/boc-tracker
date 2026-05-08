@@ -465,15 +465,14 @@ The Inflation section's framework is fully verified and the blurb pipeline runs 
 - **Breadth synthesis** — IMPLEMENTED. Four-state classification (broad-based pressure / broad-based softening / clustered near target / polarized) using `tilt = above3-deviation − below1-deviation`. Output uses the state name, not the threshold-vs-historical four-direction comparison.
 - **Writing style and structure rules** — codified across all sections (plain verbs, semicolons, no codas, conventional shorthand, plain hedges, takeaway-first, no forecasts, no policy prescription, never speculate when verifiable).
 
-### Items still to verify, in order (sections beyond Inflation)
+### Verification status — all four sections (as of May 8, 2026)
 
-1. Breadth chart's 1996–2019 baseline — `analyses/boc_speech_breadth_reference.csv` is on hand for empirical validation
-2. Neutral rate range (~2.5–3% for Canada) — needs current BoC r* citation [Policy Rates]
-3. NAIRU (~5–5.5% for Canada) — needs current source [Labour]
-4. Productivity assumption (~1%) embedded in the 3% wage-growth threshold [Labour]
-5. CAD pass-through rule of thumb (~10% depreciation → 1–2% goods CPI) — needs source [Financial Conditions]
-6. Petrocurrency relationship characterization — when has it broken down historically? [Financial Conditions]
-7. WCS-WTI normal differential — tracked spread or footnote? [Financial Conditions]
+All four framework sections now carry explicit verification flags at the top of each section in `analysis_framework.md`. Each is anchored to BoC primary sources and (where appropriate) empirical distributions from our own data.
+
+- **Inflation:** VERIFIED end-to-end. Trim/median, CPIXFET, 0.17%/month threshold, top-level decomposition rule, four-state breadth classification, writing style — all codified and documented above.
+- **Monetary Policy:** VERIFIED end-to-end (May 7, 2026). Neutral rate range 2.25–3.25% (Staff Note 2025-16, MPR April 2026); peak QE March 2021 not April 2022 ($575.4B verified from `boc_total_assets`); floor system permanent since April 2022 (not 2025); QT operational timeline (April 25, 2022 — January 29, 2025); $20–60B settlement balance steady-state target (Gravelle March 2024 speech). Tiered thresholds for `bocfed_spread` and `can2y_overnight_spread` anchored to empirical percentiles since 1996/2001. 2Y term premium magnitudes from BoC ACM literature.
+- **Labour Market:** VERIFIED (May 8, 2026). NAIRU framing replaced — BoC has moved away from a single point estimate to a multi-indicator benchmark approach (SAN 2025-17). Wage threshold ~3% kept as a soft anchor; productivity assumption ~1% verified against SAN 2025-14 with note that recent productivity is structurally weak. LFS-Micro composition adjustment verified (SAN 2024-23) with the empirical pattern noted: Canadian LFS-Micro typically runs *below* raw LFS. "Margin absorption" softened to BoC-validated framing of "leading indicator for services inflation persistence." Real wages = wage Y/Y − headline CPI Y/Y per BoC convention. Coverage gap explicitly flagged: framework lacks employment rate, vacancies, hours, ULC, newcomer/youth — all BoC-tracked.
+- **Financial Conditions:** VERIFIED (May 8, 2026). CAD pass-through corrected from "1–2 pp goods CPI per 10% move" to "0.3–0.6 pp" (BoC Discussion Paper 2015 dp2015-91; the older figure was for 25–30% depreciation episodes). Petrocurrency relationship flagged as structurally weak post-2016 (Alberta Central). Stress corridor expanded from 1.45–1.46 to 1.45–1.47 with three episodes (Jan 2016, Mar 2020, Dec 2024–Jan 2025). WTI Y/Y disinflationary impulse quantified (~0.35 pp per 10% via gasoline, 3.7% basket weight). BoC-Fed → CAD framing validated (rate diff explains ~25% of recent moves; FX risk premium ~75% per BoC SAN 2025-2 + MPR Jan 2025). WCS-WTI normal $10–15, >$20 constrained, <$12 post-TMX. Coverage gap explicitly flagged: framework lacks CEER, credit spreads, equity, explicit FX risk premium decomposition.
 
 ### Pipeline status
 
@@ -482,12 +481,11 @@ Built and runnable. End-to-end:
 - `analyze.py` reads `markdown-files/analysis_framework.md`, computes the section's values from CSVs, builds a prompt, calls `claude-opus-4-7`, writes the blurb to `data/blurbs.json`. Loads the prior blurb (if any) to pass as comparison context.
 - `data/blurbs.json` shape: `{section_id: {as_of, model, text}}`.
 - `build.py` reads `data/blurbs.json` and injects the section heading + blurb above the chart at the index named in `PageSpec.sections`.
-- **Wired sections (compute + format + blurb):** `inflation`, `policy`. Each has a `compute_*_values` + `format_*_values` pair in `analyze.py` and a generated blurb in `data/blurbs.json`. Adding a new section is a matter of writing the same pair, registering in `SECTIONS`, and adding the chart-index mapping to `PageSpec.sections`.
-- **Pending sections:** `labour`, `external` (Financial Conditions). Section *headings* are already placed via `PageSpec.sections={0: "policy", 3: "inflation", 6: "labour", 8: "financial"}`; only the compute/format pairs and blurbs are missing. Same verification-then-build process as inflation and policy.
-- The current `data/blurbs.json` blurbs were hand-generated in conversation by Opus 4.7 (the same model `analyze.py` calls). Once `ANTHROPIC_API_KEY` is set, blurbs regenerate automatically on each run.
+- **All four sections wired (compute + format + framework + blurb):** `inflation`, `policy`, `labour`, `financial`. Each has a `compute_*_values` + `format_*_values` pair in `analyze.py`, a verified framework section (status flags at the top of each section in `analysis_framework.md`), and a generated blurb in `data/blurbs.json`. The section heading `financial` is what `build.py` and `PageSpec.sections` use; internal Python function names use `external` for historical reasons (compute_external_values, format_external_values) — both names refer to the same domain.
+- **CI workflow generates blurbs end-to-end** when `ANTHROPIC_API_KEY` is present in repo Secrets. Step "Generate section blurbs" between Fetch and Build loops over all four section_ids and calls `python analyze.py --section <id>`. Each call generates a blurb, then runs a self-review pass (`review_blurb` in analyze.py) that checks for factual errors against the framework + computed values; flagged blurbs save with `review_flags` for the next user review rather than blocking. If the secret isn't set, the step emits a `::warning::` annotation and skips — CI stays green; blurbs hold at the last manually-saved values.
+- **Voice quality:** Inflation and Monetary Policy blurbs went through user iteration cycles and represent ground-truth voice. Labour Market and Financial Conditions blurbs were generated autonomously on May 8, 2026 against the verified frameworks; the prose is unverified by the user yet and may need revision when the user next reviews. Activating `ANTHROPIC_API_KEY` will regenerate all four nightly via the same self-reviewed pipeline.
 - **Policy section data architecture (built May 7, 2026).** Action-state classification ("on hold" / "cutting" / "hiking") needs meeting-resolution data, which the monthly `overnight_rate` series doesn't provide. Solution: a daily series (`overnight_rate_daily`, V39079, since 2009) feeds `compute_policy_values`; the BoC FAD calendar lives in two files (`data/fad_calendar.json` from the BoC iCal feed for upcoming + recent past; `data/fad_history.json` static historical bootstrap, committed). `_load_fad_calendar()` merges them. The chart still uses the monthly `overnight_rate` for its longer history; data sources serve different purposes.
-- **Blurb development workflow.** For each section: (1) verify every analytical claim in the framework's section against primary sources or our own data (parallel Sonnet subagents work well), (2) build `compute_*_values` and `format_*_values`, (3) run `--print-only` to inspect prompt + values, (4) generate blurb in conversation against the prompt, (5) iterate with the user on plain-language quality, (6) commit. Blurbs aren't one-shot quality yet — iteration with a human is part of the loop until we've seen multiple sections come out clean.
-- Still to do: AI-generated content disclaimer in the About section; wire `analyze.py` into the GitHub Actions workflow with `ANTHROPIC_API_KEY` as a secret.
+- **Blurb development workflow.** For each section: (1) verify every analytical claim in the framework's section against primary sources or our own data (parallel Sonnet subagents work well), (2) build `compute_*_values` and `format_*_values`, (3) run `--print-only` to inspect prompt + values, (4) generate blurb against the prompt, (5) iterate with the user on plain-language quality, (6) commit. Steps 1-5 were all done for inflation and policy; for labour and financial, steps 1-4 were done autonomously and step 5 is pending.
 
 ---
 
@@ -510,17 +508,18 @@ Built and runnable. End-to-end:
 - [x] **Oil Prices** — WTI/Brent/WCS, smooth toggle, ymin=0 floor for the April-2020 anomaly
 - [x] **USD/CAD** — daily, 10Y default
 - [x] **Live y-axis computation** — `_computeYRange` + `_niceDtick` + `_dtickFormat` + `_refreshYAxis` adjust the y-axis to currently visible traces in the current x-window; `Y_FLOORS` carries chart-level floors. Replaces the old build-time Y_RANGES.
-- [x] **Section heading + blurb injection** — Inflation section appears above the CPI chart with a blurb generated from the analysis framework
-- [x] About section credits all four data sources
+- [x] **Section heading + blurb injection** — All four sections (Inflation, Monetary Policy, Labour Market, Financial Conditions) appear with blurbs generated from the verified analysis framework
+- [x] About section credits all four data sources + carries the AI-generated-content disclaimer ("Section blurbs are AI-generated from public data using a fixed analytical framework verified against primary sources. Not investment advice.")
 - [x] `analyses/` folder convention; `probe_*.py` and `table-*.json` gitignored
-- [x] Analysis framework (`markdown-files/analysis_framework.md`) restructured with blurb structure, writing style, verification, and top-level-aggregates rules; Inflation section verified end-to-end
+- [x] **Analysis framework verified end-to-end across all four sections** — Inflation (May 2026), Monetary Policy (May 2026), Labour Market (May 2026), Financial Conditions (May 2026). Each section carries an explicit VERIFIED status flag at the top with citations to BoC primary sources and empirical-distribution anchors.
+- [x] **All four `compute_*_values` + `format_*_values` pairs in `analyze.py`** — `compute_inflation_values`, `compute_policy_values`, `compute_labour_values`, `compute_external_values` all registered in SECTIONS dict; blurbs in `data/blurbs.json` for all four sections.
+- [x] **CI workflow wired for blurb regeneration** — `.github/workflows/update.yml` includes a "Generate section blurbs" step that loops over all four sections; gates on `ANTHROPIC_API_KEY` secret presence (skips with a warning if not set, so CI stays green either way).
+- [x] **Self-review pass in analyze.py** — second LLM call after blurb generation runs a focused factual-correctness checklist (direction/sign, asset/liability, attribution, dates, action-state, magnitude); flagged blurbs save with `review_flags` for user iteration rather than blocking.
 
 ## What has NOT been implemented
 
-- [ ] **Framework verification for non-Inflation sections** — Policy Rates, Labour, Financial Conditions still need their thresholds and signals verified
-- [ ] **`analyze.py` for Labour and Financial Conditions sections** — `inflation` and `policy` are registered in the `SECTIONS` dict and have generated blurbs; `labour` and `external` (Financial Conditions) need `compute_*_values` + `format_*_values` and blurbs. Section headings for all four are already placed.
-- [ ] **AI-generated content disclaimer** — short note in the About section
-- [ ] **`ANTHROPIC_API_KEY` in GitHub Actions** — currently the cron runs `fetch.py` and `build.py` only; `analyze.py` is not wired into CI
+- [ ] **`ANTHROPIC_API_KEY` secret set in repo Settings** — workflow code is in place; flipping the switch requires the user to add the secret at https://github.com/jayzhaomurray/boc-tracker/settings/secrets/actions. Until set, blurbs stay at the last manually-seeded values; CI runs are still green and everything else (data fetch, chart build, auto-commit) works as before.
+- [ ] **Labour Market and Financial Conditions blurbs are autonomous-draft as of May 2026** — verified framework + computed values, but the prose itself was generated overnight without user iteration. Quality unverified for those two; expect revision against plain-language principles when the user next reviews. Inflation and Monetary Policy blurbs went through user iteration cycles and are ground-truth voice.
 - [ ] **Multiple pages** — PAGES list has one entry; infrastructure is ready
 - [ ] **Navigation bar** — only relevant after multi-page split
 - [ ] **Custom domain**
@@ -529,41 +528,23 @@ Built and runnable. End-to-end:
 
 ## Next steps, in priority order
 
-### 1. Set `ANTHROPIC_API_KEY` and confirm `analyze.py` works end-to-end
+### 1. Set `ANTHROPIC_API_KEY` in repo Secrets to activate full automation
 
-The pipeline is built. The current `data/blurbs.json` was hand-generated by Opus in conversation. To validate that the script works as designed, set the env var and run `python analyze.py`. The blurb should be regenerated automatically and look comparable to the hand-generated version.
+This is the single switch that turns the dashboard from "data-and-charts auto-update; blurbs hold at last manual seed" into "everything auto-updates nightly." Workflow code is in place (`.github/workflows/update.yml` already loops over all four sections through `python analyze.py`); the secret just needs to be added at https://github.com/jayzhaomurray/boc-tracker/settings/secrets/actions. Until set, the workflow gracefully skips with a `::warning::` annotation and CI stays green.
 
-Once confirmed, add `ANTHROPIC_API_KEY` as a GitHub Actions secret and add an `analyze.py` step to the cron workflow between `fetch.py` and `build.py`.
+After setting the secret, manually dispatch the workflow once to confirm: blurbs in `data/blurbs.json` should regenerate with new `model` and possibly `review_flags` fields. The self-review pass (added May 8) catches factual errors before save.
 
-### 2. Framework verification + blurb generation for Monetary Policy
+### 2. User iteration on the autonomous-draft Labour Market and Financial Conditions blurbs
 
-The Monetary Policy framework section is now structurally complete (rate signals, balance sheet signals, thresholds, "what to surface"). Items needing primary-source verification before generating a blurb:
+These were generated overnight (May 8, 2026) against the verified frameworks but did not go through user-iteration on plain-language quality. The Monetary Policy and Inflation blurbs went through that cycle and are ground-truth voice; Labour and Financial Conditions need the same treatment. Iterate against the framework writing principles — plain language, semantic preservation, action-state verbs, no journey phrasing. Once the user is satisfied with both blurbs' voice, save them as the new ground truth.
 
-- Neutral rate range (2.25–3.25%) — needs a current BoC r* citation (the Bank's annual neutral-rate update report)
-- Pre-COVID balance sheet baseline (~$120B) and April-2022 peak (~$575B) — straightforward to verify directly from the data we now have
-- Floor system "permanent in 2025" claim — needs verification of the exact BoC announcement language and date
-- **Verified May 2026:** 2Y term-premium magnitudes and regime distortions — codified in framework's `can2y_overnight_spread` bullet and 2-Year Yields chart footnote (0–40 bp normal regimes, 20–60 bp post-2023, materially distorted during QE/QT and stress). See "Parked items" below for the full investigation.
-
-After verification, write `compute_policy_values` + `format_policy_values` in `analyze.py`, register `policy` in `SECTIONS`, run end-to-end. The Monetary Policy section then has a generated blurb above its three charts.
-
-### 3. Continue framework verification for Labour Market and Financial Conditions
-
-- Labour: NAIRU range (~5–5.5%) and the productivity assumption (~1%) embedded in the 3% wage-growth threshold.
-- Financial Conditions: CAD pass-through rule of thumb, petrocurrency relationship, WCS spread treatment.
-
-Same process: verify, then add `compute_*` / `format_*` to `analyze.py`, register in `SECTIONS`.
-
-### 4. Inflation expectations data for the Inflation section
+### 3. Inflation expectations data for the Inflation section
 
 BoC publishes Business Outlook Survey (BOS) and Survey of Consumer Expectations (CSCE) quarterly. Data is available as CSV downloads from the BoC publications page (more manual than Valet). Once fetched, adds an inflation-expectations line/chart to the Inflation section answering "are expectations anchored at 2%."
 
 User noted this is more manual than other data fetching, so it's deferred but still valuable.
 
-### 5. Add AI-generated-content disclaimer
-
-Short, unobtrusive note in the About section: "Section blurbs are AI-generated from public data using a fixed analytical framework. Not investment advice." User flagged this as low priority.
-
-### 6. Eventually: deep-dive Monetary Policy page
+### 4. Eventually: deep-dive Monetary Policy page
 
 A separate page (or page section) for the practitioner-grade detail that doesn't fit on the overview:
 - Yield curve term structure (5Y, 10Y, 30Y; 2Y vs 10Y spread for recession indicator)
@@ -575,7 +556,7 @@ A separate page (or page section) for the practitioner-grade detail that doesn't
 
 User has explicitly framed this as deep-dive territory; not for the overview.
 
-### 7. Multi-page split (eventually)
+### 5. Multi-page split (eventually)
 
 When chart count grows past ~12, consider splitting into themed pages. Planned (this is illustrative, not committed):
 - `index.html` — overview (current page)
@@ -583,7 +564,7 @@ When chart count grows past ~12, consider splitting into themed pages. Planned (
 - `inflation.html` — deep dive (CPI components, sub-aggregates, etc.)
 - `labour.html` — deep dive (hours, participation, sectoral, regional)
 
-### 8. Charts still on the wishlist
+### 6. Charts still on the wishlist
 
 The original A-tier roadmap items not yet built:
 
@@ -648,16 +629,12 @@ The original A-tier roadmap items not yet built:
 
 ## Deferred quality fixes
 
-Identified during a code-quality review (May 2026). Real issues, not nits — addressed when convenient.
+Original list identified during a code-quality review (May 2026). All five items were applied during an autonomous overnight session on May 8, 2026:
 
-1. **`analyze.py:105` — latent KeyError on partial CPI release.** `above3 = above3[valid]` filters `above3` to months where all 60 depth-3 components have ≥13 months of valid history. If `latest` (the headline CPI's last month) refers to a month where one component is delayed, `above3.loc[latest]` raises `KeyError`. Crashes `compute_inflation_values` during partial-release windows. Latent because `analyze.py` isn't wired into CI yet — but it'll bite the moment it is. **Fix:** snap `latest` to the last index in `above3` (`latest_breadth = above3.index.max()`), or fall back if `latest not in above3.index`.
+1. ~~`analyze.py:105` latent KeyError on partial CPI release~~ — **DONE.** `latest_breadth = above3.index[above3.index <= latest].max()` snaps the lookup to the most recent breadth-valid date.
+2. ~~JS `nT = 4` hardcoded~~ — **DONE.** Templated from Python via `.replace("{n_cpi_transforms}", str(len(_CPI_TRANSFORMS)))`.
+3. ~~`_nice_dtick` unreachable `else: nice = 0.5` branch~~ — **DONE.** Removed in both Python and JS copies; final branch is now `else: nice = 1.0` with an inline comment about why.
+4. ~~Bare `except Exception:` in analyze.py blurbs.json handler and fetch.py `_latest_saved_date`~~ — **DONE.** analyze.py write-time corruption handler now narrows to `JSONDecodeError`, logs the line/col, AND backs up the corrupt file with a timestamp before overwriting (so prior sections' blurbs aren't silently lost). fetch.py narrowed to expected pandas/parser exceptions; OSError-class issues now surface.
+5. ~~Self-review pass for blurb generation~~ — **DONE.** `review_blurb()` in analyze.py runs after blurb generation; focused factual-correctness checklist; failures save with `review_flags` rather than block. Activated in CI when `ANTHROPIC_API_KEY` is set.
 
-2. **JS `nT = 4` hardcoded in CPI handlers (`build.py` JS section, `_cpiInitVisible`/`_cpiApplyVisibility`/`cpiXformClick`).** Currently correct because `_CPI_TRANSFORMS` has 4 entries; the Python side uses `len(_CPI_TRANSFORMS)`, the JS side does not. Adding or reordering a transform silently misindexes traces. **Fix:** template `nT` from Python, e.g. inject `var nT = {len(_CPI_TRANSFORMS)};` into the JS block.
-
-3. **`_nice_dtick` — unreachable `else: nice = 0.5` branch (Python and JS copies).** `norm = rough / 10**floor(log10(rough))` is always in [1, 10), so `norm < 1.0` cannot occur. Trivial cleanup.
-
-4. **Bare `except Exception:` swallows errors.**
-   - `analyze.py:268` (`_load_existing_blurbs` or similar) silently treats a corrupt `blurbs.json` as `{}`, so the next write overwrites all prior blurbs. **Fix:** narrow to `JSONDecodeError`, log a warning, and back up the corrupt file before overwriting.
-   - `fetch.py:228` (`_latest_saved_date`) silently masks all CSV read errors. Fine for the wait-mode polling case, but a real read error (permissions, schema change) is invisible. Lower priority.
-
-5. **Self-review pass for blurb generation.** `analyze.py` currently does one LLM call to produce a blurb. LLM-generated prose against a framework can absorb high-level style rules well but factual/domain errors (asset/liability confusion, sign/direction mistakes, wrong attribution) sometimes slip through one-shot. **Fix:** after the initial blurb is generated, run a second LLM call that takes the generated blurb + framework + computed values + a small checklist ("verify: asset side vs liability side; cuts vs hikes direction; what's moving and which way; spread sign matches the prose claim; dates correct"). If the review flags errors, regenerate or surface for human review. **Cost:** one extra API call per blurb. **When:** wire in alongside `ANTHROPIC_API_KEY` automation in CI; not needed during the manual-review build-up period because the user is the review gate. Identified when the policy blurb's first draft mistakenly framed `settlement balances` as an asset.
+(No new deferred items as of May 8, 2026.)
