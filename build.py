@@ -222,12 +222,13 @@ def _nice_dtick(ymin: float, ymax: float, target: int = 5) -> float:
     rough = span / target
     mag = 10 ** math.floor(math.log10(rough))
     norm = rough / mag
-    # Round DOWN: pick the largest nice number that is <= norm
+    # Round DOWN: pick the largest nice number that is <= norm.
+    # `norm` is in [1, 10) by construction (rough / 10^floor(log10(rough))),
+    # so the final branch is `else`, not `>= 1.0`.
     if norm >= 5.0:   nice = 5.0
     elif norm >= 2.5: nice = 2.5
     elif norm >= 2.0: nice = 2.0
-    elif norm >= 1.0: nice = 1.0
-    else:             nice = 0.5
+    else:             nice = 1.0
     return nice * mag
 
 
@@ -1119,11 +1120,11 @@ function _niceDtick(ymin, ymax, target) {
   var mag = Math.pow(10, Math.floor(Math.log10(rough)));
   var norm = rough / mag;
   var nice;
+  // norm is in [1, 10) by construction; final branch is `else`, not `>= 1`.
   if (norm >= 5) nice = 5;
   else if (norm >= 2.5) nice = 2.5;
   else if (norm >= 2) nice = 2;
-  else if (norm >= 1) nice = 1;
-  else nice = 0.5;
+  else nice = 1;
   return nice * mag;
 }
 
@@ -1317,7 +1318,7 @@ function gcRange(years, btn) {
 
 function _cpiInitVisible(div) {
   if (div._cpiVisible) return;
-  var nT = 4;
+  var nT = {n_cpi_transforms};
   var nLines = div.data.length / nT;
   div._cpiVisible = [];
   for (var k = 0; k < nLines; k++) {
@@ -1331,7 +1332,7 @@ function _cpiInitVisible(div) {
 
 function _cpiApplyVisibility(div) {
   _cpiInitVisible(div);
-  var nT = 4;
+  var nT = {n_cpi_transforms};
   var t = (div._cpiTransform === undefined) ? 3 : div._cpiTransform;
   var v = div._cpiVisible;
   var vis = [];
@@ -1534,6 +1535,7 @@ def _assemble_page(page: PageSpec, chart_panels: list[str],
         .replace("{chart_ids_js}", chart_ids_js)
         .replace("{default_ranges_js}", default_ranges_js)
         .replace("{y_floors_js}", y_floors_js)
+        .replace("{n_cpi_transforms}", str(len(_CPI_TRANSFORMS)))
     )
 
     header = (

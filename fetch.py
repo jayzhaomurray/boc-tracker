@@ -260,7 +260,9 @@ def _latest_saved_date(path: Path) -> pd.Timestamp | None:
     try:
         col = pd.read_csv(path, usecols=[0], parse_dates=True)
         return pd.to_datetime(col.iloc[:, 0]).max()
-    except Exception:
+    except (pd.errors.EmptyDataError, pd.errors.ParserError, ValueError, IndexError, KeyError):
+        # Expected: empty file, malformed CSV, missing/unparseable date column.
+        # Other exceptions (e.g. OSError on permissions) propagate so they're visible.
         return None
 
 

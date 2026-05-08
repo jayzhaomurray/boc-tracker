@@ -102,8 +102,11 @@ def compute_inflation_values() -> dict:
     below1 = below1[valid]
     ha_above = above3["1996":"2019"].mean()
     ha_below = below1["1996":"2019"].mean()
-    above_dev = float(above3.loc[latest] - ha_above)
-    below_dev = float(below1.loc[latest] - ha_below)
+    # Snap to the most recent breadth date at or before `latest`, in case a
+    # component's release lags the headline (partial-release windows).
+    latest_breadth = above3.index[above3.index <= latest].max() if (above3.index <= latest).any() else above3.index.max()
+    above_dev = float(above3.loc[latest_breadth] - ha_above)
+    below_dev = float(below1.loc[latest_breadth] - ha_below)
     tilt = above_dev - below_dev
 
     return {
@@ -926,8 +929,8 @@ def main() -> None:
         try:
             prior_data = json.loads(OUT.read_text())
             prior = prior_data.get(section_id, {}).get("text")
-        except Exception:
-            pass
+        except json.JSONDecodeError as e:
+            print(f"  Warning: blurbs.json could not be parsed (line {e.lineno}, col {e.colno}); proceeding without prior-blurb context.", file=sys.stderr)
 
     prompt = build_prompt(section_id, framework, values_str, prior_blurb=prior)
 
@@ -953,7 +956,12 @@ def main() -> None:
     if OUT.exists():
         try:
             out = json.loads(OUT.read_text())
-        except Exception:
+        except json.JSONDecodeError as e:
+            # Don't silently overwrite — back up the corrupt file so we don't lose other sections' blurbs.
+            from datetime import datetime
+            backup_path = OUT.with_suffix(f".corrupt.{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+            OUT.rename(backup_path)
+            print(f"  Warning: blurbs.json was corrupt (line {e.lineno}, col {e.colno}). Backed up to {backup_path.name} before writing fresh file.", file=sys.stderr)
             out = {}
     out[section_id] = {
         "as_of": values["latest_date"],
