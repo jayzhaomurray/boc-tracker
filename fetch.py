@@ -50,6 +50,22 @@ STATSCAN_SERIES = {
     "cpi_food":            41690974,   # Table 18-10-0004-01: CPI Food, Canada, NSA (2002=100)
     "cpi_energy":          41691239,   # Table 18-10-0004-01: CPI Energy, Canada, NSA (2002=100)
     "cpi_goods":           41691222,   # Table 18-10-0004-01: CPI Goods, Canada, NSA (2002=100)
+    # GDP / Activity section (added May 2026)
+    "gdp_monthly":               65201210,  # Table 36-10-0434: Monthly real GDP, all industries, chained 2017 $, SAAR
+    "gdp_quarterly":             62305752,  # Table 36-10-0104: Quarterly real GDP, expenditure-based, chained 2017 $, SAAR
+    "gdp_qq_growth":           1594571783,  # Table 36-10-0104: Q/Q % change, pre-computed (saves one calculation)
+    "gdp_contrib_consumption":   79448555,  # Table 36-10-0104: Household final consumption, contribution to annualized Q/Q growth
+    "gdp_contrib_govt":          79448562,  # Table 36-10-0104: Government final consumption, contribution to annualized Q/Q growth
+    "gdp_contrib_investment":    79448563,  # Table 36-10-0104: Gross fixed capital formation, contribution to annualized Q/Q growth
+    "gdp_contrib_inventories":   79448572,  # Table 36-10-0104: Change in inventories, contribution to annualized Q/Q growth
+    "gdp_contrib_exports":       79448573,  # Table 36-10-0104: Exports of goods and services, contribution to annualized Q/Q growth
+    "gdp_contrib_imports":       79448576,  # Table 36-10-0104: Less: imports (sign-flipped: positive = imports fell)
+    # Note: prime-age employment rate (output gap proxy) was attempted via v2062952 but returns HTTP 409 from WDS.
+    # Skipped for now; the existing unemployment_rate series in the Labour section serves as the activity proxy.
+    # Housing section (added May 2026)
+    "housing_starts":            52300157,  # Table 34-10-0158-01: Housing starts, Canada total, SAAR (units)
+    "new_housing_price_index": 111955442,  # Table 18-10-0205-01: New Housing Price Index, Canada total, Dec 2016 = 100, NSA
+    "residential_permits":     1675119646,  # Table 34-10-0292-01: Total residential building permits, value SA, current $ thousands
 }
 
 BOC_VALET_SERIES = {
@@ -68,6 +84,10 @@ BOC_VALET_SERIES = {
     "boc_total_assets":         ("V36610", "2000-01-01", 0.001),  # Total assets, weekly
     "boc_goc_bonds":            ("V36613", "2000-01-01", 0.001),  # GoC bonds held outright, weekly
     "boc_settlement_balances":  ("V36636", "2000-01-01", 0.001),  # Members of Payments Canada deposits (settlement balances), weekly
+    # Inflation expectations (added May 2026; quarterly cadence, persistent Valet keys)
+    "infl_exp_consumer_1y": ("CES_C1_SHORT_TERM", "2014-01-01"),  # CSCE 1-year-ahead consumer inflation expectation, % (mean)
+    "infl_exp_consumer_5y": ("CES_C1_LONG_TERM",  "2014-01-01"),  # CSCE 5-year-ahead consumer inflation expectation, % (mean)
+    "infl_exp_above3":      ("ABOVE3",            "2013-01-01"),  # BOS: % of firms expecting inflation > 3% over next 2 years
 }
 
 FRED_SERIES = {

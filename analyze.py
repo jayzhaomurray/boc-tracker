@@ -109,6 +109,21 @@ def compute_inflation_values() -> dict:
     below_dev = float(below1.loc[latest_breadth] - ha_below)
     tilt = above_dev - below_dev
 
+    # Inflation expectations (CSCE quarterly + BOS ABOVE3 quarterly)
+    try:
+        ie_consumer_1y = load_series("infl_exp_consumer_1y")
+        ie_consumer_5y = load_series("infl_exp_consumer_5y")
+        ie_above3      = load_series("infl_exp_above3")
+        ie_consumer_1y_now    = float(ie_consumer_1y.iloc[-1])
+        ie_consumer_5y_now    = float(ie_consumer_5y.iloc[-1])
+        ie_above3_now         = float(ie_above3.iloc[-1])
+        ie_consumer_5y_4q_ago = float(ie_consumer_5y.asof(ie_consumer_5y.index[-1] - pd.DateOffset(years=1)))
+        ie_consumer_5y_drift  = ie_consumer_5y_now - ie_consumer_5y_4q_ago if pd.notna(ie_consumer_5y_4q_ago) else 0.0
+        ie_as_of              = ie_consumer_1y.index[-1].strftime("%B %Y")
+    except Exception:
+        ie_consumer_1y_now = ie_consumer_5y_now = ie_above3_now = ie_consumer_5y_drift = None
+        ie_as_of = None
+
     return {
         "latest_date":         latest.strftime("%B %Y"),
         "headline_yoy":        headline_yoy,
@@ -124,16 +139,32 @@ def compute_inflation_values() -> dict:
         "energy_yoy":          asof(yoy_energy, latest),
         "goods_yoy":           asof(yoy_goods, latest),
         "services_yoy":        asof(yoy_services, latest),
-        "breadth_above3":      float(above3.loc[latest]),
-        "breadth_below1":      float(below1.loc[latest]),
+        "breadth_above3":      float(above3.loc[latest_breadth]),
+        "breadth_below1":      float(below1.loc[latest_breadth]),
         "breadth_above3_dev":  above_dev,
         "breadth_below1_dev":  below_dev,
         "breadth_tilt":        tilt,
+        # Inflation expectations (added May 2026; quarterly cadence)
+        "expectations_as_of":           ie_as_of,
+        "expectations_consumer_1y":     ie_consumer_1y_now,
+        "expectations_consumer_5y":     ie_consumer_5y_now,
+        "expectations_consumer_5y_drift_4q": ie_consumer_5y_drift,
+        "expectations_bos_above3":      ie_above3_now,
     }
 
 
 def format_inflation_values(v: dict) -> str:
     c = v["cores"]
+    if v.get("expectations_as_of"):
+        exp_block = f"""
+
+Inflation expectations (as of {v['expectations_as_of']}; quarterly):
+  CSCE consumer 1y-ahead:    {v['expectations_consumer_1y']:+.2f}%   (near-term consumer expectation)
+  CSCE consumer 5y-ahead:    {v['expectations_consumer_5y']:+.2f}%   (long-run anchor)
+  5y drift over last 4q:     {v['expectations_consumer_5y_drift_4q']:+.2f}pp   (negative = re-anchoring; positive = drifting up)
+  BOS firms expecting > 3%:  {v['expectations_bos_above3']:.0f}%   (business-side anchor diagnostic; high = anchor under stress)"""
+    else:
+        exp_block = "\n\nInflation expectations data: not loaded."
     return f"""== Latest data: {v['latest_date']} ==
 
 Headline CPI Y/Y:         {v['headline_yoy']:+.2f}%
@@ -160,7 +191,7 @@ Category breakdown (Y/Y):
 CPI Breadth:
   Share above 3%:         {v['breadth_above3']:.1f}%   (1996-2019 avg deviation: {v['breadth_above3_dev']:+.1f}pp)
   Share below 1%:         {v['breadth_below1']:.1f}%   (1996-2019 avg deviation: {v['breadth_below1_dev']:+.1f}pp)
-  Breadth tilt:           {v['breadth_tilt']:+.1f}pp   (positive = broad-based pressure; negative = broad-based softening)
+  Breadth tilt:           {v['breadth_tilt']:+.1f}pp   (positive = broad-based pressure; negative = broad-based softening){exp_block}
 """
 
 
@@ -838,6 +869,196 @@ Coverage gap: this framework tracks oil and bilateral USDCAD only. BoC also trac
 """
 
 
+# ── GDP & Activity section ──────────────────────────────────────────────────
+
+def compute_gdp_values() -> dict:
+    gdp_monthly  = load_series("gdp_monthly")
+    gdp_q_level  = load_series("gdp_quarterly")
+    gdp_qq       = load_series("gdp_qq_growth")            # already pre-computed Q/Q % AR
+    contrib_cons = load_series("gdp_contrib_consumption")
+    contrib_inv  = load_series("gdp_contrib_investment")
+    contrib_govt = load_series("gdp_contrib_govt")
+    contrib_exp  = load_series("gdp_contrib_exports")
+    contrib_imp  = load_series("gdp_contrib_imports")      # sign-flipped: positive = imports declined
+    contrib_invn = load_series("gdp_contrib_inventories")
+
+    # Monthly GDP Y/Y, M/M
+    gdp_m_yoy = (gdp_monthly.pct_change(12) * 100).dropna()
+    gdp_m_mom = (gdp_monthly.pct_change(1)  * 100).dropna()
+
+    latest_m = gdp_monthly.index[-1]
+    latest_q = gdp_q_level.index[-1]
+
+    monthly_yoy = float(asof(gdp_m_yoy, latest_m))
+    monthly_mom = float(asof(gdp_m_mom, latest_m))
+
+    quarterly_qq_ar = float(gdp_qq.iloc[-1])
+    # Last 4 quarters of Q/Q AR for trend context
+    last_4q = gdp_qq.tail(4)
+    qq_4q_avg = float(last_4q.mean())
+
+    # Contributions (latest quarter)
+    cons = float(contrib_cons.iloc[-1])
+    inv  = float(contrib_inv.iloc[-1])
+    govt = float(contrib_govt.iloc[-1])
+    exp  = float(contrib_exp.iloc[-1])
+    imp  = float(contrib_imp.iloc[-1])
+    invn = float(contrib_invn.iloc[-1])
+
+    net_trade = exp + imp  # imports already sign-flipped per StatsCan convention
+    final_domestic_demand = cons + inv + govt
+    total_check = cons + inv + govt + exp + imp + invn
+
+    # Identify dominant driver (largest absolute contribution)
+    contribs = {
+        "Consumption": cons,
+        "Investment": inv,
+        "Government": govt,
+        "Net trade": net_trade,
+        "Inventories": invn,
+    }
+    dominant_label, dominant_value = max(contribs.items(), key=lambda kv: abs(kv[1]))
+
+    return {
+        "latest_date":              latest_m.strftime("%B %Y"),  # use monthly for header
+        "as_of_monthly":            latest_m.strftime("%B %Y"),
+        "as_of_quarterly":          latest_q.strftime("%B %Y"),
+
+        "monthly_gdp_yoy":          monthly_yoy,
+        "monthly_gdp_mom":          monthly_mom,
+        "quarterly_qq_ar":          quarterly_qq_ar,
+        "quarterly_qq_ar_4q_avg":   qq_4q_avg,
+        "quarterly_qq_ar_last_4q":  [float(x) for x in last_4q.values.tolist()],
+
+        "contrib_consumption":      cons,
+        "contrib_investment":       inv,
+        "contrib_government":       govt,
+        "contrib_exports":          exp,
+        "contrib_imports":          imp,
+        "contrib_net_trade":        net_trade,
+        "contrib_inventories":      invn,
+        "final_domestic_demand":    final_domestic_demand,
+        "total_check":              total_check,
+        "dominant_driver":          dominant_label,
+        "dominant_driver_value":    dominant_value,
+    }
+
+
+def format_gdp_values(v: dict) -> str:
+    last_4q_str = ", ".join(f"{x:+.2f}%" for x in v['quarterly_qq_ar_last_4q'])
+    return f"""== Latest data ==
+
+Real GDP — monthly (as of {v['as_of_monthly']}):
+  Y/Y change:                  {v['monthly_gdp_yoy']:+.2f}%
+  M/M change:                  {v['monthly_gdp_mom']:+.2f}%
+
+Real GDP — quarterly (as of {v['as_of_quarterly']}):
+  Q/Q at annualized rate:      {v['quarterly_qq_ar']:+.2f}%   (headline number; >0 = expansion, <0 = contraction)
+  Last 4 quarters Q/Q AR:      {last_4q_str}
+  4-quarter average:           {v['quarterly_qq_ar_4q_avg']:+.2f}%
+
+Contributions to last quarter's annualized growth (percentage points; sum to total):
+  Consumption:                 {v['contrib_consumption']:+.2f}pp
+  Investment:                  {v['contrib_investment']:+.2f}pp
+  Government:                  {v['contrib_government']:+.2f}pp
+  Exports:                     {v['contrib_exports']:+.2f}pp
+  Less: imports (sign-flip):   {v['contrib_imports']:+.2f}pp   (positive = imports fell)
+  Net trade:                   {v['contrib_net_trade']:+.2f}pp
+  Inventories:                 {v['contrib_inventories']:+.2f}pp   (often noisy; reverses next quarter)
+
+Synthesis:
+  Final domestic demand:       {v['final_domestic_demand']:+.2f}pp   (consumption + investment + govt; the "underlying" read)
+  Sum of tracked components:   {v['total_check']:+.2f}pp   (will differ from Q/Q AR by the statistical discrepancy term, which StatsCan publishes separately and this framework does not currently track)
+  Dominant driver:             {v['dominant_driver']} at {v['dominant_driver_value']:+.2f}pp
+
+Coverage gap: this framework tracks aggregate GDP and demand-side contributions only. It does not include output-gap estimates, capacity utilization, or productivity decomposition. Conclusions about how-far-from-potential are necessarily rough.
+"""
+
+
+# ── Housing section ─────────────────────────────────────────────────────────
+
+def compute_housing_values() -> dict:
+    starts  = load_series("housing_starts")               # SAAR units
+    nhpi    = load_series("new_housing_price_index")      # index Dec 2016 = 100
+    permits = load_series("residential_permits")          # $thousands SA
+
+    # Y/Y and M/M for each
+    starts_yoy = (starts.pct_change(12) * 100).dropna()
+    starts_mom = (starts.pct_change(1)  * 100).dropna()
+    nhpi_yoy   = (nhpi.pct_change(12)   * 100).dropna()
+    nhpi_mom   = (nhpi.pct_change(1)    * 100).dropna()
+    permits_yoy = (permits.pct_change(12) * 100).dropna()
+    permits_mom = (permits.pct_change(1)  * 100).dropna()
+
+    # Earliest of all latest dates
+    latest = min(s.index[-1] for s in [starts, starts_yoy, nhpi, nhpi_yoy, permits, permits_yoy])
+
+    starts_now      = float(asof(starts, latest))
+    starts_now_yoy  = float(asof(starts_yoy, latest))
+    starts_now_mom  = float(asof(starts_mom, latest))
+    starts_3mo_avg  = float(starts.tail(3).mean())  # 3-month moving average to filter noise
+
+    nhpi_now      = float(asof(nhpi, latest))
+    nhpi_now_yoy  = float(asof(nhpi_yoy, latest))
+    nhpi_now_mom  = float(asof(nhpi_mom, latest))
+
+    permits_now      = float(asof(permits, latest))
+    permits_now_yoy  = float(asof(permits_yoy, latest))
+    permits_now_mom  = float(asof(permits_mom, latest))
+
+    # Cycle-position interpretation for starts (HYPOTHESIS-GRADE thresholds).
+    # Data is in thousands of units annualized (e.g. 251 = 251,000 SAAR).
+    if starts_3mo_avg < 180:
+        starts_regime = "subdued (recession-era levels)"
+    elif starts_3mo_avg > 280:
+        starts_regime = "elevated / booming"
+    else:
+        starts_regime = "near trend"
+
+    return {
+        "latest_date":         latest.strftime("%B %Y"),
+        "as_of":               latest.strftime("%B %Y"),
+
+        "housing_starts":            starts_now,
+        "housing_starts_3mo_avg":    starts_3mo_avg,
+        "housing_starts_yoy":        starts_now_yoy,
+        "housing_starts_mom":        starts_now_mom,
+        "housing_starts_regime":     starts_regime,
+
+        "nhpi":                      nhpi_now,
+        "nhpi_yoy":                  nhpi_now_yoy,
+        "nhpi_mom":                  nhpi_now_mom,
+
+        "residential_permits":       permits_now,
+        "residential_permits_yoy":   permits_now_yoy,
+        "residential_permits_mom":   permits_now_mom,
+    }
+
+
+def format_housing_values(v: dict) -> str:
+    return f"""== Latest data: {v['as_of']} ==
+
+Housing starts (SAAR; values are in thousands of units annualized — e.g. 251 means 251,000):
+  Latest:                      {v['housing_starts']:,.0f}k   (= {int(v['housing_starts']*1000):,} units annualized)
+  3-month moving average:      {v['housing_starts_3mo_avg']:,.0f}k   (filters month-to-month noise)
+  Y/Y change:                  {v['housing_starts_yoy']:+.1f}%
+  M/M change:                  {v['housing_starts_mom']:+.1f}%
+  Regime classification:       {v['housing_starts_regime']}   (HYPOTHESIS-GRADE thresholds: <180k subdued; 180-280k near trend; >280k elevated)
+
+New Housing Price Index (Dec 2016 = 100):
+  Latest:                      {v['nhpi']:.1f}
+  Y/Y change:                  {v['nhpi_yoy']:+.1f}%   (>5% = meaningful price acceleration; <0% = price declines, rare)
+  M/M change:                  {v['nhpi_mom']:+.2f}%
+
+Residential building permits (value, SA, leading indicator ~6-12 months ahead of starts):
+  Latest:                      ${v['residential_permits']/1_000_000:,.2f}B   (raw value: ${v['residential_permits']:,.0f}k)
+  Y/Y change:                  {v['residential_permits_yoy']:+.1f}%
+  M/M change:                  {v['residential_permits_mom']:+.1f}%
+
+Coverage gap: this framework tracks new construction (starts, permits) and new-home prices (NHPI) only. It does NOT track resale activity (CREA MLS), mortgage rate spreads, mortgage renewal volumes, or regional breakdowns (Toronto / Vancouver vs. rest of Canada). Conclusions are macro-level; flag accordingly when a partial read might mislead.
+"""
+
+
 # ── Section registry ─────────────────────────────────────────────────────────
 
 SECTIONS = {
@@ -851,10 +1072,20 @@ SECTIONS = {
         "compute":  compute_policy_values,
         "format":   format_policy_values,
     },
+    "gdp": {
+        "name":     "GDP & Activity",
+        "compute":  compute_gdp_values,
+        "format":   format_gdp_values,
+    },
     "labour": {
         "name":     "Labour Market",
         "compute":  compute_labour_values,
         "format":   format_labour_values,
+    },
+    "housing": {
+        "name":     "Housing",
+        "compute":  compute_housing_values,
+        "format":   format_housing_values,
     },
     "financial": {
         "name":     "Financial Conditions",

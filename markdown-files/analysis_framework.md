@@ -56,13 +56,14 @@ Main-page blurbs work from top-level aggregates only — never from individual C
 
 **Question:** How does inflation compare to the BoC's 2% target, and what is the underlying trend?
 
-**Data:** cpi_all_items (M/M, 3M AR, Y/Y), cpi_trim, cpi_median, cpi_common, cpix, cpixfet, cpi_food (Y/Y), cpi_energy (Y/Y), cpi_goods (Y/Y), cpi_services (Y/Y), cpi_breadth (share above 3%, share below 1%). M/M and 3M AR are computed on the SA cpi_all_items series; Y/Y is identical between SA and NSA.
+**Data:** cpi_all_items (M/M, 3M AR, Y/Y), cpi_trim, cpi_median, cpi_common, cpix, cpixfet, cpi_food (Y/Y), cpi_energy (Y/Y), cpi_goods (Y/Y), cpi_services (Y/Y), cpi_breadth (share above 3%, share below 1%), infl_exp_consumer_1y / infl_exp_consumer_5y (BoC CSCE quarterly), infl_exp_above3 (BOS: % of firms expecting inflation > 3% over next 2 years, quarterly). M/M and 3M AR are computed on the SA cpi_all_items series; Y/Y is identical between SA and NSA.
 
 **Signals to evaluate:**
 
 - Where are core measures relative to 2%? How far above or below, and are they moving toward or away from target?
 - Is the band of core measures tight or wide? A tight band means the measures are telling a consistent story. A wide band means the choice of measure matters.
 - Is headline CPI above or below core, and what is driving the gap? When headline diverges from core by more than ~0.3pp, look at food Y/Y and energy Y/Y to identify the driver. State the actual food and energy Y/Y numbers; do not guess at attribution. Goods Y/Y vs services Y/Y can also be informative if the gap is not in food or energy.
+- **Inflation expectations: are they anchored at 2%?** Consumer 1-year-ahead (CSCE) reflects near-term expectations; the 5-year-ahead measure is the long-run anchor and the more important one for assessing whether expectations have slipped. BOS ABOVE3 (% of firms expecting inflation > 3% over the next 2 years) is the business-side anchor diagnostic — went from ~54% in late 2023 to ~11% in Q1 2026, so this is currently a re-anchoring story. Material drift in the 5-year-ahead consumer measure or a sustained climb in BOS ABOVE3 would signal anchor slippage.
 - CPI breadth: classify the breadth signal into one of four states using the deviations from the 1996–2019 historical averages. Define `tilt = (above-3% share deviation) − (below-1% share deviation)`. The four states are:
   - **Broad-based pressure** — share above 3% elevated *and* share below 1% depressed (positive tilt). Many components running hot, few cold.
   - **Broad-based softening** — share above 3% depressed *and* share below 1% elevated (negative tilt). Many cold, few hot.
@@ -152,6 +153,34 @@ The headline read is what the BoC is *doing*, for how long, and following what. 
 
 ---
 
+## GDP & Activity
+
+> **VERIFICATION STATUS: hypothesis-grade.** This section was added autonomously on May 8, 2026 to give the dashboard a read on real activity. Threshold values, output-gap framing, and growth-decomposition interpretive rules have not been audited against BoC primary sources or empirical distributions. Treat as a starting hypothesis. Before generating an authoritative GDP blurb: run the same audit cycle that was applied to Monetary Policy in May 2026 (parallel Sonnet subagents on BoC primary sources for output-gap / potential-output framing, productive-capacity assumptions, sectoral-vs-aggregate reads; local pandas for empirical distributions of monthly GDP Y/Y, contribution shares, and quarterly Q/Q AR ranges; track findings as VERIFIED / WRONG / NEEDS REFINEMENT; rewrite this section with citations and verified thresholds). Then iterate with the user on the prose. Do NOT skip the verification or iteration.
+
+**Question:** Is the Canadian economy expanding or contracting, and what's driving the most recent moves?
+
+**Data:** gdp_monthly (real GDP, monthly, chained 2017 dollars, SAAR), gdp_quarterly (real GDP, quarterly), gdp_qq_growth (Q/Q % change annualized), gdp_contrib_consumption / gdp_contrib_investment / gdp_contrib_govt / gdp_contrib_exports / gdp_contrib_imports / gdp_contrib_inventories (contributions to annualized Q/Q growth, percentage points).
+
+**Signals to evaluate:**
+
+- **Recent monthly GDP trajectory.** Is monthly real GDP Y/Y positive (expansion) or negative (contraction)? M/M change in the most recent print? StatsCan revisions matter — first releases can shift meaningfully when later data lands.
+- **Quarterly Q/Q AR growth.** The headline number in BoC and economist commentary. Positive, negative, or near-zero? Recent trend over the last 4 quarters?
+- **Demand-side decomposition (the contributions chart).** Components add to the total. Which is contributing most, which is dragging? Common patterns: consumption-led (typical expansion), inventory-driven (often noise that reverses), export-led (Canada is small open economy; US demand dominates), investment-led (most rate-sensitive component), government drag/boost (fiscal stance).
+- **Inventories vs final demand.** Final domestic demand (consumption + investment + government, excluding inventories and trade) is the cleanest "underlying" read; inventory swings can mask the underlying picture quarter-to-quarter.
+- **Net trade contribution.** Exports + (less: imports), with imports sign-flipped per StatsCan convention (positive contribution = imports declined). Canadian growth is highly trade-sensitive.
+
+**Thresholds (HYPOTHESIS-GRADE, not yet verified):**
+
+- **Real GDP Y/Y > ~1.5%** ≈ at-or-above potential growth (rough; BoC's potential output estimates have moved lower given productivity weakness)
+- **Q/Q AR > ~1.5%** ≈ at-or-above potential
+- **Q/Q AR < 0%** = quarterly contraction
+- **Q/Q AR < 0% for two consecutive quarters** = technical recession
+- **Inventories swing > ±2 pp** = likely noise; underlying read should focus on final domestic demand
+
+**What to surface:** Lead with what the economy is *doing* — expanding, contracting, near-flat. Anchor on the most recent quarterly Q/Q AR; reference monthly GDP for more recent momentum. Identify the dominant driver of the latest quarter from the contributions decomposition (e.g. "growth was inventory-driven; final domestic demand was flat"). Connect to BoC stance: restrictive policy is meant to slow growth, accommodative to speed it up. When activity reads diverge from the policy stance (tight policy + accelerating growth, or easy policy + stalling growth), the gap is itself a signal worth flagging. The framework's view is partial — no full output-gap estimate, no capacity utilization detail, no productivity decomposition — so "how far from potential" claims are necessarily rough.
+
+---
+
 ## Labour Market
 
 > **VERIFICATION STATUS: verified end-to-end (May 2026).** Audited against BoC Staff Analytical Notes (SAN 2025-17 on labour benchmarks; SAN 2024-23 on LFS-Micro composition adjustment; SAN 2025-14 on potential output and productivity) and recent MPRs (October 2024 wage In Focus; April 2026 projections). Compute and format functions in `analyze.py`; blurb in `data/blurbs.json` under `labour`.
@@ -177,6 +206,35 @@ The headline read is what the BoC is *doing*, for how long, and following what. 
 - **LFS-Micro typically below raw LFS in Canada** — when this holds, raw LFS overstates underlying wage pressure; when LFS-Micro is unexpectedly close to or above raw LFS, that itself is a signal worth flagging.
 
 **What to surface:** Lead with what the labour market is *doing* — tightening, loosening, holding — anchored on the unemployment rate level + direction, framed against BoC's qualitative characterizations rather than a fixed NAIRU. Then characterize wage growth: dispersion across measures, whether the central tendency is above or below the ~3% soft threshold, and whether LFS-Micro is meaningfully below raw LFS (the dominant Canadian pattern). Surface the wage-vs-services-CPI relationship as a leading indicator for services inflation persistence — the BoC-validated framing, not the older "margin absorption" shorthand. Note real wages when the gap is large in either direction. When relevant, flag that the framework's view is partial — without employment rate, vacancies, hours, or ULC, a single-indicator read on labour-market tightness can mislead.
+
+---
+
+## Housing
+
+> **VERIFICATION STATUS: hypothesis-grade.** Added autonomously on May 8, 2026. Threshold values and the cycle-position framing have not been audited against BoC primary sources or empirical distributions. Before generating an authoritative Housing blurb: audit BoC research on housing market signals (mortgage transmission, financial stability framing, MPR housing boxes), the relationship between starts/permits and policy rate changes, and the lag structure between leading indicators (permits) and headline activity (starts). Then iterate with the user.
+
+**Question:** What is happening in Canadian housing — supply (construction), prices (new home values), and the forward-looking pipeline (permits)?
+
+**Data:** housing_starts (monthly SAAR, units in thousands), new_housing_price_index (NHPI, monthly NSA, Dec 2016 = 100), residential_permits (monthly SA value in $thousands; series begins Jan 2018).
+
+**Signals to evaluate:**
+
+- **Housing starts level and Y/Y.** The headline construction read. Heavily noisy month-to-month — a 3-month moving average filters most of the noise. Historical context: typical Canadian starts have ranged from ~150k (slowdowns) to ~300k+ (booms) annualized in recent decades.
+- **New Housing Price Index direction.** Y/Y in NHPI tracks new-home price appreciation. Distinct from CREA's MLS HPI (which tracks resale); NHPI is more directly tied to construction-side dynamics, less to existing-stock turnover.
+- **Residential building permits.** Leading indicator — permits issued today translate to starts in roughly 6–12 months. Y/Y direction signals whether the construction pipeline is filling or emptying.
+- **Cycle position vs monetary policy.** Housing activity is highly interest-rate sensitive in Canada given household debt levels and mortgage renewals. Restrictive monetary policy slows housing (transmission lag is months to quarters); accommodative speeds it up. Connect housing reads to where the BoC sits in its cycle.
+- **Mortgage renewal dynamics.** A material share of Canadian mortgages reset within 5 years; the BoC has flagged the wave of renewals at higher rates as a transmission channel. The framework doesn't track mortgage rate spreads or renewal volumes directly — surface this as a known unmodeled channel.
+
+**Thresholds (HYPOTHESIS-GRADE):**
+
+- **Housing starts ~200–250k SAAR** = roughly trend pace given Canadian population growth
+- **Housing starts < 180k SAAR** = subdued (recession-era levels)
+- **Housing starts > 280k SAAR** = elevated / booming
+- **NHPI Y/Y > 5%** = meaningful price acceleration
+- **NHPI Y/Y < 0%** = price declines (rare; meaningful when sustained)
+- **Permits Y/Y direction** is the leading-indicator signal; a sustained negative reading 6–12 months ago tends to translate to weaker starts now
+
+**What to surface:** Lead with what housing activity is *doing* — picking up, slowing, holding. Anchor on housing starts (Y/Y or 3-month average). Reference NHPI Y/Y for the price side. Note residential permits direction as the forward-looking signal. Connect to monetary policy stance — restrictive policy typically slows housing, accommodative speeds it. The framework's view is partial: no resale activity (CREA), no mortgage rate spreads, no mortgage renewal volumes, no regional breakdowns (Toronto/Vancouver vs. rest of Canada). Conclusions are macro-level; flag accordingly.
 
 ---
 

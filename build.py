@@ -22,6 +22,8 @@ BLURBS_PATH = Path("data/blurbs.json")
 
 SECTION_HEADINGS = {
     "policy":    "Monetary Policy",
+    "gdp":       "GDP & Activity",
+    "housing":   "Housing",
     "inflation": "Inflation",
     "labour":    "Labour Market",
     "financial": "Financial Conditions",
@@ -1600,7 +1602,7 @@ PAGES = [
         title="Bank of Canada Tracker",
         tagline="Tracking the indicators behind Bank of Canada policy decisions",
         output_file="index.html",
-        sections={0: "policy", 3: "inflation", 6: "labour", 8: "financial"},
+        sections={0: "policy", 3: "inflation", 7: "gdp", 9: "labour", 11: "housing", 14: "financial"},
         charts=[
             MultiLineSpec(
                 title="Policy Rates",
@@ -1665,6 +1667,42 @@ PAGES = [
                 title="CPI Breadth",
                 footnote="Deviation from 1996–2019 average. Weighted share of 60 basket components with year-over-year change above 3% or below 1%.",
             ),
+            MultiLineSpec(
+                title="Inflation Expectations",
+                lines=[
+                    LineConfig("infl_exp_consumer_1y", "Consumer 1y ahead", "#1565c0", smooth=False),
+                    LineConfig("infl_exp_consumer_5y", "Consumer 5y ahead", "#7b1fa2", smooth=False),
+                ],
+                default_years=5,
+                line_shape="linear",
+                date_fmt="%b %Y",
+                footnote="Bank of Canada Survey of Consumer Expectations (CSCE), mean expected inflation 1 year and 5 years ahead. Quarterly. The 2% inflation target is the policy anchor; material drift in 5-year-ahead expectations would signal anchor slippage.",
+            ),
+            ChartSpec(
+                series="gdp_monthly",
+                title="Real GDP (monthly)",
+                frequency="monthly",
+                color="#1565c0",
+                default_transform="yoy",
+                default_years=10,
+                hover_decimals=1,
+                footnote="Statistics Canada Table 36-10-0434: Monthly real GDP at basic prices, all industries, chained 2017 dollars, SAAR. Released roughly two months after the reference month with significant subsequent revisions.",
+            ),
+            MultiLineSpec(
+                title="GDP Growth Contributions",
+                lines=[
+                    LineConfig("gdp_contrib_consumption", "Consumption",   "#1565c0", smooth=False),
+                    LineConfig("gdp_contrib_investment",  "Investment",    "#00897b", smooth=False),
+                    LineConfig("gdp_contrib_govt",        "Government",    "#7b1fa2", smooth=False),
+                    LineConfig("gdp_contrib_exports",     "Exports",       "#388e3c", smooth=False),
+                    LineConfig("gdp_contrib_imports",     "Less: imports", "#d84315", smooth=False),
+                    LineConfig("gdp_contrib_inventories", "Inventories",   "#fdd835", smooth=False, visible=False),
+                ],
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %Y",
+                footnote="Statistics Canada Table 36-10-0104: Contributions to annualized Q/Q real GDP growth, percentage points. Components add to total real GDP growth. 'Less: imports' is sign-flipped (positive contribution = imports declined). Inventories typically swing sharply quarter-to-quarter and are off by default.",
+            ),
             ChartSpec(
                 series="unemployment_rate",
                 title="Unemployment Rate",
@@ -1678,6 +1716,36 @@ PAGES = [
             WageSpec(
                 title="Wage Growth",
                 footnote="Year-over-year %. LFS: average hourly wages. SEPH: average weekly earnings, all industries. LFS-Micro: BoC composition-adjusted measure. Services CPI overlay for wage-price context.",
+            ),
+            ChartSpec(
+                series="housing_starts",
+                title="Housing Starts",
+                frequency="monthly",
+                color="#1565c0",
+                default_transform="yoy",
+                default_years=10,
+                hover_decimals=1,
+                footnote="CMHC housing starts, Canada total, seasonally adjusted at annualized rates. Y/Y view smooths the substantial month-to-month noise; Level view shows units in thousands annualized.",
+            ),
+            ChartSpec(
+                series="new_housing_price_index",
+                title="New Housing Price Index",
+                frequency="monthly",
+                color="#7b1fa2",
+                default_transform="yoy",
+                default_years=10,
+                hover_decimals=1,
+                footnote="Statistics Canada NHPI: contractor-reported prices for new single-family homes across 27 CMAs. Index Dec 2016 = 100. Distinct from resale price indices (e.g. CREA MLS HPI).",
+            ),
+            ChartSpec(
+                series="residential_permits",
+                title="Residential Building Permits",
+                frequency="monthly",
+                color="#00897b",
+                default_transform="yoy",
+                default_years=10,
+                hover_decimals=1,
+                footnote="Statistics Canada Table 34-10-0292: Total residential building permits, value in current dollars, seasonally adjusted. Leading indicator for housing construction roughly 6-12 months ahead. Series begins Jan 2018.",
             ),
             MultiLineSpec(
                 title="Oil Prices",

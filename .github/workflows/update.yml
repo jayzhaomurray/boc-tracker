@@ -46,7 +46,7 @@ jobs:
           if [ -z "$ANTHROPIC_API_KEY" ]; then
             echo "::warning::ANTHROPIC_API_KEY not set; skipping blurb regeneration. Set the secret in repo Settings > Secrets to enable automated blurb updates."
           else
-            for section in inflation policy labour financial; do
+            for section in inflation policy gdp labour housing financial; do
               python analyze.py --section "$section" || echo "::warning::Blurb generation failed for section: $section"
             done
           fi
