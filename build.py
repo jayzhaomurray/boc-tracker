@@ -2282,7 +2282,7 @@ PAGES = [
                 date_fmt="%b %Y",
                 ticksuffix="pp",
                 unit_label="Percentage-point contributions to annualized Q/Q growth",
-                footnote="Statistics Canada Table 36-10-0104. Bars are component contributions to annualized Q/Q real GDP growth; 'Less: imports' is sign-flipped so positive = imports fell. Headline GDP line is the published total contribution (vector 79448580). The StatsCan daily release reports non-annualized Q/Q (≈ AR ÷ 4). The small gap between the bar sum and the headline is NPISH plus statistical discrepancy, which this dashboard does not break out.",
+                footnote="Statistics Canada Table 36-10-0104. Bars are component contributions to annualized Q/Q real GDP growth; 'Less: imports' is sign-flipped so positive = imports fell. Headline GDP line is the published total contribution (vector 79448580). The StatsCan daily release reports non-annualized Q/Q (≈ AR ÷ 4). The small gap between the bar sum and the headline is non-profits plus statistical discrepancy, which this dashboard does not break out.",
             ),
             ChartSpec(
                 series="unemployment_rate",

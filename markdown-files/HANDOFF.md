@@ -36,6 +36,7 @@ boc-tracker/
 │   ├── cpi_energy.csv            ← NSA, vector 41691239
 │   ├── cpi_goods.csv             ← NSA, vector 41691222
 │   ├── cpi_services.csv          ← NSA, vector 41691230
+│   ├── cpi_shelter.csv           ← NSA, vector 41691050
 │   ├── cpi_trim.csv / cpi_median.csv / cpi_common.csv
 │   ├── cpix.csv / cpixfet.csv
 │   ├── cpi_components.csv        ← wide CSV: 60 depth-3 components × ~500 months
@@ -138,6 +139,7 @@ No auth required. Returns ~700 records covering several oil grades. WCS is filte
 | `cpi_energy` | StatsCan | Vector 41691239 | Energy CPI, Canada, NSA (Table 18-10-0004-01) | Monthly |
 | `cpi_goods` | StatsCan | Vector 41691222 | Goods CPI, Canada, NSA (Table 18-10-0004-01) | Monthly |
 | `cpi_services` | StatsCan | Vector 41691230 | Services CPI, Canada, NSA (Table 18-10-0004-01) | Monthly |
+| `cpi_shelter` | StatsCan | Vector 41691050 | Shelter CPI, Canada, NSA (Table 18-10-0004-01) | Monthly |
 | `cpi_trim` | BoC Valet | `CPI_TRIM` | CPI-trim, Y/Y % | Monthly |
 | `cpi_median` | BoC Valet | `CPI_MEDIAN` | CPI-median, Y/Y % | Monthly |
 | `cpi_common` | BoC Valet | `CPI_COMMON` | CPI-common, Y/Y % | Monthly |
@@ -339,7 +341,7 @@ PageSpec("Bank of Canada Tracker", sections={0: "policy", 3: "inflation", 8: "gd
   MultiLineSpec            — Business Inflation Expectations Distribution (BOS 4-bucket distribution: <1%, 1–2%, 2–3%, >3%; 10Y default)
   ── GDP & ACTIVITY (heading + blurb) ──
   ChartSpec                — Real GDP (monthly, C$ trillions, 4 transforms, 4 industry overlays via OverlayConfig, level default, 10Y default)
-  StackedBarSpec           — GDP Growth Contributions (6 components stacked + Headline GDP (AR) line overlay, barmode=relative, 2Y default; subtitle = "Percentage-point contributions to annualized Q/Q growth"; footnote calls out the StatsCan-daily ÷4 convention and the residual = NPISH + statistical discrepancy)
+  StackedBarSpec           — GDP Growth Contributions (6 components stacked + Headline GDP (AR) line overlay, barmode=relative, 2Y default; subtitle = "Percentage-point contributions to annualized Q/Q growth"; footnote calls out the StatsCan-daily ÷4 convention and the residual = non-profits + statistical discrepancy)
   ── LABOUR MARKET (heading + blurb) ──
   ChartSpec                — Unemployment Rate (static, 10Y default)
   WageSpec                 — Wage Growth (range band + 4 measures + Services CPI overlay)
