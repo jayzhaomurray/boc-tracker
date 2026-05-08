@@ -52,6 +52,7 @@ STATSCAN_SERIES = {
     "cpi_food":            41690974,   # Table 18-10-0004-01: CPI Food, Canada, NSA (2002=100)
     "cpi_energy":          41691239,   # Table 18-10-0004-01: CPI Energy, Canada, NSA (2002=100)
     "cpi_goods":           41691222,   # Table 18-10-0004-01: CPI Goods, Canada, NSA (2002=100)
+    "cpi_shelter":         41691050,   # Table 18-10-0004-01: CPI Shelter, Canada, NSA (2002=100)
     # GDP / Activity section (added May 2026)
     # gdp_monthly: StatsCan publishes in C$ millions; 2-tuple applies scale to store in C$ trillions
     "gdp_monthly":               (65201210, 0.000001),  # Table 36-10-0434: Monthly real GDP, all industries, chained 2017 $, SAAR (C$ trillions)

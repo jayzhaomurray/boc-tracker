@@ -1997,7 +1997,22 @@ def _build_stackedbar_panel(chart: "StackedBarSpec", data: dict,
     else:
         sb_dtick, sb_tickfmt = 1.0, ".0f"
 
-    fig.update_xaxes(showgrid=False, zeroline=False)
+    # Quarterly tick labels: each bar is a quarter, so x-axis reads "Q1 2025" rather
+    # than "Apr 2025". Provided as explicit tickvals/ticktext because Plotly's bundled
+    # d3-time-format in current versions does not implement %q for quarter.
+    sb_tickvals: list[str] = []
+    sb_ticktext: list[str] = []
+    if lines:
+        ref_dates = pd.to_datetime(data[lines[0].series]["date"]).sort_values().unique()
+        for d in ref_dates:
+            ts = pd.Timestamp(d)
+            sb_tickvals.append(ts.strftime("%Y-%m-%d"))
+            sb_ticktext.append(f"Q{(ts.month - 1) // 3 + 1} {ts.year}")
+
+    fig.update_xaxes(
+        showgrid=False, zeroline=False,
+        tickvals=sb_tickvals, ticktext=sb_ticktext, tickangle=-45,
+    )
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb",
                      zeroline=True, zerolinecolor="#bdbdbd", zerolinewidth=1,
                      tickformat=sb_tickfmt,
@@ -2192,6 +2207,7 @@ PAGES = [
                     CpiLine("cpi_energy",         "Energy",         "#7b1fa2", visible=True),
                     CpiLine("cpi_goods",          "Goods",          "#00897b"),
                     CpiLine("cpi_services",       "Services",       "#388e3c"),
+                    CpiLine("cpi_shelter",        "Shelter",        "#6d4c41"),
                 ],
                 default_transform="yoy",
                 default_years=10,
@@ -2202,28 +2218,29 @@ PAGES = [
                 footnote="Deviation from 1996–2019 average. Weighted share of 60 basket components with year-over-year change above 3% or below 1%.",
             ),
             MultiLineSpec(
-                title="Inflation Expectations",
+                title="Consumer Inflation Expectations",
                 lines=[
                     LineConfig("infl_exp_consumer_1y", "Consumer 1y ahead", "#1565c0", smooth=False),
                     LineConfig("infl_exp_consumer_5y", "Consumer 5y ahead", "#7b1fa2", smooth=False),
                 ],
-                default_years=5,
+                default_years=10,
                 line_shape="linear",
                 date_fmt="%b %Y",
                 footnote="Bank of Canada Survey of Consumer Expectations (CSCE), mean expected inflation 1 year and 5 years ahead. Quarterly. The 2% inflation target is the policy anchor; material drift in 5-year-ahead expectations would signal anchor slippage.",
             ),
             MultiLineSpec(
-                title="Business Inflation Expectations Distribution",
+                title="Business Inflation Expectations",
                 lines=[
                     LineConfig("bos_dist_below1", "<1%",  "#1565c0", smooth=False),
                     LineConfig("bos_dist_1to2",   "1–2%", "#4fc3f7", smooth=False),
                     LineConfig("bos_dist_2to3",   "2–3%", "#2e7d32", smooth=False),
                     LineConfig("bos_dist_above3", ">3%",  "#c62828", smooth=False),
+                    LineConfig("infl_exp_above3", ">3% (most-current vintage)", "#6d4c41", smooth=False, visible=False),
                 ],
                 default_years=10,
                 line_shape="linear",
                 date_fmt="%b %Y",
-                footnote="Bank of Canada Business Outlook Survey: share of firms expecting CPI inflation to fall in each band over the next two years. The four buckets sum to ~100%. The 2–3% band is target-consistent; sustained mass in >3% signals anchoring stress on the upside.",
+                footnote="Bank of Canada Business Outlook Survey: share of firms expecting CPI inflation to fall in each band over the next two years. The four buckets sum to ~100%. The 2–3% band is target-consistent; sustained mass in >3% signals anchoring stress on the upside. \"Most-current vintage\" is the same >3% concept but published faster than the vintage-aligned distribution; off by default.",
             ),
             ChartSpec(
                 series="gdp_monthly",
