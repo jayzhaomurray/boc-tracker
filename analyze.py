@@ -889,15 +889,70 @@ Output only the blurb prose. No preamble, no markdown headers, no quotation mark
 Now generate the {section_name} section blurb."""
 
 
-def call_claude(prompt: str) -> str:
+def call_claude(prompt: str, max_tokens: int = 512) -> str:
     import anthropic
     client = anthropic.Anthropic()
     response = client.messages.create(
         model=MODEL,
-        max_tokens=512,
+        max_tokens=max_tokens,
         messages=[{"role": "user", "content": prompt}],
     )
     return response.content[0].text.strip()
+
+
+def review_blurb(blurb: str, framework: str, values_str: str, section_name: str) -> str:
+    """
+    Second LLM call to catch factual / interpretive errors before the blurb is saved.
+
+    The model writes plausible-sounding prose; one-shot generation can miss
+    domain-specific errors (asset/liability confusion, sign mistakes, wrong
+    direction, wrong attribution, dates that don't match the data) that a
+    higher-level meta-instruction in the framework can't reliably prevent.
+    This pass attacks those failure modes directly with a focused checklist.
+
+    Returns "PASS" or a bulleted list of issues. Issues do NOT block saving —
+    they're recorded in blurbs.json under `review_flags` so the user can
+    iterate on flagged blurbs while still seeing the latest output.
+    """
+    review_prompt = f"""You are reviewing an AI-generated analytical blurb for a Bank of Canada economics dashboard. The blurb was just generated against the framework section and computed data values below. Your job: check for factual or interpretive errors against those inputs.
+
+== Framework section the blurb was generated against ==
+
+{framework}
+
+== Computed data values it should reflect ==
+
+{values_str}
+
+== Generated blurb ==
+
+{blurb}
+
+== Review checklist ==
+
+For each, state PASS or describe the specific issue:
+
+1. **Direction / sign correctness.** Every claim about something rising / falling / being above-or-below something else must match the data. E.g. "yields have risen" requires the data to show that.
+
+2. **Asset / liability / structural correctness.** Does the blurb correctly distinguish things on opposite sides of a balance sheet, opposite signs of a spread, different categorical buckets? E.g. settlement balances are a BoC liability not asset; a -138bps BoC-Fed spread means BoC below Fed.
+
+3. **Attribution.** Does the blurb attribute moves to the right entity? E.g. don't say "BoC has cut" if data shows hold; don't say "wages are rising" if measures are mixed.
+
+4. **Dates and timeframes.** Do dates referenced match what the data shows?
+
+5. **Action-state verb correctness.** If action_state is "on hold", verbs should reflect holding, not cutting/hiking.
+
+6. **Magnitude / threshold correctness.** If the blurb cites a percentile, threshold, or magnitude, does it match the data?
+
+== Output ==
+
+Respond with EXACTLY one of:
+
+- The single word "PASS" if the blurb has no factual errors against the framework and data.
+- Otherwise, a bulleted list of specific factual issues. Each bullet: name the exact phrase, what's wrong, what the data actually shows.
+
+Do NOT comment on writing style, voice, length, or word choice. Only factual / interpretive correctness against the inputs above."""
+    return call_claude(review_prompt, max_tokens=600)
 
 
 # ── Main ─────────────────────────────────────────────────────────────────────
@@ -952,6 +1007,12 @@ def main() -> None:
     print("\n=== Generated blurb ===\n")
     print(blurb)
 
+    print("\nRunning self-review pass for factual correctness...")
+    review = review_blurb(blurb, framework, values_str, section["name"])
+    print("\n=== Self-review verdict ===\n")
+    print(review)
+    review_passed = review.strip().upper().startswith("PASS")
+
     out: dict = {}
     if OUT.exists():
         try:
@@ -963,11 +1024,17 @@ def main() -> None:
             OUT.rename(backup_path)
             print(f"  Warning: blurbs.json was corrupt (line {e.lineno}, col {e.colno}). Backed up to {backup_path.name} before writing fresh file.", file=sys.stderr)
             out = {}
-    out[section_id] = {
+    entry = {
         "as_of": values["latest_date"],
         "model": MODEL,
         "text":  blurb,
     }
+    if not review_passed:
+        # Save flags so the user can iterate on blurbs that the review questioned;
+        # don't block saving — stale-but-flagged is more useful than nothing.
+        entry["review_flags"] = review
+        print("\nWARNING: self-review flagged issues. Blurb saved with review_flags; iterate when you next review the dashboard.", file=sys.stderr)
+    out[section_id] = entry
     OUT.write_text(json.dumps(out, indent=2))
     print(f"\nWrote: {OUT}")
 

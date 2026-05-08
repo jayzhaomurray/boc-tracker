@@ -35,6 +35,22 @@ jobs:
             python fetch.py
           fi
 
+      - name: Generate section blurbs
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # Regenerate every section blurb with the latest data. Each blurb is
+          # generated, then self-reviewed, then saved (with review flags if any).
+          # If ANTHROPIC_API_KEY isn't set in repo Secrets, this step is a no-op
+          # — the existing data/blurbs.json (last manual seed) carries through.
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::warning::ANTHROPIC_API_KEY not set; skipping blurb regeneration. Set the secret in repo Settings > Secrets to enable automated blurb updates."
+          else
+            for section in inflation policy labour financial; do
+              python analyze.py --section "$section" || echo "::warning::Blurb generation failed for section: $section"
+            done
+          fi
+
       - run: python build.py
 
       - uses: stefanzweifel/git-auto-commit-action@v5
