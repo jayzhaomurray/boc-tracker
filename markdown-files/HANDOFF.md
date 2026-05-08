@@ -145,6 +145,10 @@ No auth required. Returns ~700 records covering several oil grades. WCS is filte
 | `cpixfet` | BoC Valet | `STATIC_CPIXFET` | CPIXFET (excl. food & energy), Y/Y % | Monthly |
 | `cpi_components` | StatsCan | 60 vectors (see mapping JSON) | Wide CSV: one column per CPI component | Monthly |
 | `unemployment_rate` | StatsCan | Vector 2062815 | Unemployment rate, Canada, SA | Monthly |
+| `employment_rate` | StatsCan | Vector 2062817 | Employment rate (employment/working-age population), Canada 15+, SA — Table 14-10-0287-01 | Monthly |
+| `participation_rate` | StatsCan | Vector 2062816 | Participation rate (labour force/working-age population), Canada 15+, SA — Table 14-10-0287-01 | Monthly |
+| `job_vacancy_rate` | StatsCan | Vector 1374464764 | Job vacancy rate, Canada total economy, SA — Table 14-10-0398-01 (JVWS); series begins 2015 | Quarterly |
+| `unit_labour_cost` | StatsCan | Vector 1409159 | Unit labour costs, business sector, Canada, SA index (2017=100) — Table 36-10-0206-01 | Quarterly |
 | `lfs_wages_all` | StatsCan | Vector 105812645 | LFS avg hourly wages, all employees, SA | Monthly |
 | `lfs_wages_permanent` | StatsCan | Vector 105812715 | LFS avg hourly wages, permanent employees, SA | Monthly |
 | `seph_earnings` | StatsCan | Vector 79311153 | SEPH avg weekly earnings, all employees, SA | Monthly |
@@ -162,6 +166,14 @@ No auth required. Returns ~700 records covering several oil grades. WCS is filte
 | `gdp_industry_services` | StatsCan | Vector 65201212 | Monthly real GDP, services-producing industries, chained 2017 $, SAAR — C$ trillions | Monthly |
 | `gdp_industry_manufacturing` | StatsCan | Vector 65201263 | Monthly real GDP, manufacturing, chained 2017 $, SAAR — C$ trillions | Monthly |
 | `gdp_industry_mining_oil` | StatsCan | Vector 65201236 | Monthly real GDP, mining/quarrying/oil & gas extraction, chained 2017 $, SAAR — C$ trillions | Monthly |
+| `gdp_total_contribution` | StatsCan | Vector 79448580 | Total GDP at market prices, contribution to annualized Q/Q growth, percentage points (Table 36-10-0104, SAAR) — overlay line on the GDP Growth Contributions chart | Quarterly |
+| `housing_starts` | StatsCan | Vector 52300157 | CMHC housing starts, Canada total, SAAR (thousands) — Table 34-10-0158-01 | Monthly |
+| `new_housing_price_index` | StatsCan | Vector 111955442 | NHPI, Canada total, Dec 2016=100, NSA — Table 18-10-0205-01 | Monthly |
+| `residential_permits` | StatsCan | Vector 1675119646 | Total residential building permits, value SA, current C$ thousands — Table 34-10-0292-01 | Monthly |
+| `crea_mls_hpi` | BoC Valet | `FVI_CREA_MLS_HPI_CANADA` | CREA MLS HPI benchmark, all of Canada, index 2019=100; BoC Financial Vulnerability Indicators; available 2014–present | Monthly |
+| `housing_affordability` | BoC Valet | `INDINF_AFFORD_Q` | BoC housing affordability index (ratio of mortgage payment to income); available 2000–present | Quarterly |
+
+**Derived series (computed in `_add_derived_series`, not stored as CSVs):** `bocfed_spread`, `can2y_overnight_spread`, `can_us_2y_spread` (yield spreads); `nhpi_yoy` and `crea_mls_hpi_yoy` (Y/Y %); `nhpi_rebased` and `crea_mls_hpi_rebased` (both rebased to Jan 2020 = 100, for the Housing Prices Index toggle); `housing_starts_3m` and `housing_starts_12m` (rolling means, for the Housing Starts legend-as-toggles); `residential_permits_b` (residential_permits / 1e6, i.e. C$ billions). Source CSVs are registered in `_DERIVED_SERIES_SOURCES` dict so the data loader knows to load them.
 
 **`fed_funds` construction:** `FEDFUNDS` monthly effective rate (1990–Dec 2008) prepended to `(DFEDTARU + DFEDTARL) / 2` daily midpoint (Dec 2008–present). Built by `fetch_fed_funds_target()`.
 
@@ -309,12 +321,12 @@ class PageSpec:
     sections: dict = field(default_factory=dict)   # {chart_index: section_id}
 ```
 
-`sections` maps a chart index to a section identifier defined in `SECTION_HEADINGS`. When `build_page` reaches that index, it prepends a section heading and (if a blurb exists in `data/blurbs.json`) the blurb above the chart panel. All six section headings are placed today (`{0: "policy", 3: "inflation", 8: "gdp", 10: "labour", 12: "housing", 15: "financial"}`). All six sections have generated blurbs in `data/blurbs.json`.
+`sections` maps a chart index to a section identifier defined in `SECTION_HEADINGS`. When `build_page` reaches that index, it prepends a section heading and (if a blurb exists in `data/blurbs.json`) the blurb above the chart panel. All six section headings are placed today (`{0: "policy", 3: "inflation", 8: "gdp", 10: "labour", 15: "housing", 19: "financial"}`). All six sections have generated blurbs in `data/blurbs.json`.
 
-### Current PAGES definition (17 charts, 6 section headings, 6 blurbs)
+### Current PAGES definition (21 charts, 6 section headings, 6 blurbs)
 
 ```
-PageSpec("Bank of Canada Tracker", sections={0: "policy", 3: "inflation", 8: "gdp", 10: "labour", 12: "housing", 15: "financial"}, ...)
+PageSpec("Bank of Canada Tracker", sections={0: "policy", 3: "inflation", 8: "gdp", 10: "labour", 15: "housing", 19: "financial"}, ...)
   ── MONETARY POLICY (heading + blurb) ──
   MultiLineSpec            — Policy Rates (BoC overnight + Fed funds + BoC−Fed spread toggle, hv step, neutral-rate band 2.25–3.25%, 10Y default)
   MultiLineSpec            — 2-Year Yields (Canada + US + Canada 2Y−Overnight spread toggle + Canada 2Y−US 2Y spread toggle, smooth toggle, 10Y default)
@@ -327,14 +339,18 @@ PageSpec("Bank of Canada Tracker", sections={0: "policy", 3: "inflation", 8: "gd
   MultiLineSpec            — Business Inflation Expectations Distribution (BOS 4-bucket distribution: <1%, 1–2%, 2–3%, >3%; 10Y default)
   ── GDP & ACTIVITY (heading + blurb) ──
   ChartSpec                — Real GDP (monthly, C$ trillions, 4 transforms, 4 industry overlays via OverlayConfig, level default, 10Y default)
-  StackedBarSpec           — GDP Growth Contributions (6 components stacked, barmode=relative, 2Y default)
+  StackedBarSpec           — GDP Growth Contributions (6 components stacked + Headline GDP (AR) line overlay, barmode=relative, 2Y default; subtitle = "Percentage-point contributions to annualized Q/Q growth"; footnote calls out the StatsCan-daily ÷4 convention and the residual = NPISH + statistical discrepancy)
   ── LABOUR MARKET (heading + blurb) ──
   ChartSpec                — Unemployment Rate (static, 10Y default)
   WageSpec                 — Wage Growth (range band + 4 measures + Services CPI overlay)
+  MultiLineSpec            — Labour Utilization (Employment rate + Participation rate, monthly SA, level only; 10Y default)
+  ChartSpec                — Job Vacancy Rate (quarterly SA, static, 10Y default)
+  ChartSpec                — Unit Labour Costs (business sector, quarterly SA, default Y/Y; 10Y default)
   ── HOUSING (heading + blurb) ──
-  ChartSpec                — Housing Starts (monthly with 3-month smoothing, units, 10Y default)
-  ChartSpec                — New Housing Price Index (NHPI Y/Y, 10Y default)
-  ChartSpec                — Residential Building Permits (Y/Y, 10Y default)
+  MultiLineSpec            — Housing Starts (three legend-as-toggle lines: Level off, 3M Avg on, 12M Avg on; no transform toggles; thousands SAAR; 10Y default)
+  MultiLineSpec            — Housing Prices (NHPI + CREA MLS HPI; Y/Y default with Y/Y ↔ Index button-bar toggle; both rebased to Jan 2020 = 100 in Index view; 10Y default)
+  ChartSpec                — Residential Building Permits (level default; C$ billions SA via residential_permits_b derived series; Max default — data starts Jan 2018)
+  ChartSpec                — Housing Affordability (BoC INDINF_AFFORD_Q; quarterly ratio; static, 10Y default)
   ── FINANCIAL CONDITIONS (heading + blurb) ──
   MultiLineSpec            — Oil Prices (WTI + Brent + WCS, smooth toggle, ymin=0, 10Y default)
   ChartSpec                — USD/CAD (daily, 10Y default)
@@ -522,12 +538,13 @@ Built and runnable. End-to-end:
 
 - [x] `fetch.py` — pulls StatsCan, BoC Valet, FRED, Alberta Economic Dashboard
 - [x] `analyze.py` — reads framework + data, calls Claude Opus, writes `data/blurbs.json`
-- [x] `build.py` — config-driven, builds 17-chart `index.html` with section blurb injection across 6 sections
+- [x] `build.py` — config-driven, builds 21-chart `index.html` with section blurb injection across 6 sections
 - [x] Full transformation system for all frequencies
 - [x] Spec dataclasses (Chart, MultiLine, StackedBar, CoreInflation, CpiBreadth, Wage, Cpi, Page); `PageSpec.sections` for blurb placement
 - [x] GitHub Pages deployment + GitHub Actions cron (3 schedules + dispatch)
 - [x] StatsCan retry/poll logic via `--wait`
-- [x] **All 17 charts implemented across 6 sections** (Monetary Policy: Policy Rates, 2Y Yields, Balance Sheet · Inflation: Core Inflation, CPI Components, CPI Breadth, Inflation Expectations, Business Inflation Expectations Distribution · GDP & Activity: Real GDP monthly with industry overlays, GDP Contributions stacked bar · Labour Market: Unemployment, Wage Growth · Housing: Starts, NHPI, Permits · Financial Conditions: Oil Prices, USD/CAD)
+- [x] **All 21 charts implemented across 6 sections** (Monetary Policy: Policy Rates, 2Y Yields, Balance Sheet · Inflation: Core Inflation, CPI Components, CPI Breadth, Inflation Expectations, Business Inflation Expectations Distribution · GDP & Activity: Real GDP monthly with industry overlays, GDP Contributions stacked bar · Labour Market: Unemployment, Wage Growth, Labour Utilization, Job Vacancy Rate, Unit Labour Costs · Housing: Starts, Housing Prices, Permits, Housing Affordability · Financial Conditions: Oil Prices, USD/CAD)
+- [x] **Housing section redesign (May 2026)** — Housing Starts converted to MultiLineSpec with three legend-as-toggle lines (Level off, 3M Avg on, 12M Avg on); growth-rate transforms removed because mainstream housing analysis (CMHC, BoC MPR, FRED) reports starts as smoothed levels, not growth rates. Housing Prices MultiLineSpec carries NHPI + CREA MLS HPI (BoC Valet `FVI_CREA_MLS_HPI_CANADA`) with a Y/Y ↔ Index button-bar toggle; in Index view both series are rebased to Jan 2020 = 100 via build-time-derived `nhpi_rebased` and `crea_mls_hpi_rebased` (source CSVs unmodified). Permits unit changed from C$ thousands to C$ billions via build-time-derived `residential_permits_b` and default range changed to Max (series only starts Jan 2018). Housing Affordability ChartSpec added (BoC Valet `INDINF_AFFORD_Q`, quarterly, 2000–present). Architectural additions: `MultiLineSpec` gained an `alt_lines` toggle path (button-bar above chart, flips visibility group + y-axis units globally; mutually exclusive with `smooth_window`); `mlXformClick` JS extended with optional `unitLabel` arg; ChartSpec branch of the data loader now accepts derived series names. Chart-design conventions captured in `chart_style_guide.md` §7.
 - [x] **Industry overlays on Real GDP (monthly)** — `OverlayConfig` + `overlays` field on `ChartSpec` (May 2026). Four sub-aggregates from Table 36-10-0434 (Goods-producing V65201211, Services-producing V65201212, Manufacturing V65201263, Mining/oil/gas V65201236) are off by default and respect all four monthly transforms. JS: `xformClickOverlay` + `toggleOverlayTrace` (added to `_JS_TEMPLATE`).
 - [x] **Live y-axis computation** — `_computeYRange` + `_niceDtick` + `_dtickFormat` + `_refreshYAxis` adjust the y-axis to currently visible traces in the current x-window; `Y_FLOORS` carries chart-level floors.
 - [x] **Section heading + blurb injection** — All 6 sections appear with blurbs from the verified analytical framework.
@@ -545,7 +562,10 @@ Built and runnable. End-to-end:
 - [ ] **`ANTHROPIC_API_KEY` secret set in repo Settings** — workflow code is in place; flipping the switch requires the user to add the secret at https://github.com/jayzhaomurray/boc-tracker/settings/secrets/actions. Until set, blurbs stay at the last manually-seeded values; CI runs are still green and everything else works.
 - [ ] **GDP, Housing, Labour, Financial Conditions blurbs are autonomous-draft as of May 8, 2026** — verified frameworks + computed values, but prose itself was generated overnight without user iteration. Quality unverified; expect revision against plain-language principles when the user next reviews. Inflation and Monetary Policy blurbs went through user iteration cycles and are ground-truth voice.
 - [ ] **Output gap as a separate live indicator** — the BoC publishes a live output gap range each MPR (currently -1.5% to -0.5%); the GDP section references it but doesn't fetch and surface it directly. Could be added as a manual quarterly input or via fetch from BoC Valet if the series is exposed.
-- [ ] **Resale activity / CREA MLS HPI / housing affordability** — the BoC's own Housing Affordability Index uses MLS resale prices (not NHPI which is on the dashboard). Adding CREA data is non-trivial (no public API; CSV downloads + regional breakdowns).
+- [ ] **GDP — wire v79448580 + AR-explicit framing into `compute_gdp_values` + framework — pending user review.** The Headline GDP (AR) overlay (vector 79448580) and AR-convention subtitle/footnote landed on the chart May 2026, but `analyze.py`'s `compute_gdp_values` still uses `gdp_qq_growth` (vector 1594571783, rounded one-decimal Q/Q AR). `gdp_qq_growth` was kept in `STATSCAN_SERIES` because of that consumer; the cleaner comparator for the contributions chart and for blurb generation is v79448580 or AR computed from the level series (per `markdown-files/gdp_inventories_research.md`). When user reviews, switch `compute_gdp_values` to v79448580 and the framework prose to the AR-explicit framing the chart now uses.
+- [ ] **Wire new housing indicators into `compute_housing_values` + framework What-this-doesn't-track section update** — CREA MLS HPI and housing affordability are now on the dashboard but `analyze.py`'s `compute_housing_values` still only pulls `housing_starts`, `new_housing_price_index`, and `residential_permits`. The housing blurb does not yet reflect CREA HPI or affordability. Pending user review.
+- [ ] **Wire new labour indicators into `compute_labour_values` + framework What-this-doesn't-track section update** — Labour Utilization (employment rate, participation rate), Job Vacancy Rate, and Unit Labour Costs are now on the dashboard but `analyze.py`'s `compute_labour_values` still only pulls unemployment, wages, lfs_micro, services CPI. The labour framework's "what this framework doesn't track" coverage gap should be updated to remove employment rate, participation rate, vacancy rate, and ULC (now tracked) while still flagging involuntary part-time, average hours, and demographic decompositions. Pending user review.
+- [ ] **Average hours worked + involuntary part-time rate — deferred (low priority).** Both flagged as gaps in the labour framework but skipped on the May 2026 add-pass due to data-quality issues: avg hours (V3411411, table 14-10-0036) is NSA-only monthly so it would need a 12M MA to denoise; involuntary PT rate (table 14-10-0029) is annual-only at the Canada level. Open question: take NSA hours with 12M MA + skip PT, or skip both. User to decide when next reviewing labour scope.
 - [ ] **Mortgage rate spreads / mortgage debt-service ratio** — flagged in the Housing framework's coverage gaps; tracked by BoC FSR but not loaded here.
 - [ ] **Multiple pages** — PAGES list has one entry; infrastructure is ready
 - [ ] **Navigation bar** — only relevant after multi-page split

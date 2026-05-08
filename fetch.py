@@ -61,20 +61,31 @@ STATSCAN_SERIES = {
     "gdp_industry_manufacturing":(65201263, 0.000001),  # Table 36-10-0434: Manufacturing, chained 2017 $, SAAR (C$ trillions)
     "gdp_industry_mining_oil":   (65201236, 0.000001),  # Table 36-10-0434: Mining, quarrying, and oil and gas extraction, chained 2017 $, SAAR (C$ trillions)
     "gdp_quarterly":             62305752,  # Table 36-10-0104: Quarterly real GDP, expenditure-based, chained 2017 $, SAAR
-    "gdp_qq_growth":           1594571783,  # Table 36-10-0104: Q/Q % change, pre-computed (saves one calculation)
+    "gdp_qq_growth":           1594571783,  # Table 36-10-0104: Q/Q % change, pre-computed (kept: consumed by analyze.py compute_gdp_values; not the right comparator for the contributions chart — see HANDOFF)
+    "gdp_total_contribution":    79448580,  # Table 36-10-0104: TOTAL GDP at market prices, contribution to annualized Q/Q growth (pp). Overlay for the contributions chart; gap vs. component sum = NPISH + statistical discrepancy.
     "gdp_contrib_consumption":   79448555,  # Table 36-10-0104: Household final consumption, contribution to annualized Q/Q growth
     "gdp_contrib_govt":          79448562,  # Table 36-10-0104: Government final consumption, contribution to annualized Q/Q growth
     "gdp_contrib_investment":    79448563,  # Table 36-10-0104: Gross fixed capital formation, contribution to annualized Q/Q growth
     "gdp_contrib_inventories":   79448572,  # Table 36-10-0104: Change in inventories, contribution to annualized Q/Q growth
     "gdp_contrib_exports":       79448573,  # Table 36-10-0104: Exports of goods and services, contribution to annualized Q/Q growth
-    "gdp_contrib_imports":       79448576,  # Table 36-10-0104: Less: imports (sign-flipped: positive = imports fell)
+    "gdp_contrib_imports":       (79448576, -1),  # Table 36-10-0104: imports — scale_factor=-1 stores it as "Less: imports" so positive contribution = imports fell (StatsCan/MPR presentation convention)
     # Note: prime-age employment rate (output gap proxy) was attempted via v2062952 but returns HTTP 409 from WDS.
     # Skipped for now; the existing unemployment_rate series in the Labour section serves as the activity proxy.
+    # Labour Market section additions (May 2026): BoC SAN 2025-17 multi-indicator framework — employment rate,
+    # participation rate, job vacancy rate, unit labour costs. Avg hours and involuntary PT skipped: only NSA
+    # or annual at the cadence we want; flagged for the next round.
+    "employment_rate":           2062817,  # Table 14-10-0287-01: Employment rate, Canada, 15+, total, SA (%)
+    "participation_rate":        2062816,  # Table 14-10-0287-01: Participation rate, Canada, 15+, total, SA (%)
+    "job_vacancy_rate":      1374464764,   # Table 14-10-0398-01: Job vacancy rate, Canada total, quarterly SA (%)
+    "unit_labour_cost":         1409159,   # Table 36-10-0206-01: Unit labour cost, business sector, Canada, quarterly SA (index)
     # Housing section (added May 2026)
     "housing_starts":            52300157,  # Table 34-10-0158-01: Housing starts, Canada total, SAAR (units)
     "new_housing_price_index": 111955442,  # Table 18-10-0205-01: New Housing Price Index, Canada total, Dec 2016 = 100, NSA
     "residential_permits":     1675119646,  # Table 34-10-0292-01: Total residential building permits, value SA, current $ thousands
 }
+
+# Note: housing_starts units are thousands of SAAR units (e.g. 236 = 236,000 annualized starts)
+# residential_permits units are current C$ thousands (e.g. 8,132,058 = ~$8.1 billion)
 
 BOC_VALET_SERIES = {
     # 2-tuple: (series_key, start_date). 3-tuple: (series_key, start_date, scale_factor)
@@ -101,6 +112,9 @@ BOC_VALET_SERIES = {
     "bos_dist_1to2":        ("INDINF_BOS1TO2_Q",   "2003-01-01"),  # BOS: % of firms expecting CPI inflation 1-2%
     "bos_dist_2to3":        ("INDINF_BOS2TO3_Q",   "2003-01-01"),  # BOS: % of firms expecting CPI inflation 2-3% (target-consistent)
     "bos_dist_above3":      ("INDINF_BOSOVER3_Q",  "2003-01-01"),  # BOS: % of firms expecting CPI inflation >3%
+    # Housing price indices (added May 2026)
+    "crea_mls_hpi":         ("FVI_CREA_MLS_HPI_CANADA", "2014-01-01"),  # CREA MLS HPI, all of Canada, index 2019=100; BoC Financial Vulnerability Indicators; monthly
+    "housing_affordability": ("INDINF_AFFORD_Q",        "2000-01-01"),  # BoC housing affordability index (quarterly; ~ratio of mortgage payment to income)
 }
 
 FRED_SERIES = {

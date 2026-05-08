@@ -7,7 +7,7 @@ A real, in-use personal data dashboard tracking Bank of Canada indicators. Live 
 Read these four documents in order before doing anything substantive. They are the source of truth.
 
 1. **`markdown-files/HANDOFF.md`** — current state, file structure, ordered next-steps. Orient here.
-2. **`markdown-files/chart_style_guide.md`** — formatting principles + workflow rules (§7 governs how to break or revise a principle).
+2. **`markdown-files/chart_style_guide.md`** — formatting principles + workflow rules (§8 governs how to break or revise a principle).
 3. **`markdown-files/analysis_framework.md`** — internal analytical brief for blurb generation. Per-section questions, signals, thresholds.
 4. **`markdown-files/reading_guide.md`** — short reader-facing dashboard orientation.
 
@@ -19,7 +19,7 @@ Read these four documents in order before doing anything substantive. They are t
 - **Argue and recommend, don't menu options.** When facing a choice, write the analysis, weigh the candidates, name a recommendation. Use AskUserQuestion only for clarification I can't infer — not for "pick one of these." The user's decision rule: a strong recommendation is something to agree with or push back on; a menu shifts the decision burden back to them.
 - **Skip plan mode for genuinely small changes.** Adding one toggleable line to an existing chart doesn't need the 5-step planning workflow. Plan mode is for design decisions, not implementation steps.
 - **Concise commit messages.** 5–10 lines max for routine changes; long-form only for genuinely complex commits. (Past sessions have over-explained.)
-- **Never silently break a principle, never silently rewrite one.** chart_style_guide.md §7 has the exception/revision protocol. Surface the case, propose either revising the principle (if it'll recur) or documenting an exception.
+- **Never silently break a principle, never silently rewrite one.** chart_style_guide.md §8 has the exception/revision protocol. Surface the case, propose either revising the principle (if it'll recur) or documenting an exception.
 - **Keep HANDOFF.md current as part of the same commit that changes reality.** Don't let the doc drift. Triggers:
   - Adding/removing a chart, adding a data series, renaming a section: update HANDOFF's "Current PAGES definition" and/or the data series table.
   - Completing a Next Steps item or verifying a framework section: cross it off / move it.

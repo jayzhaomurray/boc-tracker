@@ -84,6 +84,12 @@ class ChartSpec:
     # Optional overlay lines. Each shares the same frequency/transforms as the primary
     # series but renders as a separate toggleable line, off by default.
     overlays: list = field(default_factory=list)  # list[OverlayConfig]
+    # In level mode with the main series toggled off, swap the overlays to an alternate
+    # display unit. Used by Monthly GDP: trillions while the total is shown, billions
+    # while only industry overlays are shown (industries naturally read in billions, not
+    # fractional trillions). Both fields must be set for the swap to activate.
+    overlay_level_alt_unit_label: str = ""
+    overlay_level_alt_scale: float = 1.0
 
 
 @dataclass
@@ -163,18 +169,31 @@ class MultiLineSpec:
     default_years: int | None = None
     line_shape: str = "linear"          # "linear" | "hv" (step)
     smooth_window: int | None = None    # rolling average window; None = no smooth button
+    smooth_label: str | None = None     # override for the smooth button text; defaults to "{smooth_window}d Avg"
     date_fmt: str = "%b %Y"            # hover date format
     footnote: str = ""
     ymin: float | None = None           # hard floor for y-axis (pre-computed ranges + autorange)
     unit_label: str = "%"               # text shown in top-left of plot area
     hband: tuple | None = None          # (lo, hi) horizontal shaded reference band, e.g. neutral rate
+    # Alt-mode toggle (e.g. Index ↔ Y/Y on Housing Prices). Mutually exclusive with smooth_window.
+    # When set, the chart renders a button-bar above the chart that flips both series between
+    # primary (lines) and alt (alt_lines) — switching y-axis units globally.
+    alt_lines: list = field(default_factory=list)   # list[LineConfig], must match lines length 1:1
+    primary_label: str = "Y/Y"                     # button text for primary view
+    alt_label: str = "Index"                       # button text for alt view
+    alt_unit_label: str = ""                        # unit_label when in alt mode
+    alt_ticksuffix: str = ""                        # ticksuffix used in HOVER for alt-mode traces
+    alt_hoverformat: str = ".1f"                    # hoverformat for alt-mode traces
+    default_alt: bool = False                       # if True, alt mode is the default view
 
 
 @dataclass
 class StackedBarSpec:
     """Stacked bar chart with per-series legend toggles. Uses barmode='relative'
     so positive bars stack above zero and negative bars stack below — correct for
-    contribution-to-growth charts where components can swing either direction."""
+    contribution-to-growth charts where components can swing either direction.
+    `overlay` (optional) renders an additional line trace (e.g. headline series)
+    on top of the bars; default visible, has its own legend toggle."""
     title: str
     lines: list                       # list[LineConfig]; reused from MultiLineSpec
     ticksuffix: str = "%"
@@ -183,6 +202,7 @@ class StackedBarSpec:
     date_fmt: str = "%b %Y"
     footnote: str = ""
     unit_label: str = "%"
+    overlay: "LineConfig | None" = None  # optional headline-line overlay drawn on top of bars
 
 
 # ── Transform system ──────────────────────────────────────────────────────────
@@ -493,6 +513,37 @@ def _chart_panel_html(chart: ChartSpec, df: pd.DataFrame, chart_idx: int,
         '<div class="chart-footnote">' + chart.footnote + '</div>'
         if chart.footnote else ""
     )
+
+    # Conditional alt-unit setup: stash the level-transform overlay y-values and the
+    # alt unit/scale so JS can swap on main-series toggle. See ChartSpec.overlay_level_alt_*.
+    alt_unit_script = ""
+    if (chart.overlays and chart.overlay_level_alt_unit_label
+            and chart.overlay_level_alt_scale != 1.0):
+        import json as _json, math as _math
+        level_idx = 0  # FREQ_TRANSFORMS lists "level" first for every frequency
+        orig_y = {}
+        for k in range(len(chart.overlays)):
+            trace_idx = (k + 1) * n_transforms + level_idx
+            if trace_idx < len(fig.data):
+                y_vals = fig.data[trace_idx].y
+                orig_y[str(trace_idx)] = [
+                    None if (isinstance(v, float) and _math.isnan(v)) else v
+                    for v in y_vals
+                ]
+        cfg = {
+            "altUnitLabel": chart.overlay_level_alt_unit_label,
+            "primaryUnitLabel": chart.unit_label,
+            "altScale": chart.overlay_level_alt_scale,
+            "levelTformIdx": level_idx,
+            "origY": orig_y,
+        }
+        alt_unit_script = (
+            '<script>'
+            'window._chartConfig=window._chartConfig||{};'
+            'window._chartConfig["' + div_id + '"]=' + _json.dumps(cfg) + ';'
+            '</script>'
+        )
+
     return (
         '<div class="chart-panel">'
         '<div class="chart-header">'
@@ -500,6 +551,7 @@ def _chart_panel_html(chart: ChartSpec, df: pd.DataFrame, chart_idx: int,
         + controls +
         "</div>"
         + plotly_frag
+        + alt_unit_script
         + legend_html
         + footnote_html
         + "</div>\n"
@@ -562,6 +614,27 @@ def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
         hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>CPI-median</extra>",
         showlegend=False, visible=False,
     ))
+    # Trace 5: CPI-common (hidden by default)
+    fig.add_trace(go.Scatter(
+        x=common.index, y=common.values,
+        line=dict(color="#00897b", width=1.5),
+        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>CPI-common</extra>",
+        showlegend=False, visible=False,
+    ))
+    # Trace 6: CPIX (hidden by default)
+    fig.add_trace(go.Scatter(
+        x=cpix.index, y=cpix.values,
+        line=dict(color="#6d4c41", width=1.5),
+        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>CPIX</extra>",
+        showlegend=False, visible=False,
+    ))
+    # Trace 7: CPIXFET (hidden by default)
+    fig.add_trace(go.Scatter(
+        x=cpixfet.index, y=cpixfet.values,
+        line=dict(color="#8e24aa", width=1.5),
+        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>CPIXFET</extra>",
+        showlegend=False, visible=False,
+    ))
 
     fig.add_hline(y=2, line_color="#555", line_width=1)
     fig.update_layout(
@@ -621,6 +694,15 @@ def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
         + '<button class="legend-item"'
         + ' onclick="toggleTrace(this,\'' + div_id + '\',[4])">'
         + _swatch_line("#78909c") + 'CPI-median</button>'
+        + '<button class="legend-item"'
+        + ' onclick="toggleTrace(this,\'' + div_id + '\',[5])">'
+        + _swatch_line("#00897b") + 'CPI-common</button>'
+        + '<button class="legend-item"'
+        + ' onclick="toggleTrace(this,\'' + div_id + '\',[6])">'
+        + _swatch_line("#6d4c41") + 'CPIX</button>'
+        + '<button class="legend-item"'
+        + ' onclick="toggleTrace(this,\'' + div_id + '\',[7])">'
+        + _swatch_line("#8e24aa") + 'CPIXFET</button>'
         + '<button class="legend-item active"'
         + ' onclick="toggleTrace(this,\'' + div_id + '\',[0,1])">'
         + swatch_range + 'Range of core measures</button>'
@@ -1385,7 +1467,7 @@ function toggleTrace(btn, chartId, indices) {
   _refreshYAxis(chartId);
 }
 
-function mlXformClick(btn, chartId, mode, lineCount) {
+function mlXformClick(btn, chartId, mode, lineCount, unitLabel) {
   var div = document.getElementById(chartId);
   btn.closest(".btn-group").querySelectorAll(".ctrl-btn").forEach(function(b) {
     b.classList.remove("active");
@@ -1403,6 +1485,10 @@ function mlXformClick(btn, chartId, mode, lineCount) {
     });
   }
   Plotly.restyle(div, {visible: vis});
+  if (unitLabel !== undefined) {
+    var subtitleDiv = document.getElementById("unit-" + chartId);
+    if (subtitleDiv) subtitleDiv.textContent = unitLabel;
+  }
   var rb = document.getElementById("rb-" + chartId);
   if (rb) {
     var ab = rb.querySelector(".ctrl-btn.active");
@@ -1417,7 +1503,22 @@ function mlToggle(btn, chartId, lineIdx, lineCount) {
   var div = document.getElementById(chartId);
   var isActive = btn.classList.contains("active");
   btn.classList.toggle("active");
-  var mode = div._mlMode || "raw";
+  // Mode is whichever xform button is currently active. Without this fallback, charts
+  // that default to alt-mode (e.g. Housing Prices defaulting to Y/Y) would have
+  // _mlMode unset until first xform-click, and legend toggles would target the
+  // wrong trace group.
+  var mode = div._mlMode;
+  if (!mode) {
+    var xb = document.getElementById("xb-" + chartId);
+    if (xb) {
+      var ab = xb.querySelector(".ctrl-btn.active");
+      if (ab) {
+        var m = ab.getAttribute("onclick").match(/'(raw|smooth)'/);
+        if (m) { mode = m[1]; div._mlMode = mode; }
+      }
+    }
+    if (!mode) mode = "raw";
+  }
   // Treat "legendonly" as off — only an explicit true counts as visible.
   // See toggleTrace for the same fix; without this, lines spec'd visible=False
   // (Plotly stores them as "legendonly") get promoted to true by restyle when
@@ -1464,6 +1565,7 @@ function xformClickOverlay(btn, chartId, idx, nTransforms, nOverlays, unitLabel)
     if (isOn) vis[base + idx] = true;
   }
   Plotly.restyle(div, {visible: vis});
+  _maybeSwapAltUnit(div, chartId, nTransforms);
   var rb = document.getElementById("rb-" + chartId);
   if (rb) {
     var activeRangeBtn = rb.querySelector(".ctrl-btn.active");
@@ -1472,6 +1574,37 @@ function xformClickOverlay(btn, chartId, idx, nTransforms, nOverlays, unitLabel)
       if (m && m[1] !== "null") applyRange(chartId, parseInt(m[1]));
     }
   }
+}
+
+// _maybeSwapAltUnit: for charts configured with overlay_level_alt_unit_label,
+// switch overlay y-values + subtitle between primary and alt scale based on whether
+// the main series is currently visible (level transform only).
+function _maybeSwapAltUnit(div, chartId, nTransforms) {
+  var cfg = (window._chartConfig || {})[chartId];
+  if (!cfg || !cfg.altUnitLabel) return;
+  var xb = document.getElementById("xb-" + chartId);
+  var activeTform = 0;
+  if (xb) xb.querySelectorAll(".ctrl-btn").forEach(function(b, i) {
+    if (b.classList.contains("active")) activeTform = i;
+  });
+  if (activeTform !== cfg.levelTformIdx) return;
+
+  var mainOff = (div.data[cfg.levelTformIdx].visible !== true);
+  var nOverlays = (div.data.length / nTransforms) - 1;
+  var subtitleDiv = document.getElementById("unit-" + chartId);
+
+  var traceIdxs = [];
+  var newYs = [];
+  for (var k = 0; k < nOverlays; k++) {
+    var overlayLevelIdx = (k + 1) * nTransforms + cfg.levelTformIdx;
+    var origY = cfg.origY[String(overlayLevelIdx)];
+    if (!origY) continue;
+    var newY = mainOff ? origY.map(function(v) { return v === null ? null : v * cfg.altScale; }) : origY.slice();
+    newYs.push(newY);
+    traceIdxs.push(overlayLevelIdx);
+  }
+  if (traceIdxs.length > 0) Plotly.restyle(div, {y: newYs}, traceIdxs);
+  if (subtitleDiv) subtitleDiv.textContent = mainOff ? cfg.altUnitLabel : cfg.primaryUnitLabel;
 }
 
 // toggleOverlayTrace: turn an overlay (or the main series) on or off.
@@ -1503,6 +1636,7 @@ function toggleOverlayTrace(btn, chartId, overlayIdx, nTransforms) {
     if (!isActive) vis[base + activeTform] = true;
   }
   Plotly.restyle(div, {visible: vis});
+  if (overlayIdx === -1) _maybeSwapAltUnit(div, chartId, nTransforms);
   _refreshYAxis(chartId);
 }
 
@@ -1595,6 +1729,12 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
     lines = [line for line in chart.lines if line.series in data]
     n = len(lines)
     has_smooth = chart.smooth_window is not None and n > 0
+    has_alt = bool(chart.alt_lines) and n > 0
+    # Mutually exclusive modes
+    if has_smooth and has_alt:
+        raise ValueError("MultiLineSpec: smooth_window and alt_lines cannot both be set")
+    default_alt = has_alt and chart.default_alt
+    has_two_modes = has_smooth or has_alt
 
     fig = go.Figure()
 
@@ -1608,15 +1748,20 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
             layer="below",
         )
 
-    # Raw traces (indices 0..n-1)
+    # Primary traces (indices 0..n-1).
+    # When default_alt is True, primary traces are hidden by default.
     for line in lines:
         df = data[line.series]
+        if default_alt:
+            initial_visible = False
+        else:
+            initial_visible = True if line.visible else "legendonly"
         fig.add_trace(go.Scatter(
             x=df["date"], y=df["value"],
             name=line.label,
             line=dict(color=line.color, width=2),
             line_shape=chart.line_shape,
-            visible=True if line.visible else "legendonly",
+            visible=initial_visible,
             hovertemplate="%{x|" + chart.date_fmt + "}<br>%{y:" + chart.hoverformat + "}" + chart.ticksuffix + "<extra>" + line.label + "</extra>",
             showlegend=False,
         ))
@@ -1627,7 +1772,8 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
             df = data[line.series]
             if line.smooth:
                 smooth = df["value"].rolling(chart.smooth_window, min_periods=chart.smooth_window // 2).mean()
-                smooth_label = line.label + " (" + str(chart.smooth_window) + "d avg)"
+                _sl = chart.smooth_label if chart.smooth_label is not None else str(chart.smooth_window) + "d avg"
+                smooth_label = line.label + " (" + _sl + ")"
             else:
                 smooth = df["value"]  # already low-frequency; show raw in smooth mode
                 smooth_label = line.label
@@ -1641,6 +1787,37 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
                 showlegend=False,
             ))
 
+    # Alt-mode traces (indices n..2n-1). Each alt line corresponds positionally to a primary line.
+    # Visibility: when default_alt is True and the matching primary line was visible, this alt
+    # trace is visible by default; otherwise hidden.
+    if has_alt:
+        for i, line in enumerate(lines):
+            alt_line = chart.alt_lines[i] if i < len(chart.alt_lines) else None
+            if alt_line is None or alt_line.series not in data:
+                # Add a placeholder empty trace to preserve index alignment.
+                fig.add_trace(go.Scatter(
+                    x=[], y=[],
+                    name=line.label,
+                    line=dict(color=line.color, width=2),
+                    visible=False,
+                    showlegend=False,
+                ))
+                continue
+            df_alt = data[alt_line.series]
+            if default_alt:
+                initial_visible = True if line.visible else "legendonly"
+            else:
+                initial_visible = False
+            fig.add_trace(go.Scatter(
+                x=df_alt["date"], y=df_alt["value"],
+                name=line.label,
+                line=dict(color=line.color, width=2),
+                line_shape=chart.line_shape,
+                visible=initial_visible,
+                hovertemplate="%{x|" + chart.date_fmt + "}<br>%{y:" + chart.alt_hoverformat + "}" + chart.alt_ticksuffix + "<extra>" + line.label + "</extra>",
+                showlegend=False,
+            ))
+
     fig.update_layout(
         height=_CHART_HEIGHT, showlegend=False,
         paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
@@ -1648,7 +1825,11 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
     )
     _fmt_today = pd.Timestamp.now().normalize()
     _fmt_vals: list = []
-    for _line in lines:
+    # When default_alt is True, the initial visible series is the alt set, not the primary.
+    _ref_lines = chart.alt_lines if default_alt else lines
+    for _line in _ref_lines:
+        if _line is None or _line.series not in data:
+            continue
         _df = data[_line.series]
         if chart.default_years:
             _cutoff = _fmt_today - pd.DateOffset(years=chart.default_years)
@@ -1687,7 +1868,27 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
         xform_btns = (
             '<div class="btn-group" id="xb-' + div_id + '">'
             + '<button class="ctrl-btn active" onclick="mlXformClick(this,\'' + div_id + '\',\'raw\',' + str(n) + ')">Level</button>'
-            + '<button class="ctrl-btn" onclick="mlXformClick(this,\'' + div_id + '\',\'smooth\',' + str(n) + ')">' + str(chart.smooth_window) + 'd Avg</button>'
+            + '<button class="ctrl-btn" onclick="mlXformClick(this,\'' + div_id + '\',\'smooth\',' + str(n) + ')">' + (chart.smooth_label if chart.smooth_label is not None else str(chart.smooth_window) + 'd Avg') + '</button>'
+            + '</div>'
+        )
+        controls = '<div class="chart-controls">' + xform_btns + '<div class="btn-sep"></div>' + range_btns + '</div>'
+    elif has_alt:
+        # Two-mode toggle: primary (e.g. Y/Y) vs alt (e.g. Index). Mode switch flips
+        # which group of traces is visible AND swaps the unit_label in the plot subtitle.
+        primary_args = (
+            "this,'" + div_id + "','raw'," + str(n)
+            + ",'" + chart.unit_label.replace("'", "\\'") + "'"
+        )
+        alt_args = (
+            "this,'" + div_id + "','smooth'," + str(n)
+            + ",'" + chart.alt_unit_label.replace("'", "\\'") + "'"
+        )
+        primary_active = "" if default_alt else " active"
+        alt_active = " active" if default_alt else ""
+        xform_btns = (
+            '<div class="btn-group" id="xb-' + div_id + '">'
+            + '<button class="ctrl-btn' + primary_active + '" onclick="mlXformClick(' + primary_args + ')">' + chart.primary_label + '</button>'
+            + '<button class="ctrl-btn' + alt_active + '" onclick="mlXformClick(' + alt_args + ')">' + chart.alt_label + '</button>'
             + '</div>'
         )
         controls = '<div class="chart-controls">' + xform_btns + '<div class="btn-sep"></div>' + range_btns + '</div>'
@@ -1704,7 +1905,7 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
     legend_items = []
     for i, line in enumerate(lines):
         active = " active" if line.visible else ""
-        if has_smooth:
+        if has_two_modes:
             handler = 'mlToggle(this,\'' + div_id + '\',' + str(i) + ',' + str(n) + ')'
         else:
             handler = 'toggleTrace(this,\'' + div_id + '\',[' + str(i) + '])'
@@ -1719,10 +1920,11 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
         '<div class="chart-footnote">' + chart.footnote + '</div>'
         if chart.footnote else ""
     )
+    initial_unit_label = chart.alt_unit_label if (has_alt and default_alt) else chart.unit_label
     html = (
         '<div class="chart-panel">'
         '<div class="chart-header">'
-        + _title_block_html(chart.title, chart.unit_label, div_id)
+        + _title_block_html(chart.title, initial_unit_label, div_id)
         + controls + '</div>'
         + plotly_frag
         + legend
@@ -1736,6 +1938,7 @@ def _build_stackedbar_panel(chart: "StackedBarSpec", data: dict,
                             chart_idx: int, include_plotlyjs: bool) -> str:
     div_id = "chart-" + str(chart_idx)
     lines = [line for line in chart.lines if line.series in data]
+    overlay = chart.overlay if (chart.overlay is not None and chart.overlay.series in data) else None
 
     fig = go.Figure()
     for line in lines:
@@ -1746,6 +1949,18 @@ def _build_stackedbar_panel(chart: "StackedBarSpec", data: dict,
             marker=dict(color=line.color),
             visible=True if line.visible else "legendonly",
             hovertemplate="%{x|" + chart.date_fmt + "}<br>%{y:" + chart.hoverformat + "}" + chart.ticksuffix + "<extra>" + line.label + "</extra>",
+            showlegend=False,
+        ))
+    if overlay is not None:
+        odf = data[overlay.series]
+        fig.add_trace(go.Scatter(
+            x=odf["date"], y=odf["value"],
+            mode="lines+markers",
+            name=overlay.label,
+            line=dict(color=overlay.color, width=2),
+            marker=dict(color=overlay.color, size=5),
+            visible=True if overlay.visible else "legendonly",
+            hovertemplate="%{x|" + chart.date_fmt + "}<br>%{y:" + chart.hoverformat + "}" + chart.ticksuffix + "<extra>" + overlay.label + "</extra>",
             showlegend=False,
         ))
 
@@ -1814,6 +2029,15 @@ def _build_stackedbar_panel(chart: "StackedBarSpec", data: dict,
             '<button class="legend-item' + active + '"'
             ' onclick="' + handler + '">'
             + _swatch(line.color) + line.label + '</button>'
+        )
+    if overlay is not None:
+        overlay_idx = len(lines)
+        active = " active" if overlay.visible else ""
+        handler = 'toggleTrace(this,\'' + div_id + '\',[' + str(overlay_idx) + '])'
+        legend_items.append(
+            '<button class="legend-item' + active + '"'
+            ' onclick="' + handler + '">'
+            + _swatch(overlay.color) + overlay.label + '</button>'
         )
     legend = '<div class="chart-legend" id="leg-' + div_id + '">' + "".join(legend_items) + '</div>'
 
@@ -1912,7 +2136,7 @@ PAGES = [
         title="Bank of Canada Tracker",
         tagline="Tracking the indicators behind Bank of Canada policy decisions",
         output_file="index.html",
-        sections={0: "policy", 3: "inflation", 8: "gdp", 10: "labour", 12: "housing", 15: "financial"},
+        sections={0: "policy", 3: "inflation", 8: "gdp", 10: "labour", 15: "housing", 19: "financial"},
         charts=[
             MultiLineSpec(
                 title="Policy Rates",
@@ -2023,6 +2247,8 @@ PAGES = [
                     OverlayConfig("gdp_industry_manufacturing","Manufacturing",     "#7b1fa2"),
                     OverlayConfig("gdp_industry_mining_oil",   "Mining & oil/gas",  "#d84315"),
                 ],
+                overlay_level_alt_unit_label="C$ billions",
+                overlay_level_alt_scale=1000.0,
             ),
             StackedBarSpec(
                 title="GDP Growth Contributions",
@@ -2034,9 +2260,12 @@ PAGES = [
                     LineConfig("gdp_contrib_imports",     "Less: imports", "#d84315", smooth=False),
                     LineConfig("gdp_contrib_inventories", "Inventories",   "#fdd835", smooth=False),
                 ],
+                overlay=LineConfig("gdp_total_contribution", "Headline GDP (AR)", "#212121"),
                 default_years=2,
                 date_fmt="%b %Y",
-                footnote="Statistics Canada Table 36-10-0104: Contributions to annualized Q/Q real GDP growth, percentage points. Bars stack to the headline real GDP growth rate. 'Less: imports' is sign-flipped so a positive contribution = imports declined.",
+                ticksuffix="pp",
+                unit_label="Percentage-point contributions to annualized Q/Q growth",
+                footnote="Statistics Canada Table 36-10-0104. Bars are component contributions to annualized Q/Q real GDP growth; 'Less: imports' is sign-flipped so positive = imports fell. Headline GDP line is the published total contribution (vector 79448580). The StatsCan daily release reports non-annualized Q/Q (≈ AR ÷ 4). The small gap between the bar sum and the headline is NPISH plus statistical discrepancy, which this dashboard does not break out.",
             ),
             ChartSpec(
                 series="unemployment_rate",
@@ -2052,35 +2281,114 @@ PAGES = [
                 title="Wage Growth",
                 footnote="Year-over-year %. LFS: average hourly wages. SEPH: average weekly earnings, all industries. LFS-Micro: BoC composition-adjusted measure. Services CPI overlay for wage-price context.",
             ),
+            MultiLineSpec(
+                title="Labour Utilization",
+                lines=[
+                    LineConfig("employment_rate",    "Employment rate",    "#1565c0"),
+                    LineConfig("participation_rate", "Participation rate", "#7b1fa2"),
+                ],
+                ticksuffix="%",
+                hoverformat=".1f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %Y",
+                unit_label="%",
+                footnote="Statistics Canada Table 14-10-0287, seasonally adjusted, population 15+. Employment rate = employed / working-age population; participation rate = labour force / working-age population. Both are part of the BoC's multi-indicator labour-market benchmark (SAN 2025-17, June 2025). Tracking both isolates labour-supply moves (participation) from labour-demand moves (employment): falling employment with stable participation = layoffs absorbing slack; falling participation with stable employment = workers leaving the labour force.",
+            ),
             ChartSpec(
-                series="housing_starts",
+                series="job_vacancy_rate",
+                title="Job Vacancy Rate",
+                frequency="quarterly",
+                color="#00897b",
+                static=True,
+                default_years=10,
+                hover_decimals=1,
+                unit_label="%",
+                footnote="Statistics Canada Table 14-10-0398: Job Vacancy and Wage Survey, Canada total economy, quarterly seasonally adjusted. Vacancy rate = vacancies / (vacancies + payroll employees). One half of the Beveridge tightness pair: high vacancies with low unemployment = a tight labour market; the V/U ratio (vacancies divided by unemployed) is the BoC's preferred composite tightness indicator. The 2022 peak above 5.7% reflected the post-COVID hiring surge; recent readings near 2.8% are roughly in line with the 2017–19 pre-pandemic range. Series begins 2015.",
+            ),
+            ChartSpec(
+                series="unit_labour_cost",
+                title="Unit Labour Costs",
+                frequency="quarterly",
+                color="#c62828",
+                default_transform="yoy",
+                default_years=10,
+                hover_decimals=2,
+                unit_label="index",
+                transform_unit_labels={
+                    "level":  "index",
+                    "qoq":    "%",
+                    "qoq_ar": "%",
+                    "yoy":    "%",
+                },
+                footnote="Statistics Canada Table 36-10-0206: Unit labour costs, business sector, Canada, quarterly seasonally adjusted (index, 2017=100). ULC = nominal labour compensation per unit of real output, i.e. wage growth net of productivity. The identity wage growth − productivity = ULC growth means ULC growth is a more direct read on whether labour costs are consistent with the 2% inflation target — sustained ULC growth materially above 2% with stable margins points toward goods/services price pressure. Default view is Y/Y; level is the underlying index.",
+            ),
+            MultiLineSpec(
                 title="Housing Starts",
-                frequency="monthly",
-                color="#1565c0",
-                default_transform="yoy",
+                # Three legend-as-toggle lines: Level, 3M Avg, 12M Avg.
+                # Level off by default — CMHC, BoC MPR, and analyst notes read starts via
+                # smoothed paths because the raw monthly is too noisy to read trend.
+                # No Y/Y / M/M transforms exposed — growth rates of a noisy SAAR series
+                # aren't reported in mainstream housing analysis.
+                lines=[
+                    LineConfig("housing_starts",     "Level (monthly)", "#90a4ae", visible=False),
+                    LineConfig("housing_starts_3m",  "3M Avg",          "#1565c0", visible=True),
+                    LineConfig("housing_starts_12m", "12M Avg",         "#7b1fa2", visible=False),
+                ],
+                ticksuffix="",
+                hoverformat=".0f",
                 default_years=10,
-                hover_decimals=1,
-                footnote="CMHC housing starts, Canada total, seasonally adjusted at annualized rates. Y/Y view smooths the substantial month-to-month noise; Level view shows units in thousands annualized.",
+                date_fmt="%b %Y",
+                unit_label="thousands SAAR",
+                footnote="CMHC housing starts, Canada total, seasonally adjusted at annualized rates (thousands). Three views: raw monthly level, 3M moving average (CMHC standard short-trend smoother), 12M moving average (cycle view). Long-run average since 1977: ~194k. CMHC affordability-restoring pace: 430–500k/year. Growth rates aren't shown — Y/Y / M/M of a noisy SAAR series isn't read in practice.",
+            ),
+            MultiLineSpec(
+                title="Housing Prices",
+                # Two series, two views: Y/Y (default — the news number) and Index (rebased
+                # to a common base for direct level comparison). Toggle is button-bar above
+                # the chart because it changes y-axis units globally for both lines.
+                lines=[
+                    LineConfig("nhpi_yoy",         "NHPI (new homes)",       "#7b1fa2"),
+                    LineConfig("crea_mls_hpi_yoy", "CREA MLS HPI (resale)",  "#1565c0"),
+                ],
+                alt_lines=[
+                    LineConfig("nhpi_rebased",         "NHPI (new homes)",      "#7b1fa2"),
+                    LineConfig("crea_mls_hpi_rebased", "CREA MLS HPI (resale)", "#1565c0"),
+                ],
+                primary_label="Y/Y",
+                alt_label="Index",
+                default_alt=False,
+                ticksuffix="%",
+                hoverformat=".1f",
+                alt_ticksuffix="",
+                alt_hoverformat=".1f",
+                default_years=10,
+                date_fmt="%b %Y",
+                unit_label="Y/Y %",
+                alt_unit_label="Index, Jan 2020 = 100",
+                footnote="Y/Y: year-over-year % change in the underlying index. Index: each series rebased to Jan 2020 = 100 so the level paths are directly comparable. NHPI: StatsCan contractor-reported prices, new single-family homes, 27 CMAs (native base Dec 2016 = 100). CREA MLS HPI: BoC Financial Vulnerability Indicators, resale-dominant hedonic (native base 2019 = 100; available from 2014). Re-indexing happens at build time; source CSVs are unmodified.",
             ),
             ChartSpec(
-                series="new_housing_price_index",
-                title="New Housing Price Index",
-                frequency="monthly",
-                color="#7b1fa2",
-                default_transform="yoy",
-                default_years=10,
-                hover_decimals=1,
-                footnote="Statistics Canada NHPI: contractor-reported prices for new single-family homes across 27 CMAs. Index Dec 2016 = 100. Distinct from resale price indices (e.g. CREA MLS HPI).",
-            ),
-            ChartSpec(
-                series="residential_permits",
+                series="residential_permits_b",
                 title="Residential Building Permits",
                 frequency="monthly",
                 color="#00897b",
-                default_transform="yoy",
-                default_years=10,
+                default_transform="level",
+                default_years=None,  # Max — series only starts Jan 2018, so a 10Y window wastes space
                 hover_decimals=1,
-                footnote="Statistics Canada Table 34-10-0292: Total residential building permits, value in current dollars, seasonally adjusted. Leading indicator for housing construction roughly 6-12 months ahead. Series begins Jan 2018.",
+                unit_label="C$ billions",
+                footnote="StatsCan Table 34-10-0292: total residential building permits, current C$ billions, seasonally adjusted. Source CSV is in $thousands; displayed in $B at build time for legibility. Leading indicator for housing construction: blended lag ~9–15 months (type-dependent — single-detached 2–10 months, multi-unit/high-rise 9–15+ months per CMHC Spring 2026). Series begins Jan 2018; default range is Max because the series only has ~8 years of history.",
+            ),
+            ChartSpec(
+                series="housing_affordability",
+                title="Housing Affordability",
+                frequency="quarterly",
+                color="#ef6c00",
+                static=True,
+                default_years=10,
+                hover_decimals=3,
+                unit_label="ratio",
+                footnote="BoC housing affordability index (INDINF_AFFORD_Q): ratio of mortgage payment to household income. Higher = less affordable. Historical range 2000–2025: 0.28 (most affordable, 2002) to 0.55 (least affordable, Q3 2023). Incorporates MLS resale prices, qualifying mortgage rates, and NIAE income data.",
             ),
             MultiLineSpec(
                 title="Oil Prices",
@@ -2113,6 +2421,23 @@ PAGES = [
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
+
+# Map from derived-series name (used in chart specs) to the source CSV series that
+# must be loaded for _add_derived_series to compute it. Add a new entry here when a
+# chart references a series computed at build time from one or more raw CSVs.
+_DERIVED_SERIES_SOURCES: dict[str, list[str]] = {
+    "bocfed_spread":         ["overnight_rate", "fed_funds"],
+    "can2y_overnight_spread": ["yield_2yr", "overnight_rate"],
+    "can_us_2y_spread":      ["yield_2yr", "us_2yr"],
+    "nhpi_yoy":              ["new_housing_price_index"],
+    "nhpi_rebased":          ["new_housing_price_index"],
+    "crea_mls_hpi_yoy":      ["crea_mls_hpi"],
+    "crea_mls_hpi_rebased":  ["crea_mls_hpi"],
+    "housing_starts_3m":     ["housing_starts"],
+    "housing_starts_12m":    ["housing_starts"],
+    "residential_permits_b": ["residential_permits"],
+}
+
 
 def _load_blurbs() -> dict:
     if not BLURBS_PATH.exists():
@@ -2171,6 +2496,52 @@ def _add_derived_series(data: dict[str, pd.DataFrame]) -> None:
             "value": merged["value"] - merged["us"],
         }).dropna().reset_index(drop=True)
         data["can_us_2y_spread"] = spread
+
+    # Housing price Y/Y series — pre-computed for the Housing Prices MultiLineSpec.
+    # Both NHPI and CREA MLS HPI are stored as levels; Y/Y % makes them directly comparable.
+    # Index-rebased copies (Jan 2020 = 100) feed the Index toggle on the same chart.
+    _HOUSING_INDEX_BASE = pd.Timestamp("2020-01-01")
+    if "new_housing_price_index" in data:
+        df = data["new_housing_price_index"].sort_values("date").reset_index(drop=True)
+        yoy = df["value"].pct_change(12) * 100
+        data["nhpi_yoy"] = pd.DataFrame({"date": df["date"], "value": yoy}).dropna().reset_index(drop=True)
+        base_row = df.loc[df["date"] == _HOUSING_INDEX_BASE, "value"]
+        if not base_row.empty and base_row.iloc[0] != 0:
+            base_val = float(base_row.iloc[0])
+            data["nhpi_rebased"] = pd.DataFrame({
+                "date": df["date"],
+                "value": df["value"] / base_val * 100.0,
+            }).dropna().reset_index(drop=True)
+
+    if "crea_mls_hpi" in data:
+        df = data["crea_mls_hpi"].sort_values("date").reset_index(drop=True)
+        yoy = df["value"].pct_change(12) * 100
+        data["crea_mls_hpi_yoy"] = pd.DataFrame({"date": df["date"], "value": yoy}).dropna().reset_index(drop=True)
+        base_row = df.loc[df["date"] == _HOUSING_INDEX_BASE, "value"]
+        if not base_row.empty and base_row.iloc[0] != 0:
+            base_val = float(base_row.iloc[0])
+            data["crea_mls_hpi_rebased"] = pd.DataFrame({
+                "date": df["date"],
+                "value": df["value"] / base_val * 100.0,
+            }).dropna().reset_index(drop=True)
+
+    # Housing Starts smoothed series for the legend-as-toggles design.
+    # Three lines coexist: raw level (noisy month-to-month), 3M moving average (CMHC standard
+    # short-trend smoother), 12M moving average (strips remaining seasonality + cycle noise).
+    if "housing_starts" in data:
+        df = data["housing_starts"].sort_values("date").reset_index(drop=True)
+        for win, name in [(3, "housing_starts_3m"), (12, "housing_starts_12m")]:
+            sm = df["value"].rolling(win, min_periods=max(1, win // 2)).mean()
+            data[name] = pd.DataFrame({"date": df["date"], "value": sm}).dropna().reset_index(drop=True)
+
+    # Residential permits in C$ billions (source CSV is in $thousands; / 1e6).
+    # Display in $B avoids the seven-digit zero strings that $k produces.
+    if "residential_permits" in data:
+        df = data["residential_permits"].sort_values("date").reset_index(drop=True)
+        data["residential_permits_b"] = pd.DataFrame({
+            "date": df["date"],
+            "value": df["value"] / 1_000_000.0,
+        }).dropna().reset_index(drop=True)
 
 
 def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
@@ -2231,13 +2602,27 @@ def main():
             elif isinstance(chart, CpiBreadthSpec):
                 has_breadth = True
             elif isinstance(chart, (MultiLineSpec, StackedBarSpec)):
-                for line in chart.lines:
+                _line_iter = list(chart.lines)
+                if isinstance(chart, MultiLineSpec):
+                    _line_iter += list(chart.alt_lines)
+                if isinstance(chart, StackedBarSpec) and chart.overlay is not None:
+                    _line_iter.append(chart.overlay)
+                for line in _line_iter:
                     if (DATA_DIR / f"{line.series}.csv").exists():
                         all_series.add(line.series)
+                    elif line.series in _DERIVED_SERIES_SOURCES:
+                        # Derived series: load source CSVs; _add_derived_series will compute it.
+                        all_series.update(_DERIVED_SERIES_SOURCES[line.series])
                     else:
                         print(f"  Warning: {line.series}.csv missing — run fetch.py. Line will be skipped.")
             else:
-                all_series.add(chart.series)
+                # ChartSpec: series may be raw (CSV exists) or derived.
+                if (DATA_DIR / f"{chart.series}.csv").exists():
+                    all_series.add(chart.series)
+                elif chart.series in _DERIVED_SERIES_SOURCES:
+                    all_series.update(_DERIVED_SERIES_SOURCES[chart.series])
+                else:
+                    all_series.add(chart.series)  # let the load step raise the error
                 # Also register any overlay series on a ChartSpec
                 for ov in getattr(chart, "overlays", []):
                     all_series.add(ov.series)

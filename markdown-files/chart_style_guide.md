@@ -148,7 +148,18 @@ Beyond the universal rules in sections 2–5, a few principles govern what kind 
 
 **Horizontal reference bands for known thresholds.** When a chart has a meaningful threshold range that helps the reader interpret the data (the BoC's neutral rate range of 2.25–3.25% on Policy Rates, in principle a NAIRU range on Unemployment, etc.), draw it as a translucent gray horizontal band (`rgba(180, 180, 180, 0.35)`) across the chart, layered below the data lines. Same fill as the range-band overlay convention; different role — this band is a *static reference value*, not a synthesis of multiple measures. Use sparingly: the threshold has to be widely accepted, citable, and stable. Document the source in the footnote.
 
-## 7. How this guide is used
+## 7. Default-selection conventions
+
+Cross-cutting rules I keep coming back to when adding or revising a chart. Sections 2–6 cover the universal aesthetics; this section is about the per-chart calls.
+
+- **Defaults match how practitioners conventionally read the indicator.** Starts as 3M / 12M moving average (CMHC, BoC MPR), permits as level, prices as Y/Y for headlines. If the convention says "nobody looks at growth rates of this," don't expose growth-rate toggles.
+- **Toggle placement follows what the toggle controls.** When the toggle decides which lines are visible, put it in the legend (the legend *is* the toggle bar). When the toggle changes y-axis units or transformation globally for every line, put it as a button-bar above the chart. Don't mix idioms on the same chart.
+- **Right unit for the data range.** Pick the scale that yields clean 2–4-digit numbers across the visible range. Use $M or $B instead of $k when values are in the millions/billions; use bp instead of % when values are sub-1pp; use % instead of decimal ratio when values are <1. Avoid leading zeros and trailing-zero strings ("$8,132,058k").
+- **Default date range matches data availability.** When the series starts late (e.g. Jan 2018 for the current residential permits table), default to Max — a 10Y window wastes space showing pre-data emptiness. The standard 10Y default applies when the series is genuinely longer.
+- **Re-index to a common base when overlaying two index series.** NHPI (Dec 2016 = 100) and CREA MLS HPI (2019 = 100) only make sense on the same axis if both are rebased to the same date. Compute the rebase at build time in `_add_derived_series`, never modify the source CSV — and pick a base date both series cover (Jan 2020 is the current convention; pick the most-recent common date that's a sensible economic anchor).
+- **Hide controls that don't add a meaningful read.** §6 already says this for transforms; the same applies to growth rates on noisy SAAR series, smooth toggles on already-smooth series, and Y/Y on series that don't have 12 months of history yet.
+
+## 8. How this guide is used
 
 This guide codifies what's been learned from nine charts. It will be wrong for the tenth chart in some way that isn't yet visible — that's fine. The guide is meant to evolve.
 
