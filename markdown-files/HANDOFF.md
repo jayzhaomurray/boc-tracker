@@ -15,6 +15,8 @@ A personal data dashboard that tracks the economic indicators the Bank of Canada
 **Tech stack:** Python → Plotly → static HTML → GitHub Pages
 **Data sources:** Statistics Canada WDS API, Bank of Canada Valet API, Federal Reserve (FRED) API, Alberta Economic Dashboard API
 
+**Long-term vision:** see [`vision.md`](vision.md) for capability trajectories beyond the current todo list — corpus-as-asset, forkable infrastructure for other central banks, dashboard as thinking partner, the rare public-good outcome of free plain-language sourced commentary, and the interactive query-mode layer.
+
 ---
 
 ## File structure
