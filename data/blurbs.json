@@ -3,5 +3,10 @@
     "as_of": "March 2026",
     "model": "claude-opus-4-7 (manual seed pending API key)",
     "text": "Inflation is roughly on target, but recent monthly momentum has turned against the disinflationary trend. Headline CPI was 2.3% y/y in March; core measures sit in a tight band of 2.0% to 2.6%. Breadth points to broad-based softening - the share of components running well below target is above the historical norm. The complication is March's +0.48% m/m print, well above the pace consistent with 2% annualized; the 3-month annualized rate is at 2.9%."
+  },
+  "policy": {
+    "as_of": "May 2026",
+    "model": "claude-opus-4-7 (manual seed pending API key)",
+    "text": "The BoC has held rates at 2.25% for four meetings after a 275bp cutting cycle, and bond markets are starting to price the next move as more likely a hike than another cut. At 2.25%, the policy rate is right at the bottom of the BoC's 2.25-3.25% neutral range and 138 bps below where the Fed sits - an unusually wide gap, since the BoC cut more aggressively after both central banks peaked in July 2023. Canadian 2-year yields have risen over the past quarter and now trade 66 bps above the policy rate. The BoC finished QT in January 2025; total assets stand at $229B, and banks keep $71B in cash at the BoC overnight - slightly above the $20-60B steady-state target."
   }
 }

@@ -21,14 +21,24 @@ Length: 3 sentences typically; 4 if there is a real tension that needs the closi
 
 ## Writing style
 
-Blurbs should read like an analyst writing for an informed reader, not a journalist explaining analysis.
+Write as an analyst would speak to an informed reader. The reader knows the terms (bps, y/y, neutral rate, core CPI, restrictive, accommodative) but shouldn't have to decode the data's shape — signed spreads, percentile rankings, tier labels, and jargon nouns belong in the formatter's output, not in the prose. Translate.
 
-- **Plain verbs.** *Was, is, sits, runs.* Avoid *ran at, has returned to, pulled back, firmed up.* State positions, not journeys.
-- **Semicolons for parallel facts of equal weight.** Two independent observations get a semicolon, not a subordinating clause.
-- **No explanatory codas.** Do not add *"indicating X"* or *"the read here is Y."* Let the data carry the inference.
-- **Conventional shorthand.** *y/y, m/m, q/q, 3-month, pp, bps.* Not *year-over-year, three-month, percentage points, basis points.*
-- **Plain hedges.** *Roughly, near, broadly.* Not *broadly returned to, hints at, appears to be.*
-- **Embed numbers in analytical sentences.** Do not lead with *"As of March, headline CPI was 2.3%."* Instead: *"Headline CPI was 2.3% y/y in March."* The number is part of a sentence, not the sentence's reason for existing.
+State positions, don't describe journeys. Embed numbers in sentences, don't list them. Use plain words when plain words fit. If a sentence sounds like a Bloomberg terminal output, rewrite it.
+
+**Worked example — same observation, two forms:**
+
+Bad: *"The BoC−Fed spread is −138bps, in the top 10% of observations historically. Canada 2Y−overnight spread is +66bps with hawkish 12-week drift."*
+
+Good: *"The BoC's policy rate sits 138 bps below the Fed's, an unusually wide gap. Canadian 2-year yields have risen over the past quarter and now trade 66 bps above the policy rate."*
+
+The "good" version still uses bps and still references specific numbers. What it drops: the signed-spread shape, the percentile rank, and the jargon noun "hawkish drift." Same information, plainer sentences. Apply the same transformation everywhere: "lower edge" → "bottom"; "settlement balances" → "cash banks keep at the BoC overnight"; "floor-system maintenance" → "running the balance sheet at its target steady-state size."
+
+**When translating technical → plain, check what the technical term encoded.** Technical terms compress structural information that the plain version has to preserve explicitly:
+- "Hawkish drift" carried *direction* (yields up). "Gap widening" loses it — the gap could widen because either side moves. Plain translation must state the direction: *"yields have risen."*
+- "Settlement balances" carried *which side of the balance sheet* (liability — banks own these deposits, the BoC owes them). "$71B" alone doesn't. Plain translation must make the ownership clear: *"banks keep $71B at the BoC overnight."*
+- Signed spreads carry *sign convention* (which leg is which). "+0.66pp" alone doesn't tell you which is above. Plain translation states it: *"X is N bps above Y."*
+
+If a translated sentence becomes more ambiguous than the technical original, the translation lost something. Re-translate to preserve the dropped information explicitly.
 
 ---
 

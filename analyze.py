@@ -555,17 +555,18 @@ BoC - Fed spread:                {v['bocfed_spread']:+.2f}pp   tier: {v['bocfed_
   Canada 2Y - US 2Y:             {v['can_us_2y_spread']:+.2f}pp
   (Canada 2Y - US 2Y) - (BoC - Fed):  {v['can_us_minus_bocfed']:+.2f}pp   (divergence indicator; small = aligned, large = pricing future stance change OR relative-premium move)
 
-Balance sheet (C$B, as of {v['as_of_balance_sheet']}):
-  Operating phase:               {v['qt_phase']}
-  Total assets:                  {v['total_assets']:.1f}B   ({v['distance_from_baseline']:+.1f}B vs ~$120B baseline; {v['distance_from_peak_qe']:+.1f}B vs ~$575B March 2021 peak)
-  GoC bonds:                     {v['goc_bonds']:.1f}B
-  Non-GoC components:            {v['non_goc']:.1f}B   (T-bills, term repos, advances, FX swaps, etc.)
-  Settlement balances:           {v['settlement']:.1f}B   (post-QT target range: ${v['settlement_target_low']}–${v['settlement_target_high']}B)
+Balance sheet (C$B, as of {v['as_of_balance_sheet']}; operating phase: {v['qt_phase']}):
 
-Trajectory (change over last 6mo / 12mo):
-  Total assets:                  {v['ta_change_6mo']:+.1f}B / {v['ta_change_12mo']:+.1f}B
-  GoC bonds:                     {v['gb_change_6mo']:+.1f}B / {v['gb_change_12mo']:+.1f}B
-  Non-GoC components:            {v['non_goc_change_6mo']:+.1f}B / {v['non_goc_change_12mo']:+.1f}B   (rapid expansion = stress signal)
+  ASSET SIDE (what the BoC holds):
+    Total assets:                {v['total_assets']:.1f}B   ({v['distance_from_baseline']:+.1f}B vs ~$120B baseline; {v['distance_from_peak_qe']:+.1f}B vs ~$575B March 2021 peak)
+                                 6mo change: {v['ta_change_6mo']:+.1f}B; 12mo change: {v['ta_change_12mo']:+.1f}B
+    GoC bonds:                   {v['goc_bonds']:.1f}B
+                                 6mo change: {v['gb_change_6mo']:+.1f}B; 12mo change: {v['gb_change_12mo']:+.1f}B
+    Non-GoC components:          {v['non_goc']:.1f}B    (T-bills, term repos, advances, FX swaps, etc.)
+                                 6mo change: {v['non_goc_change_6mo']:+.1f}B; 12mo change: {v['non_goc_change_12mo']:+.1f}B   (rapid expansion = stress signal)
+
+  LIABILITY SIDE (what the BoC owes):
+    Settlement balances:         {v['settlement']:.1f}B    (deposits banks keep at the BoC overnight; post-QT target range: ${v['settlement_target_low']}–${v['settlement_target_high']}B)
 """
 
 
