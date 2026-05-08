@@ -1109,7 +1109,7 @@ def build_prompt(section_id: str, framework: str, values_str: str,
         )
     return f"""You are generating a short analytical blurb for a public economic dashboard tracking Bank of Canada indicators. Read the analytical framework below, then read the latest computed data, then generate the blurb for the **{section_name}** section.
 
-Output only the blurb prose. No preamble, no markdown headers, no quotation marks. Follow the framework's structure (takeaway -> anchor -> support -> closing nuance) and the writing-style rules (plain verbs, semicolons for parallel facts, conventional shorthand, plain hedges, no explanatory codas, no forecasts, no policy prescription). 3 sentences typically; 4 if there is a real tension worth surfacing in a closing slot.
+Output only the blurb prose. No preamble, no markdown headers, no quotation marks. Follow the framework's structure (takeaway -> anchor -> support -> closing nuance) and the writing-style rules (plain verbs, semicolons for parallel facts, conventional shorthand, plain hedges, no explanatory codas, no forecasts, no policy prescription). 3 sentences typically; 4 if there is a real tension worth surfacing in a closing slot. Use em dashes (—) for parenthetical asides and sub-clauses; do not use plain hyphens with surrounding spaces (` - `).
 {prior}
 == Analytical Framework ==
 
@@ -1129,6 +1129,17 @@ def call_claude(prompt: str, max_tokens: int = 512) -> str:
         messages=[{"role": "user", "content": prompt}],
     )
     return response.content[0].text.strip()
+
+
+def _normalize_dashes(text: str) -> str:
+    """Convert ASCII hyphens used as parenthetical / sub-clause separators into em dashes.
+
+    Models default to ` - ` and ` -- ` even when prompted otherwise. This pass is the
+    safety net. Only space-bounded hyphens get replaced; in-word hyphens (year-over-year,
+    labour-cost), ranges (2-3, $20-60B), and unary minuses (-0.5%) are untouched because
+    they have no surrounding spaces.
+    """
+    return text.replace(" -- ", " — ").replace(" - ", " — ")
 
 
 def review_blurb(blurb: str, framework: str, values_str: str, section_name: str) -> str:
@@ -1233,7 +1244,7 @@ def main() -> None:
         sys.exit(1)
 
     print(f"\nCalling Claude ({MODEL})...")
-    blurb = call_claude(prompt)
+    blurb = _normalize_dashes(call_claude(prompt))
 
     print("\n=== Generated blurb ===\n")
     print(blurb)

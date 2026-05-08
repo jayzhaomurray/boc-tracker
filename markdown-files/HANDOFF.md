@@ -147,9 +147,11 @@ No auth required. Returns ~700 records covering several oil grades. WCS is filte
 | `cpixfet` | BoC Valet | `STATIC_CPIXFET` | CPIXFET (excl. food & energy), Y/Y % | Monthly |
 | `cpi_components` | StatsCan | 60 vectors (see mapping JSON) | Wide CSV: one column per CPI component | Monthly |
 | `unemployment_rate` | StatsCan | Vector 2062815 | Unemployment rate, Canada, SA | Monthly |
+| `unemployment_level` | StatsCan | Vector 2062814 | Unemployment count, Canada 15+, SA — Table 14-10-0287-01; scale 0.001 (thousands → millions of persons) | Monthly |
 | `employment_rate` | StatsCan | Vector 2062817 | Employment rate (employment/working-age population), Canada 15+, SA — Table 14-10-0287-01 | Monthly |
 | `participation_rate` | StatsCan | Vector 2062816 | Participation rate (labour force/working-age population), Canada 15+, SA — Table 14-10-0287-01 | Monthly |
 | `job_vacancy_rate` | StatsCan | Vector 1374464764 | Job vacancy rate, Canada total economy, SA — Table 14-10-0398-01 (JVWS); series begins 2015 | Quarterly |
+| `job_vacancy_level` | StatsCan | Vector 1212389364 | Job vacancies count, Canada total, NSA — Table 14-10-0371-01; scale 0.000001 (persons → millions so it shares an axis with `unemployment_level`); series begins 2015 | Monthly |
 | `unit_labour_cost` | StatsCan | Vector 1409159 | Unit labour costs, business sector, Canada, SA index (2017=100) — Table 36-10-0206-01 | Quarterly |
 | `lfs_wages_all` | StatsCan | Vector 105812645 | LFS avg hourly wages, all employees, SA | Monthly |
 | `lfs_wages_permanent` | StatsCan | Vector 105812715 | LFS avg hourly wages, permanent employees, SA | Monthly |
@@ -323,12 +325,12 @@ class PageSpec:
     sections: dict = field(default_factory=dict)   # {chart_index: section_id}
 ```
 
-`sections` maps a chart index to a section identifier defined in `SECTION_HEADINGS`. When `build_page` reaches that index, it prepends a section heading and (if a blurb exists in `data/blurbs.json`) the blurb above the chart panel. All six section headings are placed today (`{0: "policy", 3: "inflation", 8: "gdp", 10: "labour", 15: "housing", 19: "financial"}`). All six sections have generated blurbs in `data/blurbs.json`.
+`sections` maps a chart index to a section identifier defined in `SECTION_HEADINGS`. When `build_page` reaches that index, it prepends a section heading and (if a blurb exists in `data/blurbs.json`) the blurb above the chart panel. All six section headings are placed today (`{0: "policy", 3: "inflation", 8: "gdp", 10: "labour", 14: "housing", 18: "financial"}`). All six sections have generated blurbs in `data/blurbs.json`.
 
-### Current PAGES definition (21 charts, 6 section headings, 6 blurbs)
+### Current PAGES definition (20 charts, 6 section headings, 6 blurbs)
 
 ```
-PageSpec("Bank of Canada Tracker", sections={0: "policy", 3: "inflation", 8: "gdp", 10: "labour", 15: "housing", 19: "financial"}, ...)
+PageSpec("Bank of Canada Tracker", sections={0: "policy", 3: "inflation", 8: "gdp", 10: "labour", 14: "housing", 18: "financial"}, ...)
   ── MONETARY POLICY (heading + blurb) ──
   MultiLineSpec            — Policy Rates (BoC overnight + Fed funds + BoC−Fed spread toggle, hv step, neutral-rate band 2.25–3.25%, 10Y default)
   MultiLineSpec            — 2-Year Yields (Canada + US + Canada 2Y−Overnight spread toggle + Canada 2Y−US 2Y spread toggle, smooth toggle, 10Y default)
@@ -343,10 +345,9 @@ PageSpec("Bank of Canada Tracker", sections={0: "policy", 3: "inflation", 8: "gd
   ChartSpec                — Real GDP (monthly, C$ trillions, 4 transforms, 4 industry overlays via OverlayConfig, level default, 10Y default)
   StackedBarSpec           — GDP Growth Contributions (6 components stacked + Headline GDP (AR) line overlay, barmode=relative, 2Y default; subtitle = "Percentage-point contributions to annualized Q/Q growth"; footnote calls out the StatsCan-daily ÷4 convention and the residual = non-profits + statistical discrepancy)
   ── LABOUR MARKET (heading + blurb) ──
-  ChartSpec                — Unemployment Rate (static, 10Y default)
+  MultiLineSpec            — Unemployment & Job Vacancies (combined; primary=Rate (%), alt=Level (thousands of persons) via button-bar toggle; legend toggles each series. Vacancies are monthly NSA — no SA series exists — so the default-visible vacancy line is a 12M MA derived series; raw NSA available as a legend toggle. 10Y default; Beveridge tightness pair)
   WageSpec                 — Wage Growth (range band + 4 measures + Services CPI overlay)
   MultiLineSpec            — Labour Utilization (Employment rate + Participation rate, monthly SA, level only; 10Y default)
-  ChartSpec                — Job Vacancy Rate (quarterly SA, static, 10Y default)
   ChartSpec                — Unit Labour Costs (business sector, quarterly SA, default Y/Y; 10Y default)
   ── HOUSING (heading + blurb) ──
   MultiLineSpec            — Housing Starts (three legend-as-toggle lines: Level off, 3M Avg on, 12M Avg on; no transform toggles; thousands SAAR; 10Y default)

@@ -77,7 +77,9 @@ STATSCAN_SERIES = {
     # or annual at the cadence we want; flagged for the next round.
     "employment_rate":           2062817,  # Table 14-10-0287-01: Employment rate, Canada, 15+, total, SA (%)
     "participation_rate":        2062816,  # Table 14-10-0287-01: Participation rate, Canada, 15+, total, SA (%)
-    "job_vacancy_rate":      1374464764,   # Table 14-10-0398-01: Job vacancy rate, Canada total, quarterly SA (%)
+    "job_vacancy_rate":      1212389365,   # Table 14-10-0371-01: Job vacancy rate, Canada total, monthly NSA (%). Earlier rev used quarterly SA (v1374464764) but no monthly SA series exists; we use NSA + 12M MA derived line on the chart instead.
+    "unemployment_level":   (2062814, 0.001),   # Table 14-10-0287-01: Unemployment, Canada, 15+, total, SA — scaled thousands → millions for the chart
+    "job_vacancy_level":   (1212389364, 0.000001),  # Table 14-10-0371-01: Job vacancies count, Canada total, monthly NSA — scaled persons → millions so it shares an axis with unemployment_level
     "unit_labour_cost":         1409159,   # Table 36-10-0206-01: Unit labour cost, business sector, Canada, quarterly SA (index)
     # Housing section (added May 2026)
     "housing_starts":            52300157,  # Table 34-10-0158-01: Housing starts, Canada total, SAAR (units)

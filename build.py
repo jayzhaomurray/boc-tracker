@@ -2151,7 +2151,7 @@ PAGES = [
         title="Bank of Canada Tracker",
         tagline="Tracking the indicators behind Bank of Canada policy decisions",
         output_file="index.html",
-        sections={0: "policy", 3: "inflation", 8: "gdp", 10: "labour", 15: "housing", 19: "financial"},
+        sections={0: "policy", 3: "inflation", 8: "gdp", 10: "labour", 14: "housing", 18: "financial"},
         charts=[
             MultiLineSpec(
                 title="Policy Rates",
@@ -2205,9 +2205,9 @@ PAGES = [
                     CpiLine("cpi_all_items_nsa",  "Headline (NSA)", "#90a4ae"),
                     CpiLine("cpi_food",           "Food",           "#ef6c00", visible=True),
                     CpiLine("cpi_energy",         "Energy",         "#7b1fa2", visible=True),
+                    CpiLine("cpi_shelter",        "Shelter",        "#6d4c41"),
                     CpiLine("cpi_goods",          "Goods",          "#00897b"),
                     CpiLine("cpi_services",       "Services",       "#388e3c"),
-                    CpiLine("cpi_shelter",        "Shelter",        "#6d4c41"),
                 ],
                 default_transform="yoy",
                 default_years=10,
@@ -2284,15 +2284,30 @@ PAGES = [
                 unit_label="Percentage-point contributions to annualized Q/Q growth",
                 footnote="Statistics Canada Table 36-10-0104. Bars are component contributions to annualized Q/Q real GDP growth; 'Less: imports' is sign-flipped so positive = imports fell. Headline GDP line is the published total contribution (vector 79448580). The StatsCan daily release reports non-annualized Q/Q (≈ AR ÷ 4). The small gap between the bar sum and the headline is non-profits plus statistical discrepancy, which this dashboard does not break out.",
             ),
-            ChartSpec(
-                series="unemployment_rate",
-                title="Unemployment Rate",
-                frequency="monthly",
-                color="#1565c0",
-                static=True,
+            MultiLineSpec(
+                title="Unemployment & Job Vacancies",
+                lines=[
+                    LineConfig("unemployment_rate",     "Unemployment",          "#1565c0", smooth=False),
+                    LineConfig("job_vacancy_rate_12m",  "Vacancies (12M Avg)",   "#00897b", smooth=False),
+                    LineConfig("job_vacancy_rate",      "Vacancies (raw NSA)",   "#80cbc4", smooth=False, visible=False),
+                ],
+                alt_lines=[
+                    LineConfig("unemployment_level",     "Unemployment",          "#1565c0", smooth=False),
+                    LineConfig("job_vacancy_level_12m",  "Vacancies (12M Avg)",   "#00897b", smooth=False),
+                    LineConfig("job_vacancy_level",      "Vacancies (raw NSA)",   "#80cbc4", smooth=False, visible=False),
+                ],
+                primary_label="Rate",
+                alt_label="Level",
+                ticksuffix="%",
+                hoverformat=".1f",
+                alt_ticksuffix="M",
+                alt_hoverformat=".2f",
                 default_years=10,
-                hover_decimals=1,
-                footnote="Canada, seasonally adjusted.",
+                line_shape="linear",
+                date_fmt="%b %Y",
+                unit_label="%",
+                alt_unit_label="millions of persons",
+                footnote="Beveridge tightness pair. Unemployment: StatsCan Table 14-10-0287, monthly SA, 15+. Vacancies: StatsCan Table 14-10-0371, monthly NSA (no SA series exists), total economy; series begins 2015. Vacancies displayed as a 12M moving average by default to denoise the seasonal Sep-peak/Dec-trough; raw NSA available as a legend toggle. Rate view shares % units; Level view shares millions of persons (both natively in persons/thousands and scaled at fetch). High vacancies with low unemployment = tight labour market; the V/U ratio is the BoC's preferred composite tightness read.",
             ),
             WageSpec(
                 title="Wage Growth",
@@ -2311,17 +2326,6 @@ PAGES = [
                 date_fmt="%b %Y",
                 unit_label="%",
                 footnote="Statistics Canada Table 14-10-0287, seasonally adjusted, population 15+. Employment rate = employed / working-age population; participation rate = labour force / working-age population. Both are part of the BoC's multi-indicator labour-market benchmark (SAN 2025-17, June 2025). Tracking both isolates labour-supply moves (participation) from labour-demand moves (employment): falling employment with stable participation = layoffs absorbing slack; falling participation with stable employment = workers leaving the labour force.",
-            ),
-            ChartSpec(
-                series="job_vacancy_rate",
-                title="Job Vacancy Rate",
-                frequency="quarterly",
-                color="#00897b",
-                static=True,
-                default_years=10,
-                hover_decimals=1,
-                unit_label="%",
-                footnote="Statistics Canada Table 14-10-0398: Job Vacancy and Wage Survey, Canada total economy, quarterly seasonally adjusted. Vacancy rate = vacancies / (vacancies + payroll employees). One half of the Beveridge tightness pair: high vacancies with low unemployment = a tight labour market; the V/U ratio (vacancies divided by unemployed) is the BoC's preferred composite tightness indicator. The 2022 peak above 5.7% reflected the post-COVID hiring surge; recent readings near 2.8% are roughly in line with the 2017–19 pre-pandemic range. Series begins 2015.",
             ),
             ChartSpec(
                 series="unit_labour_cost",
@@ -2453,6 +2457,8 @@ _DERIVED_SERIES_SOURCES: dict[str, list[str]] = {
     "housing_starts_3m":     ["housing_starts"],
     "housing_starts_12m":    ["housing_starts"],
     "residential_permits_b": ["residential_permits"],
+    "job_vacancy_rate_12m":  ["job_vacancy_rate"],
+    "job_vacancy_level_12m": ["job_vacancy_level"],
 }
 
 
@@ -2559,6 +2565,15 @@ def _add_derived_series(data: dict[str, pd.DataFrame]) -> None:
             "date": df["date"],
             "value": df["value"] / 1_000_000.0,
         }).dropna().reset_index(drop=True)
+
+    # Job vacancies 12-month moving averages: source vectors are monthly NSA (no SA series
+    # exists), so a 12M MA denoises the seasonal Sep-peak/Dec-trough pattern. Default-visible
+    # line on the Unemployment & Vacancies chart; raw NSA available as a legend toggle.
+    for src in ("job_vacancy_rate", "job_vacancy_level"):
+        if src in data:
+            df = data[src].sort_values("date").reset_index(drop=True)
+            sm = df["value"].rolling(12, min_periods=6).mean()
+            data[src + "_12m"] = pd.DataFrame({"date": df["date"], "value": sm}).dropna().reset_index(drop=True)
 
 
 def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
