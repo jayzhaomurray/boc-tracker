@@ -1242,7 +1242,10 @@ function toggleTrace(btn, chartId, indices) {
   if (!div) return;
   var isActive = btn.classList.contains("active");
   btn.classList.toggle("active");
-  var vis = div.data.map(function(t) { return t.visible !== false; });
+  // Treat "legendonly" as off — only an explicit true counts as visible.
+  // Otherwise lines spec'd visible=False (which Plotly stores as "legendonly")
+  // would be promoted to true by restyle as a side effect of any toggle.
+  var vis = div.data.map(function(t) { return t.visible === true; });
   indices.forEach(function(i) { vis[i] = !isActive; });
   Plotly.restyle(div, {visible: vis});
   _refreshYAxis(chartId);
@@ -1281,7 +1284,11 @@ function mlToggle(btn, chartId, lineIdx, lineCount) {
   var isActive = btn.classList.contains("active");
   btn.classList.toggle("active");
   var mode = div._mlMode || "raw";
-  var vis = div.data.map(function(t) { return t.visible !== false; });
+  // Treat "legendonly" as off — only an explicit true counts as visible.
+  // See toggleTrace for the same fix; without this, lines spec'd visible=False
+  // (Plotly stores them as "legendonly") get promoted to true by restyle when
+  // any other line on the chart is toggled.
+  var vis = div.data.map(function(t) { return t.visible === true; });
   vis[lineIdx] = !isActive && mode === "raw";
   vis[lineCount + lineIdx] = !isActive && mode === "smooth";
   Plotly.restyle(div, {visible: vis});
