@@ -493,33 +493,30 @@ Built and runnable. End-to-end:
 
 - [x] `fetch.py` — pulls StatsCan, BoC Valet, FRED, Alberta Economic Dashboard
 - [x] `analyze.py` — reads framework + data, calls Claude Opus, writes `data/blurbs.json`
-- [x] `build.py` — config-driven, builds 9-chart `index.html` with section blurb injection
+- [x] `build.py` — config-driven, builds 16-chart `index.html` with section blurb injection across 6 sections
 - [x] Full transformation system for all frequencies
 - [x] Spec dataclasses (Chart, MultiLine, CoreInflation, CpiBreadth, Wage, Cpi, Page); `PageSpec.sections` for blurb placement
 - [x] GitHub Pages deployment + GitHub Actions cron (3 schedules + dispatch)
 - [x] StatsCan retry/poll logic via `--wait`
-- [x] **CPI** — six lines (Headline SA, Headline NSA, Food, Energy, Goods, Services) × four transforms; Y/Y default, 10Y default; first chart on the page
-- [x] **Core Inflation panel** — range band of 5 core measures + headline + toggles
-- [x] **CPI Breadth chart** — calibrated against BoC published chart
-- [x] **Policy Rates** — BoC + Fed, step rendering, 10Y default
-- [x] **2-Year Yields** — Canada + US, smooth toggle, 10Y default
-- [x] **Unemployment Rate** — static, 10Y default
-- [x] **Wage Growth** — range band + 4 measures + Services CPI overlay
-- [x] **Oil Prices** — WTI/Brent/WCS, smooth toggle, ymin=0 floor for the April-2020 anomaly
-- [x] **USD/CAD** — daily, 10Y default
-- [x] **Live y-axis computation** — `_computeYRange` + `_niceDtick` + `_dtickFormat` + `_refreshYAxis` adjust the y-axis to currently visible traces in the current x-window; `Y_FLOORS` carries chart-level floors. Replaces the old build-time Y_RANGES.
-- [x] **Section heading + blurb injection** — All four sections (Inflation, Monetary Policy, Labour Market, Financial Conditions) appear with blurbs generated from the verified analysis framework
-- [x] About section credits all four data sources + carries the AI-generated-content disclaimer ("Section blurbs are AI-generated from public data using a fixed analytical framework verified against primary sources. Not investment advice.")
+- [x] **All 16 charts implemented across 6 sections** (Monetary Policy: Policy Rates, 2Y Yields, Balance Sheet · Inflation: Core Inflation, CPI Components, CPI Breadth, Inflation Expectations · GDP & Activity: Real GDP monthly, GDP Contributions · Labour Market: Unemployment, Wage Growth · Housing: Starts, NHPI, Permits · Financial Conditions: Oil Prices, USD/CAD)
+- [x] **Live y-axis computation** — `_computeYRange` + `_niceDtick` + `_dtickFormat` + `_refreshYAxis` adjust the y-axis to currently visible traces in the current x-window; `Y_FLOORS` carries chart-level floors.
+- [x] **Section heading + blurb injection** — All 6 sections appear with blurbs from the verified analytical framework.
+- [x] About section + AI-generated-content disclaimer
 - [x] `analyses/` folder convention; `probe_*.py` and `table-*.json` gitignored
-- [x] **Analysis framework verified end-to-end across all four sections** — Inflation (May 2026), Monetary Policy (May 2026), Labour Market (May 2026), Financial Conditions (May 2026). Each section carries an explicit VERIFIED status flag at the top with citations to BoC primary sources and empirical-distribution anchors.
-- [x] **All four `compute_*_values` + `format_*_values` pairs in `analyze.py`** — `compute_inflation_values`, `compute_policy_values`, `compute_labour_values`, `compute_external_values` all registered in SECTIONS dict; blurbs in `data/blurbs.json` for all four sections.
-- [x] **CI workflow wired for blurb regeneration** — `.github/workflows/update.yml` includes a "Generate section blurbs" step that loops over all four sections; gates on `ANTHROPIC_API_KEY` secret presence (skips with a warning if not set, so CI stays green either way).
-- [x] **Self-review pass in analyze.py** — second LLM call after blurb generation runs a focused factual-correctness checklist (direction/sign, asset/liability, attribution, dates, action-state, magnitude); flagged blurbs save with `review_flags` for user iteration rather than blocking.
+- [x] **Analysis framework verified end-to-end across all 6 sections** — Inflation, Monetary Policy, Labour Market, Financial Conditions (all May 2026); GDP & Activity, Housing (May 8, 2026 autonomous verification). Each section carries an explicit VERIFIED status flag with citations to BoC primary sources, BoC SANs, CMHC research, and empirical-distribution anchors.
+- [x] **All 6 `compute_*_values` + `format_*_values` pairs in `analyze.py`** — inflation, policy, gdp, labour, housing, financial — all registered in SECTIONS dict; blurbs in `data/blurbs.json` for all 6 sections.
+- [x] **Inflation expectations integrated into Inflation section** — CSCE consumer 1y/5y, BOS firms expecting > 3%, all from BoC Valet persistent keys. Surfaces "are expectations anchored at 2%?" as a tracked signal in the framework + blurb.
+- [x] **CI workflow wired for blurb regeneration** — `.github/workflows/update.yml` loops over all 6 section IDs; gates on `ANTHROPIC_API_KEY` secret presence (skips with a warning if not set, CI stays green either way).
+- [x] **Self-review pass in analyze.py** — second LLM call after blurb generation runs a focused factual-correctness checklist; flagged blurbs save with `review_flags` for user iteration rather than blocking.
+- [x] **README.md** — describes the project, architecture, framework methodology, data sources, and how it was built (acknowledging Claude collaboration). Portfolio-relevant.
 
 ## What has NOT been implemented
 
-- [ ] **`ANTHROPIC_API_KEY` secret set in repo Settings** — workflow code is in place; flipping the switch requires the user to add the secret at https://github.com/jayzhaomurray/boc-tracker/settings/secrets/actions. Until set, blurbs stay at the last manually-seeded values; CI runs are still green and everything else (data fetch, chart build, auto-commit) works as before.
-- [ ] **Labour Market and Financial Conditions blurbs are autonomous-draft as of May 2026** — verified framework + computed values, but the prose itself was generated overnight without user iteration. Quality unverified for those two; expect revision against plain-language principles when the user next reviews. Inflation and Monetary Policy blurbs went through user iteration cycles and are ground-truth voice.
+- [ ] **`ANTHROPIC_API_KEY` secret set in repo Settings** — workflow code is in place; flipping the switch requires the user to add the secret at https://github.com/jayzhaomurray/boc-tracker/settings/secrets/actions. Until set, blurbs stay at the last manually-seeded values; CI runs are still green and everything else works.
+- [ ] **GDP, Housing, Labour, Financial Conditions blurbs are autonomous-draft as of May 8, 2026** — verified frameworks + computed values, but prose itself was generated overnight without user iteration. Quality unverified; expect revision against plain-language principles when the user next reviews. Inflation and Monetary Policy blurbs went through user iteration cycles and are ground-truth voice.
+- [ ] **Output gap as a separate live indicator** — the BoC publishes a live output gap range each MPR (currently -1.5% to -0.5%); the GDP section references it but doesn't fetch and surface it directly. Could be added as a manual quarterly input or via fetch from BoC Valet if the series is exposed.
+- [ ] **Resale activity / CREA MLS HPI / housing affordability** — the BoC's own Housing Affordability Index uses MLS resale prices (not NHPI which is on the dashboard). Adding CREA data is non-trivial (no public API; CSV downloads + regional breakdowns).
+- [ ] **Mortgage rate spreads / mortgage debt-service ratio** — flagged in the Housing framework's coverage gaps; tracked by BoC FSR but not loaded here.
 - [ ] **Multiple pages** — PAGES list has one entry; infrastructure is ready
 - [ ] **Navigation bar** — only relevant after multi-page split
 - [ ] **Custom domain**
