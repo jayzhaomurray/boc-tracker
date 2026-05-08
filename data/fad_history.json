@@ -1,0 +1,10 @@
+[
+  {"date": "2025-06-04", "decision": "hold", "rate": 2.75},
+  {"date": "2025-07-30", "decision": "hold", "rate": 2.75},
+  {"date": "2025-09-17", "decision": "cut",  "rate": 2.50},
+  {"date": "2025-10-29", "decision": "cut",  "rate": 2.25},
+  {"date": "2025-12-10", "decision": "hold", "rate": 2.25},
+  {"date": "2026-01-28", "decision": "hold", "rate": 2.25},
+  {"date": "2026-03-18", "decision": "hold", "rate": 2.25},
+  {"date": "2026-04-29", "decision": "hold", "rate": 2.25}
+]

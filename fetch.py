@@ -11,6 +11,7 @@ Output: data/cpi_all_items.csv
 import argparse
 import json
 import os
+import re
 import time
 import requests
 import pandas as pd
@@ -55,7 +56,8 @@ BOC_VALET_SERIES = {
     # 2-tuple: (series_key, start_date). 3-tuple: (series_key, start_date, scale_factor)
     # Scale factor is applied to the fetched values (e.g. 0.001 to convert millions to billions)
     "yield_2yr":      ("BD.CDN.2YR.DQ.YLD",    "1990-01-01"),  # 2-yr GoC benchmark bond yield, daily
-    "overnight_rate": ("STATIC_ATABLE_V39079",  "1990-01-01"),  # BoC overnight rate target, monthly
+    "overnight_rate": ("STATIC_ATABLE_V39079",  "1990-01-01"),  # BoC overnight rate target, monthly (long history; used by chart)
+    "overnight_rate_daily": ("V39079",          "2009-04-21"),  # BoC overnight rate target, DAILY (since 2009-04-21; used by analyze.py for meeting-resolution)
     "cpi_trim":       ("CPI_TRIM",              "1990-01-01"),  # CPI-trim, Y/Y %, monthly
     "cpi_median":     ("CPI_MEDIAN",            "1990-01-01"),  # CPI-median, Y/Y %, monthly
     "cpi_common":     ("CPI_COMMON",            "1990-01-01"),  # CPI-common, Y/Y %, monthly
@@ -216,6 +218,39 @@ def fetch_wcs() -> pd.DataFrame:
     return df.sort_values("date").reset_index(drop=True)
 
 
+def fetch_fad_calendar() -> list:
+    """BoC Fixed Announcement Date (FAD) calendar from the Bank's iCal feed.
+
+    Returns a sorted list of {date, title} dicts for every event whose summary
+    starts with "Interest Rate Announcement" — this captures both standalone
+    FADs and the four FADs paired with MPR releases. The feed contains roughly
+    a year of upcoming events plus recently past events, which is enough to
+    count consecutive no-change FADs since the most recent rate change.
+    """
+    r = requests.get(
+        "https://www.bankofcanada.ca/?feed=ical&content_type=upcoming-events",
+        timeout=30,
+    )
+    r.raise_for_status()
+    # Unfold lines per RFC5545: continuation lines start with whitespace.
+    text = re.sub(r"\r?\n[ \t]", "", r.text)
+
+    fads = []
+    for block in re.findall(r"BEGIN:VEVENT(.*?)END:VEVENT", text, flags=re.DOTALL):
+        summary_m = re.search(r"^SUMMARY:(.*)$", block, flags=re.MULTILINE)
+        dtstart_m = re.search(r"^DTSTART(?:;[^:]*)?:(\d{8})", block, flags=re.MULTILINE)
+        if not summary_m or not dtstart_m:
+            continue
+        summary = summary_m.group(1).strip()
+        if not summary.startswith("Interest Rate Announcement"):
+            continue
+        d = dtstart_m.group(1)
+        fads.append({"date": f"{d[:4]}-{d[4:6]}-{d[6:8]}", "title": summary})
+
+    fads.sort(key=lambda x: x["date"])
+    return fads
+
+
 # ── Retry helper ──────────────────────────────────────────────────────────────
 
 def _latest_saved_date(path: Path) -> pd.Timestamp | None:
@@ -330,6 +365,14 @@ def main(wait: bool = False):
     if df is not None:
         df.to_csv(path)
         print(f"  -> {len(df)} months × {len(df.columns)} components saved to {path}")
+
+    print("Fetching BoC FAD calendar from iCal feed...")
+    fads = _safe("fad_calendar", fetch_fad_calendar)
+    if fads is not None:
+        path = DATA_DIR / "fad_calendar.json"
+        path.write_text(json.dumps(fads, indent=2))
+        date_range = f" ({fads[0]['date']} to {fads[-1]['date']})" if fads else ""
+        print(f"  -> {len(fads)} FAD entries saved to {path}{date_range}")
 
     if failed:
         print()
