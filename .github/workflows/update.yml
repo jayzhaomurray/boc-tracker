@@ -5,7 +5,7 @@ on:
     - cron: "30 12 * * *"   # 8:30 AM EDT (summer) — StatsCan release window
     - cron: "30 13 * * *"   # 8:30 AM EST (winter) — StatsCan release window
     - cron: "0 15 * * *"    # 11:00 AM EDT / 10:00 AM EST — BoC daily yields
-  workflow_dispatch:         # manual trigger (also uses --wait)
+  workflow_dispatch:         # manual trigger (plain fetch, no waiting)
 
 permissions:
   contents: write   # required for git-auto-commit-action to push back to main
@@ -26,10 +26,13 @@ jobs:
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: |
-          if [ "${{ github.event.schedule }}" = "0 15 * * *" ]; then
-            python fetch.py
-          else
+          # --wait is only useful when racing a StatsCan release window (the two
+          # 8:30 AM ET crons). Manual dispatches and the BoC daily cron use plain
+          # fetch — no point polling for data that isn't being released.
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" != "0 15 * * *" ]; then
             python fetch.py --wait
+          else
+            python fetch.py
           fi
 
       - run: python build.py
