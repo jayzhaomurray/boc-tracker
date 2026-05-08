@@ -52,6 +52,8 @@ Main-page blurbs work from top-level aggregates only — never from individual C
 
 ## Inflation
 
+> **VERIFICATION STATUS: verified end-to-end (May 2026).** Analytical claims audited against primary sources / our own data; thresholds anchored to empirical distributions; blurb generated and iterated with the user. Compute and format functions in `analyze.py`; blurb in `data/blurbs.json` under `inflation`.
+
 **Question:** How does inflation compare to the BoC's 2% target, and what is the underlying trend?
 
 **Data:** cpi_all_items (M/M, 3M AR, Y/Y), cpi_trim, cpi_median, cpi_common, cpix, cpixfet, cpi_food (Y/Y), cpi_energy (Y/Y), cpi_goods (Y/Y), cpi_services (Y/Y), cpi_breadth (share above 3%, share below 1%). M/M and 3M AR are computed on the SA cpi_all_items series; Y/Y is identical between SA and NSA.
@@ -83,6 +85,8 @@ When citing breadth in the blurb, lead with the state name (*broad-based pressur
 ---
 
 ## Monetary Policy
+
+> **VERIFICATION STATUS: verified end-to-end (May 2026).** Every analytical claim audited against BoC primary sources (r* update, floor system announcement, settlement-balance target, QT operational timeline) and empirical distributions (BoC-Fed spread tiers, Canada 2Y-overnight tiers, correlation with `bocfed_spread`); 2Y term-premium magnitudes and regime distortions sourced from BoC ACM literature; balance-sheet anchors (~$120B baseline, ~$575B March 2021 peak) verified directly from `boc_total_assets`. Compute and format functions in `analyze.py`; blurb in `data/blurbs.json` under `policy`.
 
 **Question:** What is the BoC doing across its policy tools — rate and balance sheet — and what is the market pricing for the rate path?
 
@@ -150,6 +154,8 @@ The headline read is what the BoC is *doing*, for how long, and following what. 
 
 ## Labour Market
 
+> **VERIFICATION STATUS: hypothesis-grade.** This section's analytical claims (NAIRU range, productivity assumption embedded in the wage-growth threshold, LFS-Micro composition-adjustment mechanism, wage-vs-services-CPI pass-through framing, real-wage interpretation) have not been audited against primary sources or our own data. Treat the entire section as a starting hypothesis, not a verified brief. Before generating a labour blurb: run the same audit cycle that was applied to Monetary Policy in May 2026 (parallel Sonnet subagents for primary sources + local pandas for empirical distributions; track findings as VERIFIED / WRONG / NEEDS REFINEMENT; rewrite this section with citations and verified thresholds), then build `compute_labour_values` + `format_labour_values`, then iterate with the user on the resulting prose. Do NOT skip the verification or the iteration — the framework writing principles memory + finished inflation/policy blurbs make the workflow faster, not automatic.
+
 **Question:** How tight is the labour market, and what does wage growth imply for the inflation outlook?
 
 **Data:** unemployment_rate, lfs_wages_all (Y/Y), lfs_wages_permanent (Y/Y), seph_earnings (Y/Y), lfs_micro (Y/Y, BoC composition-adjusted), cpi_services (Y/Y)
@@ -175,6 +181,8 @@ The headline read is what the BoC is *doing*, for how long, and following what. 
 ---
 
 ## Financial Conditions
+
+> **VERIFICATION STATUS: hypothesis-grade.** This section's analytical claims (CAD pass-through rule of thumb, petrocurrency relationship characterization, WCS-WTI normal differential, the BoC-Fed-spread → CAD mechanism, the 1.45–1.46 historical-extreme reference, oil Y/Y inflationary-impulse threshold) have not been audited against primary sources or our own data. Treat the entire section as a starting hypothesis, not a verified brief. Before generating a Financial Conditions blurb: run the same audit cycle that was applied to Monetary Policy in May 2026 (parallel Sonnet subagents for primary sources + local pandas for empirical distributions; track findings as VERIFIED / WRONG / NEEDS REFINEMENT; rewrite this section with citations and verified thresholds), then build `compute_external_values` + `format_external_values`, then iterate with the user on the resulting prose. Do NOT skip the verification or the iteration — the framework writing principles memory + finished inflation/policy blurbs make the workflow faster, not automatic.
 
 **Question:** How are commodity prices, the exchange rate, and (in the future) other market signals affecting the Canadian economic picture?
 
