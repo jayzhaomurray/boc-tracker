@@ -1109,7 +1109,7 @@ def build_prompt(section_id: str, framework: str, values_str: str,
         )
     return f"""You are generating a short analytical blurb for a public economic dashboard tracking Bank of Canada indicators. Read the analytical framework below, then read the latest computed data, then generate the blurb for the **{section_name}** section.
 
-Output only the blurb prose. No preamble, no markdown headers, no quotation marks. Follow the framework's structure (takeaway -> anchor -> support -> closing nuance) and the writing-style rules (plain verbs, semicolons for parallel facts, conventional shorthand, plain hedges, no explanatory codas, no forecasts, no policy prescription). 3 sentences typically; 4 if there is a real tension worth surfacing in a closing slot. Use em dashes (—) for parenthetical asides and sub-clauses; do not use plain hyphens with surrounding spaces (` - `).
+Output only the blurb prose. No preamble, no markdown headers, no quotation marks. Follow the framework's structure (takeaway -> anchor -> support -> closing nuance) and the writing-style rules (plain verbs, semicolons for parallel facts, conventional shorthand, plain hedges, no explanatory codas, no forecasts, no policy prescription). 3 sentences typically; 4 if there is a real tension worth surfacing in a closing slot. Use em dashes (—) for parenthetical asides and sub-clauses, with no surrounding spaces (e.g. write `target—anchor stable` rather than `target — anchor stable` or `target - anchor stable`).
 {prior}
 == Analytical Framework ==
 
@@ -1132,14 +1132,20 @@ def call_claude(prompt: str, max_tokens: int = 512) -> str:
 
 
 def _normalize_dashes(text: str) -> str:
-    """Convert ASCII hyphens used as parenthetical / sub-clause separators into em dashes.
+    """Convert ASCII hyphens used as parenthetical / sub-clause separators into em dashes,
+    with no surrounding spaces (Chicago style).
 
-    Models default to ` - ` and ` -- ` even when prompted otherwise. This pass is the
-    safety net. Only space-bounded hyphens get replaced; in-word hyphens (year-over-year,
-    labour-cost), ranges (2-3, $20-60B), and unary minuses (-0.5%) are untouched because
-    they have no surrounding spaces.
+    Models default to ` - ` or ` -- ` even when prompted otherwise; some also produce
+    ` — ` (em dash with surrounding spaces, AP style). This pass is the safety net.
+    Only space-bounded hyphens get replaced; in-word hyphens (year-over-year, labour-cost),
+    ranges (2-3, $20-60B), and unary minuses (-0.5%) are untouched because they have no
+    surrounding spaces.
     """
-    return text.replace(" -- ", " — ").replace(" - ", " — ")
+    import re
+    text = text.replace(" -- ", "—").replace(" - ", "—")
+    # Collapse any remaining space-flanked em dashes (e.g. if the model produced ` — ` directly).
+    text = re.sub(r"\s*—\s*", "—", text)
+    return text
 
 
 def review_blurb(blurb: str, framework: str, values_str: str, section_name: str) -> str:
