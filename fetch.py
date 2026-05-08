@@ -30,7 +30,9 @@ FRED_API_KEY = os.environ.get("FRED_API_KEY", "")
 #
 # STATSCAN_SERIES
 #   Key:   filename for the saved CSV (e.g. "wage_growth" -> data/wage_growth.csv)
-#   Value: Statistics Canada WDS vector ID
+#   Value: Statistics Canada WDS vector ID (int), OR a 2-tuple (vector_id, scale_factor).
+#          Scale factor is multiplied into the fetched values on every future fetch
+#          (e.g. 0.000001 to convert millions to trillions).
 #          Find vectors at: www150.statcan.gc.ca — navigate to a table, click a
 #          series, and look for the "Vector" identifier (format: V + numbers).
 #
@@ -51,7 +53,13 @@ STATSCAN_SERIES = {
     "cpi_energy":          41691239,   # Table 18-10-0004-01: CPI Energy, Canada, NSA (2002=100)
     "cpi_goods":           41691222,   # Table 18-10-0004-01: CPI Goods, Canada, NSA (2002=100)
     # GDP / Activity section (added May 2026)
-    "gdp_monthly":               65201210,  # Table 36-10-0434: Monthly real GDP, all industries, chained 2017 $, SAAR
+    # gdp_monthly: StatsCan publishes in C$ millions; 2-tuple applies scale to store in C$ trillions
+    "gdp_monthly":               (65201210, 0.000001),  # Table 36-10-0434: Monthly real GDP, all industries, chained 2017 $, SAAR (C$ trillions)
+    # Industry overlays for gdp_monthly chart (same table, same scale — vectors verified 2026-05-08)
+    "gdp_industry_goods":        (65201211, 0.000001),  # Table 36-10-0434: Goods-producing industries, chained 2017 $, SAAR (C$ trillions)
+    "gdp_industry_services":     (65201212, 0.000001),  # Table 36-10-0434: Services-producing industries, chained 2017 $, SAAR (C$ trillions)
+    "gdp_industry_manufacturing":(65201263, 0.000001),  # Table 36-10-0434: Manufacturing, chained 2017 $, SAAR (C$ trillions)
+    "gdp_industry_mining_oil":   (65201236, 0.000001),  # Table 36-10-0434: Mining, quarrying, and oil and gas extraction, chained 2017 $, SAAR (C$ trillions)
     "gdp_quarterly":             62305752,  # Table 36-10-0104: Quarterly real GDP, expenditure-based, chained 2017 $, SAAR
     "gdp_qq_growth":           1594571783,  # Table 36-10-0104: Q/Q % change, pre-computed (saves one calculation)
     "gdp_contrib_consumption":   79448555,  # Table 36-10-0104: Household final consumption, contribution to annualized Q/Q growth
@@ -87,7 +95,12 @@ BOC_VALET_SERIES = {
     # Inflation expectations (added May 2026; quarterly cadence, persistent Valet keys)
     "infl_exp_consumer_1y": ("CES_C1_SHORT_TERM", "2014-01-01"),  # CSCE 1-year-ahead consumer inflation expectation, % (mean)
     "infl_exp_consumer_5y": ("CES_C1_LONG_TERM",  "2014-01-01"),  # CSCE 5-year-ahead consumer inflation expectation, % (mean)
-    "infl_exp_above3":      ("ABOVE3",            "2013-01-01"),  # BOS: % of firms expecting inflation > 3% over next 2 years
+    "infl_exp_above3":      ("ABOVE3",            "2013-01-01"),  # BOS: % of firms expecting inflation > 3% over next 2 years (most-current vintage)
+    # BOS expectations distribution buckets (sum to ~100% across the four buckets); aligned vintage may be ~1 quarter behind ABOVE3
+    "bos_dist_below1":      ("INDINF_BOSBELOW1_Q", "2003-01-01"),  # BOS: % of firms expecting CPI inflation <1% over next 2 years
+    "bos_dist_1to2":        ("INDINF_BOS1TO2_Q",   "2003-01-01"),  # BOS: % of firms expecting CPI inflation 1-2%
+    "bos_dist_2to3":        ("INDINF_BOS2TO3_Q",   "2003-01-01"),  # BOS: % of firms expecting CPI inflation 2-3% (target-consistent)
+    "bos_dist_above3":      ("INDINF_BOSOVER3_Q",  "2003-01-01"),  # BOS: % of firms expecting CPI inflation >3%
 }
 
 FRED_SERIES = {
@@ -307,7 +320,12 @@ def main(wait: bool = False):
             failed.append(label)
             return None
 
-    for name, vector_id in STATSCAN_SERIES.items():
+    for name, entry in STATSCAN_SERIES.items():
+        # entry is either a plain int (vector_id) or a 2-tuple (vector_id, scale_factor)
+        if isinstance(entry, tuple):
+            vector_id, scale = entry
+        else:
+            vector_id, scale = entry, 1.0
         path = DATA_DIR / f"{name}.csv"
         prior = _latest_saved_date(path) if wait else None
         print(f"Fetching {name} from Statistics Canada...")
@@ -325,6 +343,8 @@ def main(wait: bool = False):
         else:
             print(f"  No new data after {MAX_RETRIES} attempts, proceeding.")
         if df is not None:
+            if scale != 1.0:
+                df["value"] = df["value"] * scale
             df.to_csv(path, index=False)
             print(f"  -> {len(df)} rows saved to {path}")
 

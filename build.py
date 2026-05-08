@@ -57,6 +57,15 @@ def _title_block_html(title: str, unit: str, div_id: str) -> str:
 # ── Data structures ───────────────────────────────────────────────────────────
 
 @dataclass
+class OverlayConfig:
+    """A single overlay line for a ChartSpec. Shares all transforms of the parent chart.
+    Default visibility is 'legendonly' (off) so the primary series dominates on first load."""
+    series: str          # CSV filename without .csv
+    label: str           # legend label
+    color: str           # hex color
+
+
+@dataclass
 class ChartSpec:
     series: str               # matches CSV filename in data/ without .csv
     title: str                # panel heading
@@ -68,6 +77,13 @@ class ChartSpec:
     footnote: str = ""
     unit_label: str = "%"     # text shown in top-left of plot area (e.g. %, CAD per USD)
     hover_decimals: int = 2   # precision in hover tooltip — see chart_style_guide.md §5
+    # Optional per-transform unit labels. When set, xformClick updates the subtitle
+    # div on each transform button click. Keys are transform names (e.g. "level",
+    # "yoy"); missing keys default to unit_label.
+    transform_unit_labels: dict = field(default_factory=dict)
+    # Optional overlay lines. Each shares the same frequency/transforms as the primary
+    # series but renders as a separate toggleable line, off by default.
+    overlays: list = field(default_factory=list)  # list[OverlayConfig]
 
 
 @dataclass
@@ -152,6 +168,21 @@ class MultiLineSpec:
     ymin: float | None = None           # hard floor for y-axis (pre-computed ranges + autorange)
     unit_label: str = "%"               # text shown in top-left of plot area
     hband: tuple | None = None          # (lo, hi) horizontal shaded reference band, e.g. neutral rate
+
+
+@dataclass
+class StackedBarSpec:
+    """Stacked bar chart with per-series legend toggles. Uses barmode='relative'
+    so positive bars stack above zero and negative bars stack below — correct for
+    contribution-to-growth charts where components can swing either direction."""
+    title: str
+    lines: list                       # list[LineConfig]; reused from MultiLineSpec
+    ticksuffix: str = "%"
+    hoverformat: str = ".2f"
+    default_years: int | None = None
+    date_fmt: str = "%b %Y"
+    footnote: str = ""
+    unit_label: str = "%"
 
 
 # ── Transform system ──────────────────────────────────────────────────────────
@@ -270,12 +301,22 @@ def _compact_x_dates(fig: go.Figure) -> None:
             pass
 
 
-def _build_chart_fig(chart: ChartSpec, df: pd.DataFrame) -> go.Figure:
+def _build_chart_fig(chart: ChartSpec, df: pd.DataFrame,
+                     overlay_data: dict | None = None) -> go.Figure:
+    """Build the Plotly figure for a ChartSpec.
+
+    Trace layout when overlays are present:
+      Traces 0..N-1 : main series (one per transform)
+      Traces N..2N-1: first overlay (one per transform, 'legendonly' by default)
+      Traces 2N..3N-1: second overlay, etc.
+    where N = len(available transforms).
+    """
     transforms = compute_transforms(df, chart.frequency)
     available = FREQ_TRANSFORMS[chart.frequency]
     default = "level" if chart.static else _resolve_default(chart)
 
     fig = go.Figure()
+    # Primary series traces
     for transform_key in available:
         if transform_key not in transforms:
             continue
@@ -289,6 +330,41 @@ def _build_chart_fig(chart: ChartSpec, df: pd.DataFrame) -> go.Figure:
             hovertemplate=_hover_template(transform_key, chart.frequency, chart.hover_decimals),
             showlegend=False,
         ))
+
+    # Overlay traces: N traces per overlay (one per transform), all 'legendonly' by default
+    if chart.overlays and overlay_data:
+        for ov in chart.overlays:
+            ov_df = overlay_data.get(ov.series)
+            if ov_df is None or ov_df.empty:
+                # Emit placeholder traces so trace indices stay consistent
+                for transform_key in available:
+                    fig.add_trace(go.Scatter(
+                        x=[], y=[], name=transform_key,
+                        visible="legendonly",
+                        line=dict(color=ov.color, width=1.5),
+                        showlegend=False,
+                    ))
+                continue
+            ov_transforms = compute_transforms(ov_df, chart.frequency)
+            for transform_key in available:
+                s = ov_transforms.get(transform_key)
+                if s is None:
+                    fig.add_trace(go.Scatter(x=[], y=[], name=transform_key,
+                                             visible="legendonly",
+                                             line=dict(color=ov.color, width=1.5),
+                                             showlegend=False))
+                    continue
+                fig.add_trace(go.Scatter(
+                    x=s.index,
+                    y=s.values,
+                    name=f"{ov.label} — {transform_key}",
+                    visible="legendonly",
+                    line=dict(color=ov.color, width=1.5),
+                    hovertemplate=_hover_template(
+                        transform_key, chart.frequency, chart.hover_decimals
+                    ).replace("<extra></extra>", f"<extra>{ov.label}</extra>"),
+                    showlegend=False,
+                ))
 
     fig.update_layout(
         height=_CHART_HEIGHT,
@@ -328,13 +404,29 @@ def _transform_buttons_html(chart: ChartSpec, div_id: str) -> str:
     if len(available) <= 1:
         return ""
     default = _resolve_default(chart)
+    use_unit_labels = bool(chart.transform_unit_labels)
+    has_overlays = bool(chart.overlays)
+    n_transforms = len(available)
+    n_overlays = len(chart.overlays)
     out = '<div class="btn-group" id="xb-' + div_id + '">'
     for i, transform_key in enumerate(available):
         label = BUTTON_LABELS.get(transform_key, transform_key)
         active = " active" if transform_key == default else ""
+        if has_overlays:
+            # xformClickOverlay manages both main and overlay trace visibility
+            if use_unit_labels:
+                unit = chart.transform_unit_labels.get(transform_key, chart.unit_label)
+                onclick = f"xformClickOverlay(this,'{div_id}',{i},{n_transforms},{n_overlays},'{unit}')"
+            else:
+                onclick = f"xformClickOverlay(this,'{div_id}',{i},{n_transforms},{n_overlays})"
+        elif use_unit_labels:
+            unit = chart.transform_unit_labels.get(transform_key, chart.unit_label)
+            onclick = f"xformClick(this,'{div_id}',{i},'{unit}')"
+        else:
+            onclick = f"xformClick(this,'{div_id}',{i})"
         out += (
             '<button class="ctrl-btn' + active + '"'
-            ' onclick="xformClick(this,\'' + div_id + '\',' + str(i) + ')">'
+            ' onclick="' + onclick + '">'
             + label + "</button>"
         )
     out += "</div>"
@@ -344,9 +436,17 @@ def _transform_buttons_html(chart: ChartSpec, div_id: str) -> str:
 # ── Chart panel HTML ──────────────────────────────────────────────────────────
 
 def _chart_panel_html(chart: ChartSpec, df: pd.DataFrame, chart_idx: int,
-                      include_plotlyjs: bool) -> str:
+                      include_plotlyjs: bool,
+                      data: dict | None = None) -> str:
     div_id = "chart-" + str(chart_idx)
-    fig = _build_chart_fig(chart, df)
+    n_transforms = len(FREQ_TRANSFORMS[chart.frequency])
+
+    # Collect overlay DataFrames (keyed by series name)
+    overlay_data: dict | None = None
+    if chart.overlays and data is not None:
+        overlay_data = {ov.series: data.get(ov.series) for ov in chart.overlays}
+
+    fig = _build_chart_fig(chart, df, overlay_data=overlay_data)
     _compact_x_dates(fig)
     plotly_frag = fig.to_html(
         full_html=False,
@@ -363,6 +463,32 @@ def _chart_panel_html(chart: ChartSpec, df: pd.DataFrame, chart_idx: int,
         controls += xform_btns + '<div class="btn-sep"></div>'
     controls += range_btns + "</div>"
 
+    # Legend for overlay lines (only when overlays are defined)
+    legend_html = ""
+    if chart.overlays:
+        def _swatch_line(color: str) -> str:
+            return (
+                '<span style="display:inline-block;width:22px;height:2.5px;'
+                'background:' + color + ';border-radius:1px;vertical-align:middle;'
+                'margin-right:5px"></span>'
+            )
+        legend_html = '<div class="chart-legend">'
+        # Primary series legend button (always active, overlayIdx=-1 means main series)
+        primary_label = chart.title.split("(")[0].strip() if "(" in chart.title else chart.title
+        legend_html += (
+            '<button class="legend-item active"'
+            ' onclick="toggleOverlayTrace(this,\'' + div_id + '\',-1,' + str(n_transforms) + ')">'
+            + _swatch_line(chart.color) + primary_label + '</button>'
+        )
+        # Overlay legend buttons (off by default)
+        for k, ov in enumerate(chart.overlays):
+            legend_html += (
+                '<button class="legend-item"'
+                ' onclick="toggleOverlayTrace(this,\'' + div_id + '\',' + str(k) + ',' + str(n_transforms) + ')">'
+                + _swatch_line(ov.color) + ov.label + '</button>'
+            )
+        legend_html += '</div>'
+
     footnote_html = (
         '<div class="chart-footnote">' + chart.footnote + '</div>'
         if chart.footnote else ""
@@ -374,6 +500,7 @@ def _chart_panel_html(chart: ChartSpec, df: pd.DataFrame, chart_idx: int,
         + controls +
         "</div>"
         + plotly_frag
+        + legend_html
         + footnote_html
         + "</div>\n"
     )
@@ -1223,13 +1350,17 @@ function rangeClick(btn, chartId, years) {
   applyRange(chartId, years);
 }
 
-function xformClick(btn, chartId, idx) {
+function xformClick(btn, chartId, idx, unitLabel) {
   var div = document.getElementById(chartId);
   btn.closest(".btn-group").querySelectorAll(".ctrl-btn").forEach(function(b) {
     b.classList.remove("active");
   });
   btn.classList.add("active");
   Plotly.restyle(div, {visible: div.data.map(function(_, i) { return i === idx; })});
+  if (unitLabel !== undefined) {
+    var subtitleDiv = document.getElementById("unit-" + chartId);
+    if (subtitleDiv) subtitleDiv.textContent = unitLabel;
+  }
   var rb = document.getElementById("rb-" + chartId);
   if (rb) {
     var activeRangeBtn = rb.querySelector(".ctrl-btn.active");
@@ -1294,6 +1425,83 @@ function mlToggle(btn, chartId, lineIdx, lineCount) {
   var vis = div.data.map(function(t) { return t.visible === true; });
   vis[lineIdx] = !isActive && mode === "raw";
   vis[lineCount + lineIdx] = !isActive && mode === "smooth";
+  Plotly.restyle(div, {visible: vis});
+  _refreshYAxis(chartId);
+}
+
+// ── Overlay-aware transform and toggle helpers ────────────────────────────────
+//
+// Used by ChartSpec charts that carry overlay lines (e.g. GDP monthly industry overlays).
+//
+// Trace layout:
+//   Indices 0..nT-1              : main series (one per transform)
+//   Indices nT..2nT-1            : overlay 0 (one per transform)
+//   Indices 2nT..3nT-1           : overlay 1, etc.
+//
+// xformClickOverlay: switch active transform while preserving overlay on/off state.
+function xformClickOverlay(btn, chartId, idx, nTransforms, nOverlays, unitLabel) {
+  var div = document.getElementById(chartId);
+  btn.closest(".btn-group").querySelectorAll(".ctrl-btn").forEach(function(b) {
+    b.classList.remove("active");
+  });
+  btn.classList.add("active");
+  if (unitLabel !== undefined) {
+    var subtitleDiv = document.getElementById("unit-" + chartId);
+    if (subtitleDiv) subtitleDiv.textContent = unitLabel;
+  }
+  // Build visibility array: main trace at idx=true; for each overlay, show the
+  // transform-matching trace only if that overlay is currently active.
+  var vis = div.data.map(function() { return false; });
+  vis[idx] = true;
+  // Determine which overlays are active by inspecting their current visibility.
+  // An overlay is "active" if any of its nT traces is currently visible (=true).
+  for (var k = 0; k < nOverlays; k++) {
+    var base = nTransforms + k * nTransforms;
+    var isOn = false;
+    for (var t = 0; t < nTransforms; t++) {
+      if (div.data[base + t].visible === true) { isOn = true; break; }
+    }
+    if (isOn) vis[base + idx] = true;
+  }
+  Plotly.restyle(div, {visible: vis});
+  var rb = document.getElementById("rb-" + chartId);
+  if (rb) {
+    var activeRangeBtn = rb.querySelector(".ctrl-btn.active");
+    if (activeRangeBtn) {
+      var m = activeRangeBtn.getAttribute("onclick").match(/,(\\w+)\\)$/);
+      if (m && m[1] !== "null") applyRange(chartId, parseInt(m[1]));
+    }
+  }
+}
+
+// toggleOverlayTrace: turn an overlay (or the main series) on or off.
+// overlayIdx=-1 means the main series (traces 0..nT-1).
+// For overlays, only the currently-active transform trace is toggled on; all
+// other transform traces for that overlay are set to false.
+function toggleOverlayTrace(btn, chartId, overlayIdx, nTransforms) {
+  var div = document.getElementById(chartId);
+  if (!div) return;
+  var isActive = btn.classList.contains("active");
+  btn.classList.toggle("active");
+  // Determine the current active transform index from the xform button group.
+  var xb = document.getElementById("xb-" + chartId);
+  var activeTform = 0;
+  if (xb) {
+    xb.querySelectorAll(".ctrl-btn").forEach(function(b, i) {
+      if (b.classList.contains("active")) activeTform = i;
+    });
+  }
+  var vis = div.data.map(function(t) { return t.visible === true; });
+  if (overlayIdx === -1) {
+    // Main series: toggle trace at activeTform
+    vis[activeTform] = !isActive;
+  } else {
+    var base = nTransforms + overlayIdx * nTransforms;
+    // Turn all transform variants for this overlay off first, then enable only
+    // the currently-active transform if toggling on.
+    for (var t = 0; t < nTransforms; t++) vis[base + t] = false;
+    if (!isActive) vis[base + activeTform] = true;
+  }
   Plotly.restyle(div, {visible: vis});
   _refreshYAxis(chartId);
 }
@@ -1524,6 +1732,108 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
     return html
 
 
+def _build_stackedbar_panel(chart: "StackedBarSpec", data: dict,
+                            chart_idx: int, include_plotlyjs: bool) -> str:
+    div_id = "chart-" + str(chart_idx)
+    lines = [line for line in chart.lines if line.series in data]
+
+    fig = go.Figure()
+    for line in lines:
+        df = data[line.series]
+        fig.add_trace(go.Bar(
+            x=df["date"], y=df["value"],
+            name=line.label,
+            marker=dict(color=line.color),
+            visible=True if line.visible else "legendonly",
+            hovertemplate="%{x|" + chart.date_fmt + "}<br>%{y:" + chart.hoverformat + "}" + chart.ticksuffix + "<extra>" + line.label + "</extra>",
+            showlegend=False,
+        ))
+
+    fig.update_layout(
+        height=_CHART_HEIGHT, showlegend=False,
+        paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
+        margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
+        barmode="relative",
+        bargap=0.15,
+    )
+
+    # y-range: union of stack-sum bounds and per-series bounds, so toggling traces on
+    # doesn't blow out the axis.
+    _today = pd.Timestamp.now().normalize()
+    all_series = []
+    for line in lines:
+        df = data[line.series].copy()
+        if chart.default_years:
+            df = df[df["date"] >= _today - pd.DateOffset(years=chart.default_years)]
+        all_series.append(df.set_index("date")["value"].rename(line.series))
+    combined = pd.concat(all_series, axis=1) if all_series else pd.DataFrame()
+    if not combined.empty and combined.notna().any().any():
+        pos_sum_max = float(combined.clip(lower=0).sum(axis=1).max())
+        neg_sum_min = float(combined.clip(upper=0).sum(axis=1).min())
+        per_max = float(combined.max().max())
+        per_min = float(combined.min().min())
+        rv_max = max(pos_sum_max, per_max, 0.0)
+        rv_min = min(neg_sum_min, per_min, 0.0)
+        rv_pad = max((rv_max - rv_min) * 0.08, 0.1)
+        disp_lo = rv_min - rv_pad
+        disp_hi = rv_max + rv_pad
+        sb_dtick = _nice_dtick(disp_lo, disp_hi)
+        sb_tickfmt = _dtick_format(sb_dtick)
+    else:
+        sb_dtick, sb_tickfmt = 1.0, ".0f"
+
+    fig.update_xaxes(showgrid=False, zeroline=False)
+    fig.update_yaxes(showgrid=True, gridcolor="#ebebeb",
+                     zeroline=True, zerolinecolor="#bdbdbd", zerolinewidth=1,
+                     tickformat=sb_tickfmt,
+                     tick0=0, dtick=sb_dtick)
+
+    _compact_x_dates(fig)
+    plotly_frag = fig.to_html(
+        full_html=False,
+        include_plotlyjs="cdn" if include_plotlyjs else False,
+        div_id=div_id,
+        config={"displayModeBar": False},
+    )
+
+    range_btns = _range_buttons_html(div_id, default_years=chart.default_years)
+    controls = '<div class="chart-controls">' + range_btns + '</div>'
+
+    def _swatch(color: str) -> str:
+        return (
+            '<span style="display:inline-block;width:12px;height:12px;'
+            'background:' + color + ';border-radius:2px;vertical-align:middle;'
+            'margin-right:6px"></span>'
+        )
+
+    legend_items = []
+    for i, line in enumerate(lines):
+        active = " active" if line.visible else ""
+        handler = 'toggleTrace(this,\'' + div_id + '\',[' + str(i) + '])'
+        legend_items.append(
+            '<button class="legend-item' + active + '"'
+            ' onclick="' + handler + '">'
+            + _swatch(line.color) + line.label + '</button>'
+        )
+    legend = '<div class="chart-legend" id="leg-' + div_id + '">' + "".join(legend_items) + '</div>'
+
+    footnote_html = (
+        '<div class="chart-footnote">' + chart.footnote + '</div>'
+        if chart.footnote else ""
+    )
+    html = (
+        '<div class="chart-panel">'
+        '<div class="chart-header">'
+        + _title_block_html(chart.title, chart.unit_label, div_id)
+        + controls + '</div>'
+        + plotly_frag
+        + legend
+        + footnote_html + '</div>\n'
+    )
+
+    return html
+
+
 # ── Page assembly ─────────────────────────────────────────────────────────────
 
 def _assemble_page(page: PageSpec, chart_panels: list[str],
@@ -1602,7 +1912,7 @@ PAGES = [
         title="Bank of Canada Tracker",
         tagline="Tracking the indicators behind Bank of Canada policy decisions",
         output_file="index.html",
-        sections={0: "policy", 3: "inflation", 7: "gdp", 9: "labour", 11: "housing", 14: "financial"},
+        sections={0: "policy", 3: "inflation", 8: "gdp", 10: "labour", 12: "housing", 15: "financial"},
         charts=[
             MultiLineSpec(
                 title="Policy Rates",
@@ -1678,17 +1988,43 @@ PAGES = [
                 date_fmt="%b %Y",
                 footnote="Bank of Canada Survey of Consumer Expectations (CSCE), mean expected inflation 1 year and 5 years ahead. Quarterly. The 2% inflation target is the policy anchor; material drift in 5-year-ahead expectations would signal anchor slippage.",
             ),
+            MultiLineSpec(
+                title="Business Inflation Expectations Distribution",
+                lines=[
+                    LineConfig("bos_dist_below1", "<1%",  "#1565c0", smooth=False),
+                    LineConfig("bos_dist_1to2",   "1–2%", "#4fc3f7", smooth=False),
+                    LineConfig("bos_dist_2to3",   "2–3%", "#2e7d32", smooth=False),
+                    LineConfig("bos_dist_above3", ">3%",  "#c62828", smooth=False),
+                ],
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %Y",
+                footnote="Bank of Canada Business Outlook Survey: share of firms expecting CPI inflation to fall in each band over the next two years. The four buckets sum to ~100%. The 2–3% band is target-consistent; sustained mass in >3% signals anchoring stress on the upside.",
+            ),
             ChartSpec(
                 series="gdp_monthly",
                 title="Real GDP (monthly)",
                 frequency="monthly",
                 color="#1565c0",
-                default_transform="yoy",
+                default_transform="level",
                 default_years=10,
-                hover_decimals=1,
-                footnote="Statistics Canada Table 36-10-0434: Monthly real GDP at basic prices, all industries, chained 2017 dollars, SAAR. Released roughly two months after the reference month with significant subsequent revisions.",
+                hover_decimals=3,
+                unit_label="C$ trillions",
+                transform_unit_labels={
+                    "level": "C$ trillions",
+                    "mom":   "%",
+                    "ar_3m": "%",
+                    "yoy":   "%",
+                },
+                footnote="Statistics Canada Table 36-10-0434: Monthly real GDP at basic prices, all industries, chained 2017 dollars, SAAR. Released roughly two months after the reference month with significant subsequent revisions. Industry overlays (off by default): toggle via legend.",
+                overlays=[
+                    OverlayConfig("gdp_industry_goods",        "Goods-producing",  "#388e3c"),
+                    OverlayConfig("gdp_industry_services",     "Services-producing", "#00897b"),
+                    OverlayConfig("gdp_industry_manufacturing","Manufacturing",     "#7b1fa2"),
+                    OverlayConfig("gdp_industry_mining_oil",   "Mining & oil/gas",  "#d84315"),
+                ],
             ),
-            MultiLineSpec(
+            StackedBarSpec(
                 title="GDP Growth Contributions",
                 lines=[
                     LineConfig("gdp_contrib_consumption", "Consumption",   "#1565c0", smooth=False),
@@ -1696,12 +2032,11 @@ PAGES = [
                     LineConfig("gdp_contrib_govt",        "Government",    "#7b1fa2", smooth=False),
                     LineConfig("gdp_contrib_exports",     "Exports",       "#388e3c", smooth=False),
                     LineConfig("gdp_contrib_imports",     "Less: imports", "#d84315", smooth=False),
-                    LineConfig("gdp_contrib_inventories", "Inventories",   "#fdd835", smooth=False, visible=False),
+                    LineConfig("gdp_contrib_inventories", "Inventories",   "#fdd835", smooth=False),
                 ],
-                default_years=10,
-                line_shape="linear",
+                default_years=2,
                 date_fmt="%b %Y",
-                footnote="Statistics Canada Table 36-10-0104: Contributions to annualized Q/Q real GDP growth, percentage points. Components add to total real GDP growth. 'Less: imports' is sign-flipped (positive contribution = imports declined). Inventories typically swing sharply quarter-to-quarter and are off by default.",
+                footnote="Statistics Canada Table 36-10-0104: Contributions to annualized Q/Q real GDP growth, percentage points. Bars stack to the headline real GDP growth rate. 'Less: imports' is sign-flipped so a positive contribution = imports declined.",
             ),
             ChartSpec(
                 series="unemployment_rate",
@@ -1856,9 +2191,11 @@ def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
             panels.append(_build_cpi_panel(chart, data, i, i == 0))
         elif isinstance(chart, MultiLineSpec):
             panels.append(_build_multiline_panel(chart, data, i, i == 0))
+        elif isinstance(chart, StackedBarSpec):
+            panels.append(_build_stackedbar_panel(chart, data, i, i == 0))
         else:
             df = data[chart.series]
-            panels.append(_chart_panel_html(chart, df, i, include_plotlyjs=(i == 0)))
+            panels.append(_chart_panel_html(chart, df, i, include_plotlyjs=(i == 0), data=data))
 
     default_ranges: dict = {}
     y_floors: dict = {}
@@ -1866,7 +2203,7 @@ def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
         cid = "chart-" + str(i)
         if isinstance(chart, CpiBreadthSpec):
             default_ranges[cid] = 10
-        elif isinstance(chart, (ChartSpec, MultiLineSpec, WageSpec, CoreInflationSpec, CpiSpec)) and chart.default_years is not None:
+        elif isinstance(chart, (ChartSpec, MultiLineSpec, StackedBarSpec, WageSpec, CoreInflationSpec, CpiSpec)) and chart.default_years is not None:
             default_ranges[cid] = chart.default_years
         if isinstance(chart, MultiLineSpec) and chart.ymin is not None:
             y_floors[cid] = chart.ymin
@@ -1893,7 +2230,7 @@ def main():
                 all_series.update(chart.SERIES)
             elif isinstance(chart, CpiBreadthSpec):
                 has_breadth = True
-            elif isinstance(chart, MultiLineSpec):
+            elif isinstance(chart, (MultiLineSpec, StackedBarSpec)):
                 for line in chart.lines:
                     if (DATA_DIR / f"{line.series}.csv").exists():
                         all_series.add(line.series)
@@ -1901,6 +2238,9 @@ def main():
                         print(f"  Warning: {line.series}.csv missing — run fetch.py. Line will be skipped.")
             else:
                 all_series.add(chart.series)
+                # Also register any overlay series on a ChartSpec
+                for ov in getattr(chart, "overlays", []):
+                    all_series.add(ov.series)
     data: dict[str, pd.DataFrame] = {}
     for name in sorted(all_series):
         path = DATA_DIR / f"{name}.csv"

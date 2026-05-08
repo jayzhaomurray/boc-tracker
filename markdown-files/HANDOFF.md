@@ -157,6 +157,11 @@ No auth required. Returns ~700 records covering several oil grades. WCS is filte
 | `wti` | FRED | `DCOILWTICO` | WTI crude oil, USD/barrel | Daily |
 | `brent` | FRED | `DCOILBRENTEU` | Brent crude oil, USD/barrel | Daily |
 | `wcs` | Alberta API | `OilPrices` table, Type=WCS | Western Canada Select, USD/barrel | Monthly |
+| `gdp_monthly` | StatsCan | Vector 65201210 | Monthly real GDP, all industries, chained 2017 $, SAAR — C$ trillions | Monthly |
+| `gdp_industry_goods` | StatsCan | Vector 65201211 | Monthly real GDP, goods-producing industries, chained 2017 $, SAAR — C$ trillions | Monthly |
+| `gdp_industry_services` | StatsCan | Vector 65201212 | Monthly real GDP, services-producing industries, chained 2017 $, SAAR — C$ trillions | Monthly |
+| `gdp_industry_manufacturing` | StatsCan | Vector 65201263 | Monthly real GDP, manufacturing, chained 2017 $, SAAR — C$ trillions | Monthly |
+| `gdp_industry_mining_oil` | StatsCan | Vector 65201236 | Monthly real GDP, mining/quarrying/oil & gas extraction, chained 2017 $, SAAR — C$ trillions | Monthly |
 
 **`fed_funds` construction:** `FEDFUNDS` monthly effective rate (1990–Dec 2008) prepended to `(DFEDTARU + DFEDTARL) / 2` daily midpoint (Dec 2008–present). Built by `fetch_fed_funds_target()`.
 
@@ -188,6 +193,12 @@ Single-series chart with a transform toggle. Used for static or simple charts (e
 
 ```python
 @dataclass
+class OverlayConfig:
+    series: str    # CSV filename without .csv
+    label: str     # legend label
+    color: str     # hex color
+
+@dataclass
 class ChartSpec:
     series: str               # CSV filename without .csv
     title: str
@@ -197,7 +208,12 @@ class ChartSpec:
     default_transform: str = "level"
     default_years: int | None = None
     footnote: str = ""
+    overlays: list = []       # list[OverlayConfig]; optional; default empty
 ```
+
+When `overlays` is non-empty, the builder adds N×T additional traces (N overlays × T transforms), all `visible="legendonly"` by default. The transform buttons use `xformClickOverlay` (instead of `xformClick`) to switch transforms while respecting which overlays are currently active. A legend bar below the chart has one button per overlay (off by default) plus a button for the primary series. The `toggleOverlayTrace` JS function toggles the overlay trace matching the currently active transform. Currently used on the Real GDP (monthly) chart for industry sub-aggregate overlays.
+
+Trace layout: indices `0..T-1` = main series transforms; indices `T..2T-1` = overlay 0 transforms; `2T..3T-1` = overlay 1; etc.
 
 ### CoreInflationSpec
 
@@ -243,6 +259,10 @@ When `smooth_window` is set, the builder creates 2N traces (raw 0..N-1, smoothed
 
 When `ymin=0`, `rangemode="nonnegative"` is set on the y-axis to clamp the floor.
 
+### StackedBarSpec
+
+Stacked bar chart with per-series legend toggles. Used for the GDP Growth Contributions chart. Reuses `LineConfig` for inputs. Uses Plotly `barmode="relative"` so positive bars stack above zero and negative bars stack below — correct for contribution-to-growth charts where components swing both ways. Y-axis range is computed from the union of stack-sum bounds and per-series bounds, so toggling a hidden trace on doesn't blow out the axis. No transforms; data is treated as already in display units (pp).
+
 ### WageSpec
 
 Composite chart: range band across four wage measures + individual toggles for each + Services CPI overlay. Built by `_build_wage_panel`. Trace map:
@@ -285,17 +305,17 @@ class PageSpec:
     title: str
     tagline: str
     output_file: str
-    charts: list                       # ChartSpec | MultiLineSpec | WageSpec | CpiSpec | CoreInflationSpec | CpiBreadthSpec
+    charts: list                       # ChartSpec | MultiLineSpec | StackedBarSpec | WageSpec | CpiSpec | CoreInflationSpec | CpiBreadthSpec
     sections: dict = field(default_factory=dict)   # {chart_index: section_id}
 ```
 
-`sections` maps a chart index to a section identifier defined in `SECTION_HEADINGS`. When `build_page` reaches that index, it prepends a section heading and (if a blurb exists in `data/blurbs.json`) the blurb above the chart panel. All four section headings are placed today (`{0: "policy", 3: "inflation", 6: "labour", 8: "financial"}`). Only `inflation` has a generated blurb; the other three render as headings only until their framework is verified and `analyze.py` is wired to generate them.
+`sections` maps a chart index to a section identifier defined in `SECTION_HEADINGS`. When `build_page` reaches that index, it prepends a section heading and (if a blurb exists in `data/blurbs.json`) the blurb above the chart panel. All six section headings are placed today (`{0: "policy", 3: "inflation", 8: "gdp", 10: "labour", 12: "housing", 15: "financial"}`). All six sections have generated blurbs in `data/blurbs.json`.
 
-### Current PAGES definition (9 charts, 4 section headings, 1 blurb)
+### Current PAGES definition (17 charts, 6 section headings, 6 blurbs)
 
 ```
-PageSpec("Bank of Canada Tracker", sections={0: "policy", 3: "inflation", 6: "labour", 8: "financial"}, ...)
-  ── MONETARY POLICY (heading) ──
+PageSpec("Bank of Canada Tracker", sections={0: "policy", 3: "inflation", 8: "gdp", 10: "labour", 12: "housing", 15: "financial"}, ...)
+  ── MONETARY POLICY (heading + blurb) ──
   MultiLineSpec            — Policy Rates (BoC overnight + Fed funds + BoC−Fed spread toggle, hv step, neutral-rate band 2.25–3.25%, 10Y default)
   MultiLineSpec            — 2-Year Yields (Canada + US + Canada 2Y−Overnight spread toggle + Canada 2Y−US 2Y spread toggle, smooth toggle, 10Y default)
   MultiLineSpec            — BoC Balance Sheet (Total assets + GoC bonds visible + Settlement balances toggle; weekly; CAD billions; 10Y default)
@@ -303,15 +323,24 @@ PageSpec("Bank of Canada Tracker", sections={0: "policy", 3: "inflation", 6: "la
   CoreInflationSpec        — Core Inflation (range band + headline + trim/median toggle)
   CpiSpec                  — CPI Components (6 lines × 4 transforms, Y/Y default, 10Y default)
   CpiBreadthSpec           — CPI Breadth (deviation from 1996–2019 avg)
-  ── LABOUR MARKET (heading) ──
+  MultiLineSpec            — Inflation Expectations (CSCE consumer 1y/5y, 5Y default)
+  MultiLineSpec            — Business Inflation Expectations Distribution (BOS 4-bucket distribution: <1%, 1–2%, 2–3%, >3%; 10Y default)
+  ── GDP & ACTIVITY (heading + blurb) ──
+  ChartSpec                — Real GDP (monthly, C$ trillions, 4 transforms, 4 industry overlays via OverlayConfig, level default, 10Y default)
+  StackedBarSpec           — GDP Growth Contributions (6 components stacked, barmode=relative, 2Y default)
+  ── LABOUR MARKET (heading + blurb) ──
   ChartSpec                — Unemployment Rate (static, 10Y default)
   WageSpec                 — Wage Growth (range band + 4 measures + Services CPI overlay)
-  ── FINANCIAL CONDITIONS (heading) ──
+  ── HOUSING (heading + blurb) ──
+  ChartSpec                — Housing Starts (monthly with 3-month smoothing, units, 10Y default)
+  ChartSpec                — New Housing Price Index (NHPI Y/Y, 10Y default)
+  ChartSpec                — Residential Building Permits (Y/Y, 10Y default)
+  ── FINANCIAL CONDITIONS (heading + blurb) ──
   MultiLineSpec            — Oil Prices (WTI + Brent + WCS, smooth toggle, ymin=0, 10Y default)
   ChartSpec                — USD/CAD (daily, 10Y default)
 ```
 
-All charts default to 10Y window. Only the inflation section currently has a blurb; the other three section headings render without a body until their framework signals are verified and `analyze.py` is wired to generate their blurbs.
+Most charts default to 10Y window; the GDP Contributions stacked bar defaults to 2Y because the per-quarter component swings only really tell their story over a recent window. All six sections currently have blurbs in `data/blurbs.json` (inflation and policy are user-iterated; the other four are autonomous-draft pending iteration).
 
 ---
 
@@ -493,12 +522,13 @@ Built and runnable. End-to-end:
 
 - [x] `fetch.py` — pulls StatsCan, BoC Valet, FRED, Alberta Economic Dashboard
 - [x] `analyze.py` — reads framework + data, calls Claude Opus, writes `data/blurbs.json`
-- [x] `build.py` — config-driven, builds 16-chart `index.html` with section blurb injection across 6 sections
+- [x] `build.py` — config-driven, builds 17-chart `index.html` with section blurb injection across 6 sections
 - [x] Full transformation system for all frequencies
-- [x] Spec dataclasses (Chart, MultiLine, CoreInflation, CpiBreadth, Wage, Cpi, Page); `PageSpec.sections` for blurb placement
+- [x] Spec dataclasses (Chart, MultiLine, StackedBar, CoreInflation, CpiBreadth, Wage, Cpi, Page); `PageSpec.sections` for blurb placement
 - [x] GitHub Pages deployment + GitHub Actions cron (3 schedules + dispatch)
 - [x] StatsCan retry/poll logic via `--wait`
-- [x] **All 16 charts implemented across 6 sections** (Monetary Policy: Policy Rates, 2Y Yields, Balance Sheet · Inflation: Core Inflation, CPI Components, CPI Breadth, Inflation Expectations · GDP & Activity: Real GDP monthly, GDP Contributions · Labour Market: Unemployment, Wage Growth · Housing: Starts, NHPI, Permits · Financial Conditions: Oil Prices, USD/CAD)
+- [x] **All 17 charts implemented across 6 sections** (Monetary Policy: Policy Rates, 2Y Yields, Balance Sheet · Inflation: Core Inflation, CPI Components, CPI Breadth, Inflation Expectations, Business Inflation Expectations Distribution · GDP & Activity: Real GDP monthly with industry overlays, GDP Contributions stacked bar · Labour Market: Unemployment, Wage Growth · Housing: Starts, NHPI, Permits · Financial Conditions: Oil Prices, USD/CAD)
+- [x] **Industry overlays on Real GDP (monthly)** — `OverlayConfig` + `overlays` field on `ChartSpec` (May 2026). Four sub-aggregates from Table 36-10-0434 (Goods-producing V65201211, Services-producing V65201212, Manufacturing V65201263, Mining/oil/gas V65201236) are off by default and respect all four monthly transforms. JS: `xformClickOverlay` + `toggleOverlayTrace` (added to `_JS_TEMPLATE`).
 - [x] **Live y-axis computation** — `_computeYRange` + `_niceDtick` + `_dtickFormat` + `_refreshYAxis` adjust the y-axis to currently visible traces in the current x-window; `Y_FLOORS` carries chart-level floors.
 - [x] **Section heading + blurb injection** — All 6 sections appear with blurbs from the verified analytical framework.
 - [x] About section + AI-generated-content disclaimer

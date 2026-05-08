@@ -948,7 +948,7 @@ def format_gdp_values(v: dict) -> str:
     last_4q_str = ", ".join(f"{x:+.2f}%" for x in v['quarterly_qq_ar_last_4q'])
     return f"""== Latest data ==
 
-Real GDP — monthly (as of {v['as_of_monthly']}):
+Real GDP — monthly (as of {v['as_of_monthly']}, level in C$ trillions chained 2017$):
   Y/Y change:                  {v['monthly_gdp_yoy']:+.2f}%
   M/M change:                  {v['monthly_gdp_mom']:+.2f}%
 
