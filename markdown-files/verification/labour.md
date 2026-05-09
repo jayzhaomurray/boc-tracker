@@ -132,7 +132,7 @@ The global "Verification, not speculation" rule near the top of `analysis_framew
 
 ### Provenance tier
 
-**Tier 3 (provisional) — user-engaged 2026-05-09; flagged for re-review 2026-05-10.** User actively challenged the V/U > 1 = tight heuristic, the BoC's-preferred framing, and the 12M MA smoothing choice; the revised version went through user push-back. The Tier-3 stamp will be confirmed (or revised again) at the 2026-05-10 review pass — until then, the entry is "engaged but not finalized," structurally still Tier 3 but with an explicit reopening flag.
+**Tier 3 (provisional) — user-engaged 2026-05-09; flagged for re-review 2026-05-10.** User actively challenged the V/U > 1 = tight heuristic, the BoC's-preferred framing, and the 12M MA smoothing choice; the revised version went through user push-back. The Tier-3 stamp will be confirmed (or revised again) at the 2026-05-10 review pass — until then, the entry is "engaged but not finalized," structurally still Tier 3 but with an explicit reopening flag. **DEFERRED (2026-05-09 convention sweep): user flagged for own re-review; thresholds not changed in this sweep.**
 
 ### Verification verdict
 
@@ -578,7 +578,7 @@ The Bank does not publish a fixed 3% threshold but articulates the identity in M
 
 ### Provenance tier
 
-**Tier 2 — autonomously verified 2026-05-09. Not user-reviewed.** Ready for user verdict on 2026-05-10.
+**Tier 2 — autonomously verified 2026-05-09. Patch 1 applied 2026-05-09: citation updated from "Macklem April 2023" to MPR July 2024 In Focus 'Drivers of inflation in core goods and services.' Not user-reviewed.** Ready for user verdict on 2026-05-10.
 
 ### Framework prose (verbatim)
 
@@ -672,7 +672,7 @@ Threshold bullet:
 
 ### Provenance tier
 
-**Tier 2 — autonomously verified 2026-05-09. Not user-reviewed.** Ready for user verdict on 2026-05-10. **Contains a likely-fabricated quote — see defects below.**
+**Tier 3 — resolved 2026-05-09. Fabrication confirmed by user. Patch 1 applied 2026-05-09: fabricated quote deleted, replaced with actual MPR Oct 2024 sentence; expanded to per-measure framing with live tier classifications in `analyze.py`.**
 
 ### Framework prose (verbatim)
 
@@ -851,7 +851,7 @@ newcomer and youth unemployment composition, and subnational variation.
 
 ### Provenance tier
 
-**Tier 2 — autonomously verified 2026-05-09. Not user-reviewed.** Ready for user verdict on 2026-05-10. **Contains a propagation defect from user-verified Claim 3 that needs immediate fix — see flag below.**
+**Tier 2 — autonomously verified 2026-05-09. Not user-reviewed.** Ready for user verdict on 2026-05-10. **Contains a propagation defect from user-verified Claim 3 that needs immediate fix — see flag below.** **DEFERRED (2026-05-09 convention sweep): user explicitly requested deferral; V/U propagation logic not touched in this sweep.**
 
 ### Framework prose (verbatim)
 

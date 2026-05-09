@@ -865,18 +865,36 @@ def compute_labour_values() -> dict:
     # LFS-Micro vs raw LFS gap (negative = composition flattering raw, the dominant Canadian pattern)
     lfs_micro_minus_raw = lfs_micro_now - wages_all_now
 
-    # Real wages (BoC convention: wage Y/Y - headline CPI Y/Y)
-    real_wage_lfs_all   = wages_all_now - headline_now
-    real_wage_lfs_micro = lfs_micro_now - headline_now
+    # Real wages per measure: nominal wage Y/Y minus headline CPI Y/Y.
+    # Per-measure computation (all aligned to the wages as-of date, which is the min
+    # of all wage series' latest dates). Headline CPI as deflator.
+    real_wage_lfs_all   = wages_all_now  - headline_now
+    real_wage_lfs_perm  = wages_perm_now - headline_now
+    real_wage_seph      = seph_now       - headline_now
+    real_wage_lfs_micro = lfs_micro_now  - headline_now
+
+    # Real wage range (max - min across 4 measures at the same date)
+    real_wage_measures = [real_wage_lfs_all, real_wage_lfs_perm, real_wage_seph, real_wage_lfs_micro]
+    real_wage_range_hi = max(real_wage_measures)
+    real_wage_range_lo = min(real_wage_measures)
+    real_wage_range_w  = real_wage_range_hi - real_wage_range_lo
 
     # Wage vs services CPI (leading indicator of services inflation persistence)
     wage_minus_services  = wages_all_now - services_now
     micro_minus_services = lfs_micro_now - services_now
 
     # Cost pressure: ULC Y/Y is the consolidated wage-minus-productivity inflation-pressure read.
-    # Implied productivity = wage growth − ULC growth (using LFS-Micro as the cleaner wage measure).
+    # Implied productivity = wage growth − ULC growth (using LFS-Micro as the smoother,
+    # more representative wage input per SAN 2024-23).
     ulc_now              = float(asof(ulc_yoy, as_of_ulc))
     productivity_implied = lfs_micro_now - ulc_now
+
+    # Convention tier classifications (distribution_conventions.md, 2026-05-09)
+    ulc_tier            = _classify_ulc_yoy(ulc_now)
+    real_wage_all_tier  = _classify_real_wage(real_wage_lfs_all,  "lfs_all")
+    real_wage_perm_tier = _classify_real_wage(real_wage_lfs_perm, "lfs_permanent")
+    real_wage_seph_tier = _classify_real_wage(real_wage_seph,     "seph")
+    real_wage_micro_tier= _classify_real_wage(real_wage_lfs_micro,"lfs_micro")
 
     return {
         "latest_date":               latest.strftime("%B %Y"),
@@ -923,12 +941,24 @@ def compute_labour_values() -> dict:
         "headline_cpi_yoy":          headline_now,
         "services_cpi_yoy":          services_now,
         "real_wage_lfs_all":         real_wage_lfs_all,
+        "real_wage_lfs_perm":        real_wage_lfs_perm,
+        "real_wage_seph":            real_wage_seph,
         "real_wage_lfs_micro":       real_wage_lfs_micro,
+        "real_wage_range_hi":        real_wage_range_hi,
+        "real_wage_range_lo":        real_wage_range_lo,
+        "real_wage_range_width":     real_wage_range_w,
         "wage_minus_services":       wage_minus_services,
         "micro_minus_services":      micro_minus_services,
 
         "ulc_yoy":                   ulc_now,
         "productivity_implied":      productivity_implied,
+
+        # Convention tier classifications (distribution_conventions.md, 2026-05-09)
+        "ulc_yoy_tier":              ulc_tier,
+        "real_wage_lfs_all_tier":    real_wage_all_tier,
+        "real_wage_lfs_perm_tier":   real_wage_perm_tier,
+        "real_wage_seph_tier":       real_wage_seph_tier,
+        "real_wage_lfs_micro_tier":  real_wage_micro_tier,
     }
 
 
@@ -968,18 +998,80 @@ Wage growth (Y/Y, as of {v['as_of_wages']}):
 
 Cost pressure (as of {v['as_of_ulc']}):
   Unit labour costs (Y/Y):       {v['ulc_yoy']:+.2f}%   (ULC ~ wage growth minus productivity; consistent with 2% inflation target when ULC growth is roughly 2% at trend productivity)
+  tier: {v['ulc_yoy_tier']}  (typical |ULC Y/Y-2.0%|<=1.4pp; uncommon to 3.1pp; pronounced to 4.6pp; rare to 6.8pp; extreme above; quarterly 1982+, N=176 SMALL-N; descriptor: labour-cost-pressure / labour-cost-soft)
   Productivity implied:          {v['productivity_implied']:+.2f}pp   (LFS-Micro Y/Y minus ULC Y/Y; positive = productivity is contributing; negative or near-zero = wage gains not matched by output gains)
 
 Pass-through and real wages:
   Headline CPI Y/Y:              {v['headline_cpi_yoy']:+.2f}%   (deflator for real wages, BoC convention)
   Services CPI Y/Y:              {v['services_cpi_yoy']:+.2f}%
   Real wages (LFS, all):         {v['real_wage_lfs_all']:+.2f}pp   (positive = workers gaining purchasing power)
+  tier: {v['real_wage_lfs_all_tier']}  (typical |RW-median|<=0.94pp; uncommon to 2.21pp; pronounced to 4.10pp; rare to 5.76pp; extreme above; median=+1.01%; monthly 2002+, N=291; descriptor: real-wage-positive / real-wage-negative)
+  Real wages (LFS-permanent):    {v['real_wage_lfs_perm']:+.2f}pp
+  tier: {v['real_wage_lfs_perm_tier']}  (typical |RW-median|<=1.01pp; uncommon to 2.25pp; pronounced to 3.98pp; rare to 5.30pp; extreme above; median=+0.97%; monthly 2002+, N=291; descriptor: real-wage-positive / real-wage-negative)
+  Real wages (SEPH):             {v['real_wage_seph']:+.2f}pp
+  tier: {v['real_wage_seph_tier']}  (typical |RW-median|<=0.89pp; uncommon to 1.91pp; pronounced to 4.54pp; rare to 7.47pp; extreme above; median=+0.73%; monthly 2002+, N=290; descriptor: real-wage-positive / real-wage-negative)
   Real wages (LFS-Micro):        {v['real_wage_lfs_micro']:+.2f}pp
+  tier: {v['real_wage_lfs_micro_tier']}  (typical |RW-median|<=0.67pp; uncommon to 1.47pp; pronounced to 2.86pp; rare to 4.06pp; extreme above; median=+0.59%; monthly 2000+, N=315; descriptor: real-wage-positive / real-wage-negative)
+  Real wage range (hi-lo):       {v['real_wage_range_hi']:+.2f}pp to {v['real_wage_range_lo']:+.2f}pp, width {v['real_wage_range_width']:.2f}pp   (spread across 4 measures; wide range signals composition effects dominating)
   LFS wages minus services CPI:  {v['wage_minus_services']:+.2f}pp   (positive = wage pressure not yet fully passed through to services prices)
   LFS-Micro minus services CPI:  {v['micro_minus_services']:+.2f}pp
 
-Coverage gap: this framework now covers unemployment, employment rate, participation rate, vacancies (rate + V/U), wages, ULC, and the wage-vs-services-CPI relationship. Still not tracked: average hours worked, involuntary part-time rate, newcomer/youth unemployment composition, regional decompositions. Flag conclusions accordingly when those would change the read.
+Coverage gap: this framework now covers unemployment, employment rate, participation rate, vacancies (rate + V/U), wages (4 measures with tier classifications), ULC (with tier), and the wage-vs-services-CPI relationship. Still not tracked: average hours worked, involuntary part-time rate, newcomer/youth unemployment composition, subnational variation. Flag conclusions accordingly when those would change the read.
 """
+
+
+def _classify_ulc_yoy(yoy_pct: float) -> str:
+    """Tier classification per markdown-files/distribution_conventions.md.
+    Tail axis: |ULC Y/Y - 2.0%| in pp (target-anchored; 2% = inflation-consistent
+    ULC growth at trend productivity), quarterly, 1982-Q1 to 2025-Q4, N=176
+    SMALL-N (last computed 2026-05-09; source analyses/labour_distribution.py):
+    P50=1.399pp, P80=3.143pp, P95=4.602pp, P99=6.799pp.
+    SMALL-N caveat: N=176; extreme tier sparsely populated; downgrade confidence.
+    Descriptor pair: labour-cost-pressure (above 2%) / labour-cost-soft (below 2%).
+    """
+    d = abs(yoy_pct - 2.0)
+    if d > 6.799: return "extreme"
+    if d > 4.602: return "rare"
+    if d > 3.143: return "pronounced"
+    if d > 1.399: return "uncommon"
+    return "typical"
+
+
+def _classify_real_wage(real_wage_pct: float, measure: str) -> str:
+    """Tier classification for real wages (nominal wage Y/Y - headline CPI Y/Y)
+    per markdown-files/distribution_conventions.md.
+
+    Tail axis: signed real wage Y/Y (two-tailed, median-centred absolute deviation).
+    Descriptor pair: real-wage-positive (gaining purchasing power) /
+                     real-wage-negative (losing purchasing power).
+
+    Thresholds computed 2026-05-09 via analyses/labour_distribution.py.
+    Each measure has its own empirical distribution since data start.
+
+    LFS-all     : median=+1.006%, monthly 2002+, N=291
+                  P50=0.942pp, P80=2.208pp, P95=4.100pp, P99=5.761pp
+    LFS-permanent: median=+0.967%, monthly 2002+, N=291
+                  P50=1.005pp, P80=2.245pp, P95=3.979pp, P99=5.301pp
+    SEPH        : median=+0.726%, monthly 2002+, N=290
+                  P50=0.892pp, P80=1.905pp, P95=4.544pp, P99=7.469pp
+    LFS-Micro   : median=+0.586%, monthly 2000+, N=315
+                  P50=0.671pp, P80=1.472pp, P95=2.864pp, P99=4.061pp
+    """
+    _THRESHOLDS = {
+        "lfs_all":       (1.006, 0.942, 2.208, 4.100, 5.761),
+        "lfs_permanent": (0.967, 1.005, 2.245, 3.979, 5.301),
+        "seph":          (0.726, 0.892, 1.905, 4.544, 7.469),
+        "lfs_micro":     (0.586, 0.671, 1.472, 2.864, 4.061),
+    }
+    if measure not in _THRESHOLDS:
+        raise ValueError(f"Unknown real-wage measure: {measure!r}")
+    median, p50, p80, p95, p99 = _THRESHOLDS[measure]
+    d = abs(real_wage_pct - median)
+    if d > p99: return "extreme"
+    if d > p95: return "rare"
+    if d > p80: return "pronounced"
+    if d > p50: return "uncommon"
+    return "typical"
 
 
 def _classify_usdcad(level: float) -> str:

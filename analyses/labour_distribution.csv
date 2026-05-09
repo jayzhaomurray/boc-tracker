@@ -1,0 +1,6 @@
+indicator,tail_axis,frequency,n,date_min,date_max,median_anchor,p50_boundary,p80_boundary,p95_boundary,p99_boundary,descriptor
+ulc_yoy,|ULC Y/Y - 2.0%| pp,quarterly,176,1982-01-01,2025-10-01,2.0,1.3992,3.1429,4.6018,6.7989,labour-cost-pressure / labour-cost-soft
+real_wage_lfs_all,signed real wage Y/Y = nominal LFS-all Y/Y - headline CPI Y/Y,monthly,291,2002-01-01,2026-03-01,1.0055,0.9416,2.2078,4.0999,5.7607,real-wage-positive / real-wage-negative
+real_wage_lfs_permanent,signed real wage Y/Y = nominal LFS-permanent Y/Y - headline CPI Y/Y,monthly,291,2002-01-01,2026-03-01,0.9669,1.005,2.2445,3.9791,5.3005,real-wage-positive / real-wage-negative
+real_wage_seph,signed real wage Y/Y = nominal SEPH Y/Y - headline CPI Y/Y,monthly,290,2002-01-01,2026-02-01,0.7257,0.8923,1.905,4.5445,7.4688,real-wage-positive / real-wage-negative
+real_wage_lfs_micro,signed real wage Y/Y = nominal LFS-Micro Y/Y - headline CPI Y/Y,monthly,315,2000-01-01,2026-03-01,0.5861,0.6715,1.472,2.8638,4.0613,real-wage-positive / real-wage-negative
