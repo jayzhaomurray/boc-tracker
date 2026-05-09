@@ -1218,9 +1218,9 @@ Oil (as of {v['as_of_daily']}):
   Brent:                         ${v['brent']:.2f}/bbl
   Implied headline CPI impulse:  {v['cpi_impulse_from_wti']:+.2f}pp   (WTI Y/Y * gasoline-basket-weight 3.7%; mechanical, gasoline channel only)
 
-WCS — Western Canada Select (as of {v['as_of_wcs']}):
+WCS — Western Canada Select (as of {v['as_of_wcs']}) [DATA CAVEAT: monthly, lagged — do NOT surface WCS-WTI differential in blurb prose; see framework note]:
   WCS price:                     ${v['wcs']:.2f}/bbl
-  WCS-to-WTI discount:           ${v['wcs_wti_differential']:.2f}/bbl   (typical $10-15; >$20 = pipeline-constrained; <$12 = post-TMX expansion)
+  WCS-to-WTI discount:           ${v['wcs_wti_differential']:.2f}/bbl   (placeholder — monthly WCS vs. daily WTI; not directly comparable; pending daily WCS source)
 
 USDCAD (as of {v['as_of_daily']}):
   Level:                         {v['usdcad']:.4f}   tier: {v['usdcad_tier']}  (typical |USDCAD - 1.3072|<=0.10; uncommon to 0.23; pronounced to 0.31; rare to 0.34; extreme above; monthly 1990+, P50/P80/P95/P99; descriptor: high (weak CAD) / low (strong CAD))

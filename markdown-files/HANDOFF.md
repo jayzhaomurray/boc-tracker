@@ -710,6 +710,12 @@ These were considered 2026-05-09 against the project's actual failure modes (see
 
 ## Parked / blocked items
 
+### WCS–WTI spread (Financial Conditions blurb)
+
+**Status:** Placeholder only. Current WCS source (Alberta Economic Dashboard) is monthly and lagged; the live spread in `compute_external_values` mixes monthly-average WCS against a single daily WTI value — not directly comparable. The distribution thresholds in `distribution_conventions.md` were calibrated from monthly WCS vs. monthly WTI (correct pairing), but the live compute is not that. Blurb prose is instructed to omit the spread until resolved.
+
+**What would unblock it:** A free daily (or at least weekly) WCS series. Alberta Economic Dashboard is the only accessible free source and it publishes monthly. TMX / Refinitiv / Bloomberg carry daily differentials but are paid.
+
 ### Market-Implied Rate Path chart
 
 **Status:** Investigated May 2026. Blocked on free programmatic access to Canadian implied-rate data.
