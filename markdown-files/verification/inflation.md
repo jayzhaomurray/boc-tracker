@@ -54,7 +54,7 @@ None.
 
 ---
 
-## Claim 2: 0.17%/month neutral threshold (precisely 0.165%) — algebraic identity
+## Claim 2: 0.17%/month neutral threshold (precisely 0.165%) — algebraic identity [CONVENTION APPLIED 2026-05-09]
 
 ### Provenance tier
 
@@ -93,10 +93,19 @@ None.
 2. **No fabricated quote.** Algebraic identity is independently verifiable.
 3. **No US-transferred heuristic.** Math is universal.
 
+### Convention application (2026-05-09)
+
+**Status: Tier 3 — convention-derived.** The 0.165%/month neutral threshold is an exact algebraic identity (no user judgment required). The M/M tier ladder has been retuned via empirical percentiles per `distribution_conventions.md`:
+
+- **Tail axis:** |M/M − 0.165%| in %/month, monthly, since 2000, N=315 (source `analyses/inflation_distribution.py`, last computed 2026-05-09)
+- **Tier thresholds:** typical ≤0.165%/mo (P50); uncommon to 0.341%/mo (P80); pronounced to 0.547%/mo (P95); rare to 0.876%/mo (P99); extreme >0.876%/mo
+- **Descriptor:** hot / soft
+- **Old unsourced thresholds replaced:** 0.3%/month = acceleration (was P74 in empirical distribution, not a BoC-published threshold); 0.1%/month = deceleration (was below P50, i.e., a very common event — not a meaningful threshold). Both removed from framework and replaced by convention-calibrated tiers.
+- `_classify_inflation_momentum()` added to `analyze.py` with these thresholds.
+
 ### Open questions for user review
 
-1. Hedge the 0.3% / 0.1% bands as analyst calibration, or anchor them to a BoC source. (E.g.: *"0.3%/month ≈ 3.7% annualized = above the BoC's 3% control-range ceiling"* — derives the threshold from Claim 1 rather than asserting it freestanding.)
-2. The "(precisely 0.165%)" parenthetical is technically correct but lightly pedantic given that 0.17% is already a rounding choice. Keep, drop, or replace with the linear `2/12 = 0.1667%` explanation?
+1. The "(precisely 0.165%)" parenthetical is technically correct but lightly pedantic given that 0.17% is already a rounding choice. Keep, drop, or replace with the linear `2/12 = 0.1667%` explanation?
 
 ---
 
@@ -153,6 +162,10 @@ None.
 4. **No fabricated quote.**
 5. **No US-transferred heuristic** — uses Canadian historical data.
 
+### Convention application (2026-05-09)
+
+**Status: DEFERRED — judgment item, convention not applied.** The four-state breadth typology is analyst synthesis covering 4 of 9 logical 3×3 deviation states (same defect class as Labour Claim 2's 2×2 utilization decoder). Convention sweep explicitly excludes this claim per task instructions. Framework prose is unchanged. Marked as open judgment item pending user review.
+
 ### Open questions for user review
 
 1. Hedge the four-state typology as analyst synthesis (e.g. "The dashboard classifies the breadth signal into one of four analyst-defined states..."). Same fix Labour Claim 2 received.
@@ -192,10 +205,19 @@ The BoC describes the multi-measure approach in the Oct 2025 MPR In Focus: *"und
 2. **No fabricated quote.**
 3. **No US heuristic transfer.**
 
+### Convention application (2026-05-09)
+
+**Status: Tier 3 — convention-derived.** Core band width tier ladder retuned via empirical percentiles per `distribution_conventions.md`:
+
+- **Tail axis:** max(core) − min(core) across all 5 measures in pp (absolute envelope), monthly, since 2000, N=315 (source `analyses/inflation_distribution.py`, last computed 2026-05-09)
+- **Tier thresholds:** typical ≤0.70pp (P50); uncommon to 1.00pp (P80); pronounced to 1.40pp (P95); rare to 1.90pp (P99); extreme >1.90pp
+- **Descriptor:** wide / narrow
+- **Old unsourced threshold replaced:** 0.5pp "tight band" = P35 empirically — a very common occurrence (34.6% of months are within this), not a noteworthy threshold. Replaced by convention-calibrated tiers where "typical" (≤P50, ≤0.70pp) is the right framing for a consistent-story read.
+- `_classify_core_band_width()` added to `analyze.py` with these thresholds.
+
 ### Open questions for user review
 
-1. Hedge the 0.5pp threshold as analyst calibration, or anchor it. The threshold is reasonable for the post-2017 Canadian core-measure trio (CPI-trim, CPI-median, CPI-common) but is not BoC-published.
-2. Note that the framework's `Data` line lists five core measures (cpi_trim, cpi_median, cpi_common, cpix, cpixfet) but the "preferred" trio per the BoC is just three. CPIX and CPIXFET are alternative measures, not in the BoC's preferred trio. The 0.5pp claim "all core measures" is more demanding when applied to all five.
+1. The 0.5pp threshold applied to all five core measures is more demanding than the BoC's preferred trio (trim, median, common). Worth considering whether to track band width on the trio only. Not changed here — that's a scope decision.
 
 ---
 
@@ -244,10 +266,19 @@ The BoC describes the multi-measure approach in the Oct 2025 MPR In Focus: *"und
 3. **No fabricated quote.**
 4. **No US heuristic transfer.**
 
+### Convention application (2026-05-09)
+
+**Status: Tier 3 — convention-derived.** Headline-core gap tier ladder retuned via empirical percentiles per `distribution_conventions.md`:
+
+- **Tail axis:** |headline Y/Y − core_avg Y/Y| in pp, monthly, since 2000, N=315 (source `analyses/inflation_distribution.py`, last computed 2026-05-09)
+- **Tier thresholds:** typical ≤0.55pp (P50); uncommon to 1.05pp (P80); pronounced to 1.70pp (P95); rare to 2.34pp (P99); extreme >2.34pp
+- **Descriptor:** large / small
+- **Old unsourced threshold replaced:** 0.3pp "look at food/energy" trigger = P27 empirically — fires in 73% of months, making it a near-constant alert rather than a diagnostic signal. Replaced by convention tiers where "uncommon" (P80, >1.05pp) is the appropriate trigger for a materially notable gap.
+- `_classify_headline_core_gap()` added to `analyze.py` with these thresholds.
+
 ### Open questions for user review
 
-1. Hedge the 0.3pp threshold as analyst calibration. Reasonable rule of thumb; not BoC canon.
-2. The framework instruction *"State the actual food and energy Y/Y numbers; do not guess at attribution"* is a strong anti-hallucination instruction and is well-formed. No defect there.
+1. The qualitative instruction *"State the actual food and energy Y/Y numbers; do not guess at attribution"* is a strong anti-hallucination instruction and is well-formed. No defect there.
 
 ---
 
@@ -329,7 +360,7 @@ Consumer 1-year-ahead (CSCE) reflects near-term expectations; the 5-year-ahead m
 
 *Source:* BoC Staff Working Paper 2025-5, *"Anchored Inflation Expectations: What Recent Data Reveal"* (https://www.bankofcanada.ca/2025/01/staff-working-paper-2025-5/) — paper title verifies the BoC's "anchored" framing. BoC monetary-policy communications recurringly use *"Longer-term inflation expectations remain anchored"* (web search synthesis 2026-05-09 across MPRs / opening statements). Neither source ranks 5y above 1y as "more important," so the patch removes the rank assertion while keeping the anchor framing.
 
-*Verification log change* (in this file): mark verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+*Verification log change* (in this file): patch applied 2026-05-09 to `analysis_framework.md`; awaiting user accept/reject for Tier 3 upgrade.
 
 ---
 

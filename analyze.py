@@ -155,32 +155,47 @@ def compute_inflation_values() -> dict:
 
 def format_inflation_values(v: dict) -> str:
     c = v["cores"]
+
+    # Convention-tier classifications (per distribution_conventions.md)
+    boc_frame, headline_tier = _classify_headline_cpi(v["headline_yoy"])
+    mom_tier   = _classify_inflation_momentum(v["headline_mom_sa"])
+    band_tier  = _classify_core_band_width(v["core_band_width"])
+    gap_tier   = _classify_headline_core_gap(abs(v["headline_minus_core"]))
+
     if v.get("expectations_as_of"):
         exp_block = f"""
 
 Inflation expectations (as of {v['expectations_as_of']}; quarterly):
   CSCE consumer 1y-ahead:    {v['expectations_consumer_1y']:+.2f}%   (near-term consumer expectation)
-  CSCE consumer 5y-ahead:    {v['expectations_consumer_5y']:+.2f}%   (long-run anchor)
+  CSCE consumer 5y-ahead:    {v['expectations_consumer_5y']:+.2f}%   (long-run anchor measure; more diagnostic of anchor slippage)
   5y drift over last 4q:     {v['expectations_consumer_5y_drift_4q']:+.2f}pp   (negative = re-anchoring; positive = drifting up)
-  BOS firms expecting > 3%:  {v['expectations_bos_above3']:.0f}%   (business-side anchor diagnostic; high = anchor under stress)"""
+  BOS firms expecting > 3%:  {v['expectations_bos_above3']:.0f}%   (business-side anchor diagnostic; high = anchor under stress)
+  NOTE: No BoC-band frame for expectations (BoC publishes no hard band); only empirical framing applies."""
     else:
         exp_block = "\n\nInflation expectations data: not loaded."
     return f"""== Latest data: {v['latest_date']} ==
 
 Headline CPI Y/Y:         {v['headline_yoy']:+.2f}%
+  BoC frame (binary):     {boc_frame}   (BoC control range 1-3%, target 2%)
+  Empirical tier:         {headline_tier}   (|deviation from 2%| = {abs(v['headline_yoy']-2.0):.2f}pp; P50=0.62, P80=1.29, P95=2.80, P99=4.88pp; N=315 monthly since 2000)
+  Descriptor:             {'hot' if v['headline_yoy'] > 2.0 else 'soft'}
 Headline M/M (SA):        {v['headline_mom_sa']:+.3f}%
+  M/M tier:               {mom_tier}   (|deviation from neutral 0.165%/mo| = {abs(v['headline_mom_sa']-0.1652):.4f}%/mo; P50=0.165, P80=0.341, P95=0.547, P99=0.876; N=315)
+  Descriptor:             {'hot' if v['headline_mom_sa'] > 0.1652 else 'soft'}
 Headline 3M AR (SA):      {v['headline_3m_ar_sa']:+.2f}%
 
 Core measures (Y/Y):
-  CPI-trim:               {c['trim']:+.2f}%
-  CPI-median:             {c['median']:+.2f}%
-  CPI-common:             {c['common']:+.2f}%
-  CPIX:                   {c['cpix']:+.2f}%
-  CPIXFET:                {c['cpixfet']:+.2f}%
+  CPI-trim:               {c['trim']:+.2f}%   (BoC preferred; BoC frame: {'in-band' if 1.0 <= c['trim'] <= 3.0 else 'outside-band'})
+  CPI-median:             {c['median']:+.2f}%   (BoC preferred; BoC frame: {'in-band' if 1.0 <= c['median'] <= 3.0 else 'outside-band'})
+  CPI-common:             {c['common']:+.2f}%   (BoC preferred; BoC frame: {'in-band' if 1.0 <= c['common'] <= 3.0 else 'outside-band'})
+  CPIX:                   {c['cpix']:+.2f}%   (alternative; BoC frame: {'in-band' if 1.0 <= c['cpix'] <= 3.0 else 'outside-band'})
+  CPIXFET:                {c['cpixfet']:+.2f}%   (alternative; BoC frame: {'in-band' if 1.0 <= c['cpixfet'] <= 3.0 else 'outside-band'})
 
 Core band:                low {v['core_band_lo']:.2f}%, high {v['core_band_hi']:.2f}%, width {v['core_band_width']:.2f}pp
+  Band-width tier:        {band_tier}   (P50=0.70pp, P80=1.00pp, P95=1.40pp, P99=1.90pp; N=315; wide/narrow)
 Core average:             {v['core_avg']:+.2f}%
 Headline minus core avg:  {v['headline_minus_core']:+.2f}pp
+  Gap tier:               {gap_tier}   (|gap|={abs(v['headline_minus_core']):.2f}pp; P50=0.55pp, P80=1.05pp, P95=1.70pp, P99=2.34pp; N=315; large/small)
 
 Category breakdown (Y/Y):
   Food:                   {v['food_yoy']:+.2f}%
@@ -188,7 +203,7 @@ Category breakdown (Y/Y):
   Goods:                  {v['goods_yoy']:+.2f}%
   Services:               {v['services_yoy']:+.2f}%
 
-CPI Breadth:
+CPI Breadth (four-state typology -- DEFERRED JUDGMENT ITEM; analyst synthesis, not BoC canon):
   Share above 3%:         {v['breadth_above3']:.1f}%   (1996-2019 avg deviation: {v['breadth_above3_dev']:+.1f}pp)
   Share below 1%:         {v['breadth_below1']:.1f}%   (1996-2019 avg deviation: {v['breadth_below1_dev']:+.1f}pp)
   Breadth tilt:           {v['breadth_tilt']:+.1f}pp   (positive = broad-based pressure; negative = broad-based softening){exp_block}
@@ -226,6 +241,87 @@ def _classify_can2y_overnight(s: float) -> str:
     if a > 1.198:  return "rare"
     if a > 0.714:  return "pronounced"
     if a > 0.320:  return "uncommon"
+    return "typical"
+
+
+def _classify_headline_cpi(yoy: float) -> tuple[str, str]:
+    """Dual classification for headline CPI Y/Y per distribution_conventions.md.
+
+    BoC-band indicator — returns (boc_frame, empirical_tier).
+
+    BoC frame (binary): in-band (1-3%) or outside-band.
+    Empirical frame: 5-tier ladder of |yoy - 2%| in pp, monthly, since 2000, N=315
+    (last computed 2026-05-09; source analyses/inflation_distribution.py):
+    P50=0.62pp, P80=1.29pp, P95=2.80pp, P99=4.88pp.
+    Descriptor: hot (above target) / soft (below target).
+    """
+    # BoC binary frame
+    if 1.0 <= yoy <= 3.0:
+        boc_frame = "in-band"
+    elif yoy > 3.0:
+        boc_frame = "outside-band (above)"
+    else:
+        boc_frame = "outside-band (below)"
+
+    # Empirical frame on |deviation from target|
+    d = abs(yoy - 2.0)
+    if d > 4.88:   empirical = "extreme"
+    elif d > 2.80: empirical = "rare"
+    elif d > 1.29: empirical = "pronounced"
+    elif d > 0.62: empirical = "uncommon"
+    else:           empirical = "typical"
+
+    return boc_frame, empirical
+
+
+def _classify_inflation_momentum(mom_sa: float) -> str:
+    """Tier classification of M/M inflation momentum per distribution_conventions.md.
+
+    Tail axis: |M/M - 0.165%| in %/month, monthly, since 2000, N=315
+    (last computed 2026-05-09; source analyses/inflation_distribution.py):
+    P50=0.165%/mo, P80=0.341%/mo, P95=0.547%/mo, P99=0.876%/mo.
+    Descriptor: hot (above neutral) / soft (below neutral).
+    Neutral = 0.165%/month = (1.02)^(1/12) - 1, the geometric monthly rate
+    that compounds to 2% annualized.
+    """
+    NEUTRAL = 0.1652
+    d = abs(mom_sa - NEUTRAL)
+    if d > 0.876:  return "extreme"
+    if d > 0.547:  return "rare"
+    if d > 0.341:  return "pronounced"
+    if d > 0.165:  return "uncommon"
+    return "typical"
+
+
+def _classify_core_band_width(width_pp: float) -> str:
+    """Tier classification of core measure band width per distribution_conventions.md.
+
+    Tail axis: max(core) - min(core) across 5 measures in pp (absolute envelope),
+    monthly, since 2000, N=315 (last computed 2026-05-09; source
+    analyses/inflation_distribution.py): P50=0.70pp, P80=1.00pp, P95=1.40pp,
+    P99=1.90pp.
+    Descriptor: wide / narrow.
+    """
+    if width_pp > 1.90:  return "extreme"
+    if width_pp > 1.40:  return "rare"
+    if width_pp > 1.00:  return "pronounced"
+    if width_pp > 0.70:  return "uncommon"
+    return "typical"
+
+
+def _classify_headline_core_gap(gap_abs_pp: float) -> str:
+    """Tier classification of |headline Y/Y - core_avg Y/Y| per distribution_conventions.md.
+
+    Tail axis: |headline - core_avg| in pp, monthly, since 2000, N=315
+    (last computed 2026-05-09; source analyses/inflation_distribution.py):
+    P50=0.55pp, P80=1.05pp, P95=1.70pp, P99=2.34pp.
+    Descriptor: large / small.
+    """
+    d = abs(gap_abs_pp)
+    if d > 2.34:  return "extreme"
+    if d > 1.70:  return "rare"
+    if d > 1.05:  return "pronounced"
+    if d > 0.55:  return "uncommon"
     return "typical"
 
 
