@@ -115,10 +115,125 @@ The global "Verification, not speculation" rule near the top of `analysis_framew
 
 ---
 
+## Claim 3: Tightness — job vacancy rate + V/U ratio + V/U threshold bands
+
+### Verification verdict
+
+**REVISED 2026-05-09 — FLAGGED FOR USER RE-REVIEW 2026-05-10 BEFORE FINAL ACCEPTANCE.** The user explicitly wants to revisit this section tomorrow morning ("this is a crucial thing to get right"). The revision below is committed but provisional.
+
+The original framework prose had three issues addressed in the revision:
+
+**(A) "BoC's preferred composite read."** Original framework asserted V/U was the BoC's *preferred* tightness indicator. No primary source positions V/U as preferred over alternatives — the BoC uses V/U directionally inside a multi-indicator approach (per SAN 2025-17). Softened to *"one of the composite tightness indicators the BoC uses"* with a verified Macklem Nov 2022 anchor (he framed labour-market state via the Beveridge curve, which is V/U-based).
+
+**(B) Threshold bands.** Original framework claimed *"V/U > 1 = tight, V/U < 1 = slack"*. This transferred a US JOLTS-era heuristic (US peaked at V/U ≈ 2 in 2022) to a structurally different Canadian series (Canadian peak ≈ 0.99 in 2022). Replaced with Canadian-specific empirical bands anchored to narrative tightness moments (2018–2019 BoC tightening cycle; 2022 post-COVID episode; 2015–2017 emergency-low period).
+
+**(C) Smoothing methodology.** Framework specified 12M MA. Empirical analysis: Canadian vacancy NSA seasonal amplitude is ~8% of cyclical range, so 12M MA over-smooths and lags cyclical turns (the 2022 V/U peak hit 0.99 in June 2022 but registered in the 12M MA only in January 2023 — a 7-month lag). Recommendation: switch to 3M MA. Framework prose updated to reference 3M MA. **The corresponding code change in `analyze.py compute_labour_values` (12M → 3M for `vac_rate_12m` / `vac_level_12m` and the `vacancy_rate_12m_avg` / `vacancy_count_12m_avg_m` output keys, plus the `job_vacancy_rate_12m` / `job_vacancy_level_12m` derived chart series in `build.py`) is QUEUED for the 2026-05-10 review pass — so framework and dashboard rendering land coherently together.**
+
+### Final framework text (post-revision; provisional pending 2026-05-10 review)
+
+> **Tightness: job vacancy rate (3M MA) and the V/U ratio.** Vacancy data is monthly NSA (Table 14-10-0371; no SA series published). The dashboard uses a 3-month moving average to denoise — seasonal amplitude is small (~8% of cyclical range), so a 12-month MA over-smooths and lags cyclical turns (the 2022 peak hit V/U ≈ 0.99 in June 2022 but registered in 12M MA only in January 2023 at ~0.86, a 7-month lag). The V/U ratio — vacancies per unemployed person — is one of the composite tightness indicators the BoC uses (Macklem Nov 2022 framed labour-market state via the Beveridge curve, which is V/U-based). Theoretically, V/U = 1 is the labour-market efficiency point per Michaillat & Saez (2023, *u\* = √uv*). Canadian thresholds are calibrated empirically, not transferred from the US: V/U < 0.30 = slack; 0.30–0.45 = below balance (2015–2017); 0.45–0.60 = approaching balance / starting to be tight (2018–2019 anchor); 0.60–0.80 = tight (extrapolated); > 0.80 = exceptionally tight (2022 anchor). Beveridge curve position shifts (post-COVID outward shift visible in Canada per CIBC Jan 2026); fixed thresholds are dashboard simplifications.
+
+### Source 1 — Statistics Canada Table 14-10-0371 (Job Vacancy and Wage Survey)
+
+**URL:** https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410037101
+
+**Verified facts:**
+- Series begins 2015 (no longer historical record exists in StatsCan's published JVWS).
+- Monthly vacancy rate / count published NSA only; no SA series exists. (Confirmed via cube metadata; no companion `_SA` vector available.)
+- Vector 1212389365 = job vacancy rate; Vector 1212389364 = job vacancy count. Both registered in `data/` per HANDOFF.
+
+**Implication for framework:** any tightness signal that requires longer history (cyclical comparison pre-2015) cannot be sourced from Canadian data. US JOLTS (1.5× longer, Dec 2000+) is the comparator we use for cyclical context.
+
+### Source 2 — Michaillat & Saez (2023), "u\* = √uv"
+
+**Citation:** Michaillat, Pascal; Saez, Emmanuel. *u\* = √uv*. NBER / journal version 2023.
+
+**Theoretical claim:** the labour-market efficiency point is V/U = 1 — i.e. the rate at which there are as many vacancies as unemployed workers. At V/U = 1, search frictions don't systematically favour either side of the matching market. Above 1 = inefficiently tight; below 1 = inefficiently slack. The associated efficient unemployment rate is u\* = √(u·v).
+
+**Use in framework:** treated as the *theoretical* anchor for V/U band design. The framework explicitly notes that fixed V/U thresholds are dashboard simplifications around this theoretical anchor — neither the BoC nor the Fed quotes specific V/U thresholds; both use V/U directionally.
+
+**Verdict:** VERIFIED — primary literature supports the theoretical anchor.
+
+### Source 3 — BoC Governor Macklem speech, Nov 10, 2022
+
+**URL:** https://www.bankofcanada.ca/2022/11/restoring-labour-market-balance-and-price-stability/
+
+**Direct quotes:**
+- *"Canada's labour market is exceptionally tight."*
+- *"...there are signs of excess demand."*
+- Macklem framed labour-market state via the Beveridge curve (V/U-based), discussing the 2022 outward shift relative to pre-pandemic.
+
+**Verdict:** VERIFIED — supports both "BoC uses V/U directionally" framing and the 2022 = "exceptionally tight" anchor for the > 0.80 V/U band.
+
+### Source 4 — BoC Senior Deputy Governor Wilkins speech, Jan 8, 2019
+
+**Source context:** Cited in the second narrative-anchoring sub-agent's findings. Quote on labour-market state circa late-2018 / early-2019 (the BoC's 2017–2019 tightening cycle):
+
+**Direct quote:** *"...one of the highest levels of labour shortages since the Great Recession."*
+
+**Computed Canadian V/U for this period (2018–2019 average using monthly NSA data, no smoothing):** V/U fluctuated in roughly 0.45–0.60 range. Unemployment was at or below the 6% IMF NAIRU lower bound — consistent with a labour market the BoC characterised as starting to be tight.
+
+**Verdict:** VERIFIED narrative anchor for the 0.45–0.60 V/U band ("approaching balance / starting to be tight").
+
+### Source 5 — CIBC Economics, Andrew Grantham (Jan 15, 2026)
+
+**URL:** https://thoughtleadership.cibc.com/article/canadian-labour-market-could-we-really-run-out-of-room-before-year-end/
+
+**Direct quote — post-pandemic Beveridge curve shift:** *"NAIRU likely moved higher subsequently, as structural changes caused by the pandemic as well as a big surge in the population resulted in a weaker relationship between skills and job availability."*
+
+**Verdict:** VERIFIED — supports the framework's "Beveridge curve position shifts" caveat. Outward shift is also visually obvious in the Beveridge curve chart at `analyses/beveridge_curve_canada.html` (post-COVID points sit measurably above the pre-pandemic locus at the same unemployment rates).
+
+### US comparison findings (Canadian thresholds calibrated empirically, not transferred from US)
+
+**US JOLTS V/U history (Dec 2000+):**
+- 2000–2007 cycle peak V/U ≈ 0.6–0.7
+- 2018–2019 peak ≈ 1.0
+- 2022 post-COVID peak ≈ 2.0 (a structurally distinct level not seen in Canadian data)
+
+**Why structurally different:**
+- Sectoral mix: Canada's employment is heavier in resources / public sector, lighter in tech / services where US 2022 vacancy demand spiked.
+- Great Resignation: a US-specific phenomenon driven by stimulus + sectoral mix; Canadian quits never reached US-level magnitudes.
+- Survey-coverage differences: JOLTS samples differently from JVWS; not 1:1 comparable in levels.
+
+**Implication:** transferring US-calibrated V/U thresholds (e.g. "V/U > 1 = tight") to Canada systematically over-states tightness. Canadian peak V/U ≈ 0.99 in 2022, not 1+. The framework's threshold bands are calibrated to the *Canadian* range of historical observations.
+
+### Smoothing methodology computation (E findings; computed 2026-05-09)
+
+| Series | Computation | Result |
+|---|---|---|
+| Vacancy rate seasonal amplitude (median monthly NSA – 12M MA) | StatsCan Vector 1212389365, 2015–2026 | 0.082 (8.2% of cyclical range) |
+| Vacancy rate cyclical amplitude (max – min, 12M MA) | Same series | 0.993 |
+| 2022 V/U cyclical peak — raw NSA | Canadian peak | 0.99 (June 2022) |
+| 2022 V/U cyclical peak — 12M MA | Same series, 12M smoothing | 0.86 (January 2023; 7-month lag behind raw peak) |
+| 2022 V/U cyclical peak — 3M MA | Same series, 3M smoothing | ≈ 0.96 (August 2022; ~2-month lag — acceptable) |
+
+**Decision:** 3M MA captures cyclical turns with acceptable lag while still removing the small NSA seasonal pattern. 12M MA's 7-month peak lag is large relative to the duration of policy-relevant cyclical episodes (2022 overheat lasted ~12 months; a 7-month detection lag means the dashboard signals "exceptionally tight" most of the way down).
+
+### Open analytical question — flagged by user 2026-05-09 for revisit
+
+**User skepticism (not an action item; logged for the 2026-05-10 review):**
+
+> *"It is kind of funny that employers were complaining about labour shortages the whole time, even when V/U was so much lower. It's almost like, maybe they were so used to having such a massive pool of unemployed people that having any competition at all for workers, having to raise wages at all, read as a 'shortage' when it really wasn't. Like I am personally skeptical that the labour market was insanely tight from 0.5 all the way to 1 V/U. But as a diagnostic tool vs. my personal opinion, those are separate questions."*
+
+**Analytical implication:** the 0.45–0.60 V/U band (anchored to Wilkins Jan 2019 "labour shortages since the Great Recession") may be over-conceding to the employer-narrative anchor. Employers used to a large unemployed pool (post-2008 era, Canadian unemployment 7%+) may interpret any wage pressure as "shortage" — a status-quo-bias signal rather than a structural-tightness signal. If the framework's "starting to be tight" band is effectively employer-baseline-expectation-driven rather than wage-pressure-driven, the diagnostic tool is partly endogenously calibrated to a complaint that was about something other than tight labour markets in the textbook sense.
+
+**Why this matters but isn't being acted on tonight:** the user explicitly separated personal-skepticism from the diagnostic-tool framing, and asked that the framework reflect the diagnostic frame. Tomorrow's review can re-examine whether to (a) keep the band labels as-is (diagnostic frame matches the available narrative anchors), (b) relabel the 0.45–0.60 band to something less assertive than "starting to be tight" (e.g. "elevated relative to recovery baseline"), or (c) introduce a separate dashboard band for "wage-pressure-confirmed tight" requiring wage Y/Y > 3.5% to fire. Worth a structured discussion at the 2026-05-10 review.
+
+### Recyclable artifact
+
+**Beveridge curve chart:** `analyses/beveridge_curve_canada.py` and `analyses/beveridge_curve_canada.html`. Plotly static HTML. Period-coloured monthly trajectory (2015–2026), 3M MA on both axes, post-COVID outward shift visually obvious. **Candidate for the deep-dive Labour Market page** (HANDOFF item 5). Date range May 2015 – Feb 2026; U range 4.97–13.50%; V range 0–5.90%.
+
+### Open follow-ups (not blocking this claim's verdict)
+
+- **2026-05-10 review pass:** re-examine threshold band labels (esp. 0.45–0.60 "starting to be tight" anchor — see user skepticism above); finalize 12M→3M code change in `compute_labour_values` and `build.py` chart spec; decide whether the chart line label should be updated.
+- **Code change queued:** `analyze.py compute_labour_values` (12M → 3M); `analyze.py format_labour_values` (key renames); `build.py` Unemployment & Job Vacancies chart spec (derived series rename + comment update); `fetch.py` `_DERIVED_SERIES_SOURCES` (rename or add 3M variant). Coherent rollout: framework + code in one commit, regen labour blurb in next API-key-available pass.
+- **CLEF 070-2024 (Fortin, regional Beveridge curves)** — also flagged in Claim 1 follow-ups; relevant here too, especially if regional Beveridge-curve heterogeneity informs whether national V/U thresholds even make sense as a single calibrated set.
+
+---
+
 ## Subsequent claims
 
 To be added as we work through the framework:
-- Claim 3: Tightness (vacancy rate 12M MA + V/U ratio + V/U as BoC's preferred composite + V/U threshold bands)
 - Claim 4: Cost pressure (ULC Y/Y; LFS-Micro + ULC pairing; implied productivity ≈ 1% rule)
 - Claim 5: Wage growth across measures (LFS-Micro vs raw LFS pattern)
 - Claim 6: Wage growth vs ~3% soft threshold

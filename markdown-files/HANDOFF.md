@@ -558,6 +558,8 @@ All entries below are **tentative** — surfaced during the framework verificati
 
 **Own NAIRU estimation.** The overview-page anchor is currently the IMF's July 2024 estimate (~6%) — a borrowed figure with limited transparency on whether it captures the 2022–2024 immigration-surge skill-mismatch effects. A self-grounded estimate using post-2022 Canadian data (Beveridge-curve regression or Phillips-curve regression with population-growth controls) would materially improve precision. The 2024–2025 immigration policy pullback should reduce structural distortion in the data over time, making a re-estimate increasingly tractable.
 
+**Beveridge curve chart (already built, ready to recycle).** `analyses/beveridge_curve_canada.html` (built 2026-05-09) is a Plotly Beveridge curve for Canada — vacancy rate (3M MA) vs unemployment rate (3M MA), monthly, period-coloured (pre-pandemic, COVID shock, post-COVID overheat, cooling, recent slack). Post-COVID outward shift visually obvious. Source script: `analyses/beveridge_curve_canada.py`. The matching-efficiency / labour-force-composition shift the Labour framework's V/U-bands caveat references is what this chart shows directly. Strong candidate as the lead chart for the deep-dive labour page.
+
 **Other candidate content:**
 - Sectoral employment moves (manufacturing layoffs vs services resilience; trade-exposed sectors during tariff cycles)
 - Hours worked (NSA monthly with 12M MA — deferred from the May 2026 overview add-pass for data-quality reasons)
