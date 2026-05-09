@@ -79,11 +79,45 @@ REVISED 2026-05-09. Original framework text contained two fabricated quotes attr
 
 ---
 
+## Claim 2: Utilization — employment rate and participation rate together
+
+### Verification verdict
+
+REVISED 2026-05-09. Original framework prose codified a rigid four-quadrant decoder mapping joint employment+participation moves to four named states (*"falling employment with stable participation = layoffs absorbing slack; falling participation with stable employment = workers leaving the labour force; both falling = slack opening on both margins; both rising = the strongest tightening signal"*). The decoder had two structural problems that prompted revision:
+
+**1. Combinatorially incomplete.** The 2×2 codification names four states out of the 3 × 3 = 9 logical configurations (employment-rate move ∈ {falling, stable, rising}, participation-rate move ∈ {falling, stable, rising}). When data falls into one of the unaddressed five states, the framework forces a wrong assignment — exactly what the naive labour blurb did during 2026-05-09 testing (applied "layoffs pattern" to a 12M window where both employment and participation had fallen, which by the framework's own taxonomy is "slack opening on both margins," not "layoffs").
+
+**2. The specific 2×2 codification is not from a primary source.** The underlying analytical move (read employment + participation together to distinguish layoff dynamics from labour-force-exit dynamics) is canonical labour-economics reasoning grounded in transition-flow analysis from the BoC, BLS, and standard texts. But the specific four-state matrix as written was the analyst's own synthesis, not a BoC-published rule.
+
+### Final framework text (post-revision)
+
+> Employment rate measures the share of the working-age population that's actually employed; participation rate measures the share that's in the labour force at all. The two encode different dimensions of labour-market state — employment captures how many people have jobs, participation captures how many are even available to work. Read against each other, the joint move surfaces dynamics the unemployment rate alone obscures: when employment is falling but participation holds, the move typically reflects layoffs adding to unemployment; when participation is falling but employment holds, the move typically reflects workers leaving the labour force (discouragement, retirement, or a labour-supply change). Treat these reads as starting hypotheses rather than final classifications — there are more configurations than canonical labels for them (3 × 3 = 9 logical states), small moves can be within noise, and the same configuration can mean different things in different cycles. Each rate is part of SAN 2025-17's multi-indicator benchmark — the BoC tracks them as separate channels rather than collapsing them into the unemployment rate.
+
+### Source backing for retained material
+
+**SAN 2025-17 (June 2025):** Verifies that the BoC's multi-indicator benchmark explicitly tracks employment rate and participation rate as separate channels rather than collapsing into the unemployment rate. (URL and direct quote in Claim 1 → Source 3.)
+
+**Standard labour economics:** The "read employment + participation together to distinguish labour-demand from labour-supply moves" framing is canonical in transition-flow analysis. The economics is well-grounded — labour force = employed + unemployed; participation rate = labour force / working-age; employment rate = employed / working-age — so the joint moves encode flows between employed / unemployed / not-in-labour-force. References include BoC analytical papers on labour-market flows, the US BLS' published flow data, and standard labour economics texts. No single citable paper underpins the specific framing; this is the field's general analytical move.
+
+### Untracked direct indicators (deep-dive material, NOT for blurb prose)
+
+An earlier draft revision attempted to name direct-indicator triangulation in the bullet itself — LFS reason-for-unemployment (Table 14-10-0125, job-loser share) for layoffs; LFS R-indicators (R3, R7, R8) for discouragement / marginal attachment; long-term unemployment share (≥27 weeks) for persistent slack. These are valid analytical moves but the underlying series are not currently fetched. The user (2026-05-09) flagged that naming them in framework prose risks the model leaking *"would check this but the indicator is not currently fetched"* into user-facing blurb output.
+
+Resolution: untracked-indicator discussion lives only in:
+- HANDOFF item 5 (deep-dive Labour Market page, listed as tentative content)
+- This verification log entry
+
+The framework prose names only indicators that are present in the data block fed to the blurb prompt.
+
+### Open follow-up
+
+The global "Verification, not speculation" rule near the top of `analysis_framework.md` says main-page blurbs work from top-level aggregates only — never from individual sub-categories — and defers component-level decomposition to deep-dive pages. The user flagged 2026-05-09 that an experienced human writer can judge when a deep-dive tidbit *enriches* a high-level blurb vs. *clutters* it, but the model doesn't yet reliably exercise that judgment. The hard rule is the safe default for now. Worth revisiting when there's a more reliable way to confer that judgment — possibly via per-section allowlists, model improvements, or a separate "supplementary detail" instruction layer.
+
+---
+
 ## Subsequent claims
 
 To be added as we work through the framework:
-
-- Claim 2: Utilization (employment rate + participation rate together)
 - Claim 3: Tightness (vacancy rate 12M MA + V/U ratio + V/U as BoC's preferred composite + V/U threshold bands)
 - Claim 4: Cost pressure (ULC Y/Y; LFS-Micro + ULC pairing; implied productivity ≈ 1% rule)
 - Claim 5: Wage growth across measures (LFS-Micro vs raw LFS pattern)
