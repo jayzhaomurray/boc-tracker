@@ -7,3 +7,5 @@ experiments/results/*
 !experiments/results/.gitkeep
 compare-*/
 compare.*.md
+*.pdf
+*.docx
