@@ -4,12 +4,13 @@ A real, in-use personal data dashboard tracking Bank of Canada indicators. Live 
 
 ## First moves in any session
 
-Read these four documents in order before doing anything substantive. They are the source of truth.
+Read these documents in order before doing anything substantive. They are the source of truth.
 
-1. **`markdown-files/HANDOFF.md`** — current state, file structure, ordered next-steps. Orient here.
-2. **`markdown-files/chart_style_guide.md`** — formatting principles + workflow rules (§8 governs how to break or revise a principle).
-3. **`markdown-files/analysis_framework.md`** — internal analytical brief for blurb generation. Per-section questions, signals, thresholds.
-4. **`markdown-files/reading_guide.md`** — short reader-facing dashboard orientation.
+1. **`markdown-files/dashboard_purpose.md`** — what the dashboard exists to answer. Six sub-questions across six sections. Every chart and blurb earns its place against this filter.
+2. **`markdown-files/HANDOFF.md`** — current state, file structure, ordered next-steps. Orient here.
+3. **`markdown-files/chart_style_guide.md`** — formatting principles + workflow rules (§8 governs how to break or revise a principle).
+4. **`markdown-files/analysis_framework.md`** — internal analytical brief for blurb generation. Per-section questions, signals, thresholds.
+5. **`markdown-files/reading_guide.md`** — short reader-facing dashboard orientation.
 
 **One-source-of-truth rule:** these docs reference each other rather than duplicate. If a fact lives in the style guide, HANDOFF should link to it not copy it. Drift between docs has been a real risk; treat it seriously.
 
