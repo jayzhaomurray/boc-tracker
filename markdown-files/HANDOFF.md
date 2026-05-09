@@ -664,7 +664,7 @@ All six sections (`policy`, `inflation`, `gdp`, `labour`, `housing`, `financial`
 - [ ] **Average hours worked + involuntary part-time rate** — flagged as coverage gaps in the labour framework but deferred. Avg hours (V3411411) is NSA-only monthly (would need 12M MA); involuntary PT (table 14-10-0029) is annual-only. Decision pending on whether to add either.
 - [ ] **Output gap as a live indicator** — BoC publishes a live range each MPR (currently -1.5% to -0.5%); GDP section references it but doesn't fetch it.
 - [ ] **Mortgage rate spreads / mortgage debt-service ratio** — flagged in the housing framework's coverage gaps; tracked by BoC FSR but not loaded.
-- [ ] **Multiple pages / navigation bar** — infrastructure ready; only relevant after chart count grows further.
+- [ ] **ECB/BoE/RBA rate CSVs not yet fetched** — FRED timed out during 2026-05-09 Policy deep-dive fetch session; `ecb_rate.csv`, `boe_rate.csv`, `rba_rate.csv` are absent. The Peer Central Banks chart currently shows BoC + Fed only. Run `python fetch.py` (with `FRED_API_KEY` set) to complete the fetch; no code changes needed.
 - [ ] **Custom domain**
 
 ---
@@ -695,14 +695,16 @@ Came up during the V/U fifth-pass discussion 2026-05-09. The dashboard currently
 
 The Labour convention sweep (commit `90bdb5d`) added live real-wage computation across 4 measures (LFS-all, LFS-permanent, SEPH, LFS-Micro). Framework prose needs a small extension to make the cross-check rule explicit: any "tight" assertion in blurbs must be wage-pressure-confirmed (real wage Y/Y > 0 AND nominal wage Y/Y above productivity baseline). Currently the rule is in the V/U paragraph framing; pulling it into the Labour Thresholds block would make it more visible. Small edit, deferred from V/U fifth-pass to keep that patch focused.
 
-### 7. Deep-dive implementation (Monetary Policy, Labour Market, GDP, Housing, Inflation, Financial)
+### 7. Deep-dive implementation (Labour Market, GDP, Housing, Inflation, Financial)
 
-**Scaffolding landed 2026-05-09 (commit `ccf5244`)** — `policy.html`, `inflation.html`, `gdp.html`, `labour.html`, `housing.html`, `financial.html` exist as placeholder pages with shared cross-page nav. Real-chart migration is now blocked only on dependent Valet pulls (yield_5yr, yield_10yr, CORRA for Monetary Policy; BOS labour-shortage for Labour).
+**Policy deep-dive landed 2026-05-09 (commit `52ab9d4`)** — `policy.html` is now a real page with 7 live charts (GoC Yield Curve, 2Y–10Y Spread, Real Rates, CORRA vs Target, BoC Assets, BoC Liabilities, Peer Central Banks). Housing is next — `yield_5yr` is now available (landed with the Policy build), unblocking the Housing deep-dive's mortgage-rate spread chart.
 
-For the full chart list and dependencies, see `analyses/deep-dive-design-2026-05-09.md`. Key summary:
-- **Monetary Policy:** 6 charts pending yield_5yr + yield_10yr + CORRA Valet pulls
+Recommended implementation order going forward: **Housing → GDP+Labour → Inflation → Financial → Trade+Demographics**.
+
+For the full chart list and dependencies, see `analyses/deep-dive-design-2026-05-09.md`. Remaining deep-dives:
+- **Housing:** mortgage rate spread chart now unblocked (yield_5yr available)
 - **Labour Market:** Beveridge curve (built 2026-05-09, ready to recycle), supply-side triangulation, NAIRU estimation, sectoral moves
-- **GDP, Housing, Inflation, Financial:** outlined in design doc
+- **GDP, Inflation, Financial, Trade, Demographics:** outlined in design doc
 
 ### 7b. Skills worth packaging when triggered (not pre-emptively)
 
