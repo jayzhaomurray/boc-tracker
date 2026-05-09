@@ -937,6 +937,36 @@ Coverage gap: this framework now covers unemployment, employment rate, participa
 """
 
 
+def _classify_usdcad(level: float) -> str:
+    """Tier classification per markdown-files/distribution_conventions.md.
+    Tail axis: |USDCAD - long-run median| in CAD (two-tailed), monthly month-last,
+    since 1990, N=437 (last computed 2026-05-09; source
+    analyses/financial_distribution.py): median=1.3072, P50=0.0958, P80=0.2343,
+    P95=0.3068, P99=0.3374. Descriptor pair: high (weak CAD) / low (strong CAD).
+    """
+    a = abs(level - 1.3072)
+    if a > 0.3374:  return "extreme"
+    if a > 0.3068:  return "rare"
+    if a > 0.2343:  return "pronounced"
+    if a > 0.0958:  return "uncommon"
+    return "typical"
+
+
+def _classify_wti_yoy(yoy_pct: float) -> str:
+    """Tier classification per markdown-files/distribution_conventions.md.
+    Tail axis: |WTI Y/Y| in %, monthly month-last, since 1991, N=425
+    (last computed 2026-05-09; source analyses/financial_distribution.py):
+    P50=20.12%, P80=42.31%, P95=72.02%, P99=118.04%.
+    Descriptor pair: inflationary / disinflationary.
+    """
+    a = abs(yoy_pct)
+    if a > 118.04: return "extreme"
+    if a > 72.02:  return "rare"
+    if a > 42.31:  return "pronounced"
+    if a > 20.12:  return "uncommon"
+    return "typical"
+
+
 # ── Financial Conditions (external) section ──────────────────────────────────
 
 def compute_external_values() -> dict:
@@ -1014,6 +1044,7 @@ def compute_external_values() -> dict:
 
         "wti":                  wti_now,
         "wti_yoy_pct":          wti_yoy_pct if wti_yoy_pct is not None else 0.0,
+        "wti_yoy_tier":         _classify_wti_yoy(wti_yoy_pct if wti_yoy_pct is not None else 0.0),
         "wti_3mo_change_pct":   wti_3mo_change if wti_3mo_change is not None else 0.0,
         "brent":                brent_now,
 
@@ -1021,6 +1052,7 @@ def compute_external_values() -> dict:
         "wcs_wti_differential": wcs_wti_diff,
 
         "usdcad":                  usdcad_now,
+        "usdcad_tier":             _classify_usdcad(usdcad_now),
         "usdcad_3mo_change_pct":   usdcad_3mo_change_pct,
         "usdcad_6mo_change_pct":   usdcad_6mo_change_pct,
         "usdcad_12mo_change_pct":  usdcad_12mo_change_pct,
@@ -1044,7 +1076,7 @@ def format_external_values(v: dict) -> str:
 
 Oil (as of {v['as_of_daily']}):
   WTI:                           ${v['wti']:.2f}/bbl
-  WTI Y/Y change:                {v['wti_yoy_pct']:+.1f}%
+  WTI Y/Y change:                {v['wti_yoy_pct']:+.1f}%   tier: {v['wti_yoy_tier']}  (typical |Y/Y|<=20%; uncommon to 42%; pronounced to 72%; rare to 118%; extreme above; monthly 1991+, P50/P80/P95/P99; descriptor: inflationary / disinflationary)
   WTI 3-month change:            {v['wti_3mo_change_pct']:+.1f}%
   Brent:                         ${v['brent']:.2f}/bbl
   Implied headline CPI impulse:  {v['cpi_impulse_from_wti']:+.2f}pp   (WTI Y/Y * gasoline-basket-weight 3.7%; mechanical, gasoline channel only)
@@ -1054,7 +1086,7 @@ WCS — Western Canada Select (as of {v['as_of_wcs']}):
   WCS-to-WTI discount:           ${v['wcs_wti_differential']:.2f}/bbl   (typical $10-15; >$20 = pipeline-constrained; <$12 = post-TMX expansion)
 
 USDCAD (as of {v['as_of_daily']}):
-  Level:                         {v['usdcad']:.4f}   (higher = weaker CAD)
+  Level:                         {v['usdcad']:.4f}   tier: {v['usdcad_tier']}  (typical |USDCAD - 1.3072|<=0.10; uncommon to 0.23; pronounced to 0.31; rare to 0.34; extreme above; monthly 1990+, P50/P80/P95/P99; descriptor: high (weak CAD) / low (strong CAD))
   3-month change:                {v['usdcad_3mo_change_pct']:+.2f}%
   6-month change:                {v['usdcad_6mo_change_pct']:+.2f}%
   12-month change:               {v['usdcad_12mo_change_pct']:+.2f}%

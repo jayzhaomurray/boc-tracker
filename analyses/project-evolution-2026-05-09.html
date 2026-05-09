@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+
+@page {
+    margin: 2.2cm 2.5cm;
+    @bottom-center {
+        content: counter(page);
+        font-size: 10pt;
+        color: #666;
+    }
+}
+body {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 11pt;
+    line-height: 1.55;
+    color: #111;
+    max-width: 100%;
+}
+h1 {
+    font-size: 18pt;
+    font-weight: bold;
+    margin-top: 0;
+    margin-bottom: 0.3em;
+    border-bottom: 2px solid #1a1a1a;
+    padding-bottom: 0.2em;
+}
+h2 {
+    font-size: 13pt;
+    font-weight: bold;
+    margin-top: 1.6em;
+    margin-bottom: 0.3em;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 0.15em;
+    page-break-after: avoid;
+}
+h3 {
+    font-size: 11.5pt;
+    font-weight: bold;
+    margin-top: 1.2em;
+    margin-bottom: 0.2em;
+    page-break-after: avoid;
+}
+p {
+    margin: 0.5em 0 0.7em 0;
+    text-align: justify;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.8em 0;
+    font-size: 10pt;
+}
+th {
+    background: #f0f0f0;
+    border: 1px solid #bbb;
+    padding: 5px 8px;
+    text-align: left;
+    font-weight: bold;
+}
+td {
+    border: 1px solid #bbb;
+    padding: 4px 8px;
+    vertical-align: top;
+}
+tr:nth-child(even) td {
+    background: #f9f9f9;
+}
+ul, ol {
+    margin: 0.4em 0 0.7em 1.5em;
+    padding: 0;
+}
+li {
+    margin-bottom: 0.25em;
+}
+strong { font-weight: bold; }
+em { font-style: italic; }
+hr {
+    border: none;
+    border-top: 1px solid #ccc;
+    margin: 1.4em 0;
+}
+blockquote {
+    margin: 0.6em 0 0.6em 1.5em;
+    color: #444;
+    border-left: 3px solid #ccc;
+    padding-left: 0.8em;
+}
+code {
+    font-family: 'Courier New', monospace;
+    font-size: 9.5pt;
+    background: #f4f4f4;
+    padding: 1px 3px;
+    border-radius: 2px;
+}
+
+</style>
+</head>
+<body>
+<h1>BoC Tracker: Project Evolution and Current State</h1>
+<p><strong>As of 2026-05-09 | https://jayzhaomurray.github.io/boc-tracker/</strong></p>
+<hr />
+<h2>1. Project Overview</h2>
+<p>The BoC Tracker is a personal data dashboard that tracks the economic indicators the Bank of Canada monitors between its quarterly Monetary Policy Reports. It is hosted publicly on GitHub Pages, auto-refreshes daily from public data APIs, and presents practitioner-grade analytical commentary alongside interactive charts — all without a server, database, or JavaScript framework. Every chart is generated in Python (Plotly) and embedded as a static HTML file.</p>
+<p>The project was built by Jay Zhao-Murray in collaboration with Claude (Anthropic) over a series of sessions beginning in early May 2026. The git history records each discrete iteration, making the project's analytical and technical decision-making fully auditable.</p>
+<p>The dashboard answers six plain-English questions, one per section, framed as the Bank of Canada itself frames them:</p>
+<table>
+<thead>
+<tr>
+<th>Section</th>
+<th>Question</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Monetary Policy</td>
+<td>What is the BoC doing right now?</td>
+</tr>
+<tr>
+<td>Inflation</td>
+<td>Is the BoC's mandate — the 2% target — being met?</td>
+</tr>
+<tr>
+<td>GDP &amp; Activity</td>
+<td>Is the economy at potential?</td>
+</tr>
+<tr>
+<td>Labour Market</td>
+<td>Is there slack? How tight is the labour market?</td>
+</tr>
+<tr>
+<td>Housing</td>
+<td>Is the most rate-sensitive sector amplifying or dampening policy?</td>
+</tr>
+<tr>
+<td>Financial Conditions</td>
+<td>What external winds are pushing on inflation, growth, and the CAD?</td>
+</tr>
+</tbody>
+</table>
+<p>The implicit composite question is: where does Canada stand relative to the BoC's goals, and what is likely to shape the next policy decision? But the six sub-questions are the working surface — each section earns its place by directly helping the reader answer its own question.</p>
+<p>The live URL is https://jayzhaomurray.github.io/boc-tracker/. The source repository is at https://github.com/jayzhaomurray/boc-tracker.</p>
+<hr />
+<h2>2. Architecture in Plain Language</h2>
+<p>The pipeline runs in three stages:</p>
+<p><strong>Fetch (<code>fetch.py</code>)</strong> pulls raw data daily from four public APIs: Statistics Canada's WDS endpoint (CPI series, LFS employment, wages, GDP, housing starts, building permits), the Bank of Canada's Valet API (overnight rate, core inflation measures, 2-year GoC yield, balance sheet, inflation expectations, LFS-Micro composition-adjusted wages, FAD calendar), the Federal Reserve's FRED API (US 2-year Treasury, USD/CAD, WTI, Brent, fed funds), and the Alberta Economic Dashboard (Western Canada Select crude). Each series is saved as a CSV in <code>data/</code>. The fetch step is the only one that makes network calls. A <code>--wait</code> flag allows the StatsCan crons to retry until the 8:30 AM ET release appears in the API response.</p>
+<p><strong>Analyze (<code>analyze.py</code>)</strong> reads the saved CSVs alongside an internal analytical brief (<code>analysis_framework.md</code>), computes structured data values for each section (current readings, thresholds, tier classifications), then calls Claude Opus via the Anthropic SDK to generate a 3–4 sentence prose blurb per section. A second LLM call acts as a self-review pass, checking the blurb for factual errors (sign conventions, attribution, dates, magnitudes) before writing results to <code>data/blurbs.json</code>. The framework is the load-bearing document: it defines the question each section answers, the signals to evaluate, the threshold values and their provenance, and explicit rules about what to surface in plain-language prose.</p>
+<p><strong>Build (<code>build.py</code>)</strong> reads the CSVs and <code>blurbs.json</code>, then assembles <code>index.html</code> from configuration objects (spec dataclasses) that define every chart's data series, transforms, defaults, legend behavior, and section assignments. The build step is fully offline. All chart transforms (Year/Year, Month/Month, 3M Annualised Rate, Level) are pre-baked into Plotly traces at build time; toggle buttons swap trace visibility via Plotly <code>restyle</code>, and the y-axis range recomputes live in JavaScript from whatever traces are currently visible.</p>
+<p>A GitHub Actions workflow (<code>update.yml</code>) runs on three cron schedules — two at 8:30 AM ET to cover the StatsCan release window across DST transitions, one at 11:00 AM ET for BoC daily yields — and pushes the rebuilt dashboard back to <code>main</code>, which triggers GitHub Pages redeploy automatically.</p>
+<p>The current dashboard has 20 charts across six sections, all on a single overview page (<code>index.html</code>). Scaffold deep-dive pages (one per section) were added in May 2026 as placeholder HTML files wired into the shared navigation bar.</p>
+<hr />
+<h2>3. Phases of Development</h2>
+<p>The project progressed through roughly six identifiable phases, each anchored to specific commits.</p>
+<p><strong>Phase 1 — MVP scaffolding (initial commit: <code>34e70a2</code>).</strong>
+The first commit on 2026-05-06 was a three-chart BoC Tracker: a CPI chart, a bond yield chart, and a policy rate chart. The architecture already separated <code>fetch.py</code> and <code>build.py</code>. Commits in the following 24 hours added transform toggles (Level / M/M / 3M AR / Y/Y), range selectors, a custom live y-axis system, and the categorical color palette documented in the chart style guide.</p>
+<p><strong>Phase 2 — Chart layer expansion (commits through <code>c5e11ca</code>).</strong>
+Within the first two days, the dashboard grew to nine charts covering the full six-section structure: CPI breadth deviation chart (weighted share of components above 3% / below 1%, calibrated against the BoC's own published breadth data); wage growth range band; GDP monthly level with industry overlays; GDP quarterly contribution stacked bar; USD/CAD; oil prices (WTI / Brent / WCS). The CPI breadth chart methodology — deviations from the 1996–2019 pre-COVID average, 59 components weighted by basket shares — was calibrated to reproduce the BoC's own published breadth chart within 1 percentage point at the 2022 peak. The blurb pipeline (<code>analyze.py</code> with self-review pass) was added in this phase, wiring the analytical framework to the dashboard's text.</p>
+<p><strong>Phase 3 — Data layer and framework writing (commits through <code>b51bef0</code>).</strong>
+The analytical framework (<code>analysis_framework.md</code>) was written as a per-section brief during this phase, anchoring every threshold and analytical claim to a BoC primary source — Staff Analytical Notes, MPRs, Financial Stability Reports, official communications. The Monetary Policy section was the first to reach practitioner-grade: the neutral-rate band (2.25–3.25% from the Bank's 2024 r* update), the BoC–Fed spread tiers, the Canada 2Y–overnight spread as a market-expectations read with explicit caveats about term-premium noise, and the balance sheet operational timeline (QE April 2020, reinvestment phase, passive QT from April 2022, QT end January 2025, floor-system maintenance $20–60B target). The meeting-resolution action-state classifier — which determines whether the BoC is currently "on hold," "cutting," or "hiking" by reading the daily overnight rate series (BoC Valet V39079) against the FAD calendar — was introduced here. Labour Market, Financial Conditions, GDP, and Housing frameworks were drafted in autonomously-run overnight sessions and initially marked as hypothesis-grade.</p>
+<p><strong>Phase 4 — Labour framework verification and blurb iteration (commits through <code>932b800</code>).</strong>
+The Labour Market section was the first to undergo the claim-by-claim user-review cycle that later became the template for all sections. The original draft contained two fabricated quotes attributed to the BoC (on NAIRU and Phillips curve methodology) that had survived the initial autonomous pass — a finding that directly motivated the three-tier provenance framework introduced later. The V/U tightness bands were revised after a user-skepticism challenge about whether the 0.45–0.60 "approaching balance" band reflected genuine data or status-quo-bias employer baseline. The composition-adjusted LFS-Micro wage measure (BoC SAN 2024-23) was wired into the wage band chart and the analytical framework, providing a cleaner underlying wage read than raw LFS.</p>
+<p><strong>Phase 5 — Architecture polish and deep-dive scaffolding (commits through <code>ccf5244</code>).</strong>
+The Indeed Hiring Lab Canada postings index was added to <code>fetch.py</code> as a daily-SA job postings series (filling the COVID gap in Statistics Canada's Job Vacancy and Wage Survey). The BoC Balance Sheet chart was added with three series (total assets, GoC bonds, settlement balances) and the operational timeline as annotation context. The A/B testing harness (<code>experiments/</code>) was built to compare blurb quality across framework vs. no-framework and across different prompt configurations. Deep-dive scaffolding — a shared cross-page navigation bar and six placeholder deep-dive HTML pages, with the Beveridge curve embedded as a real iframe in the Labour deep-dive — was added in commit <code>ccf5244</code>, marking the transition toward a multi-page site.</p>
+<p><strong>Phase 6 — Verification audit, provenance framework, and distribution conventions (commits <code>b34bebe</code> through <code>7c8b170</code>).</strong>
+This is the most analytically substantial phase and is covered in detail in the following two sections.</p>
+<hr />
+<h2>4. The May 2026 Verification Audit</h2>
+<p>On the night of 2026-05-08 to 2026-05-09, a structured verification pass was run across all six analytical framework sections. The findings transformed the project's epistemic architecture.</p>
+<h3>The three-tier provenance framework</h3>
+<p>The audit's first output was formalising a three-tier content-provenance system (<code>markdown-files/verification/_tiers.md</code>, commit <code>b34bebe</code>):</p>
+<p><strong>Tier 1 — Generated.</strong> Claude produced the content with no verification step. Default tier for any new content. Suitable for first-draft material; not suitable for citing as fact in downstream work.</p>
+<p><strong>Tier 2 — Autonomously verified.</strong> Claude or a sub-agent ran a structured verification pass — located primary sources, captured direct quotes, identified methodology gaps, compared claims against external evidence. The user did NOT review the conclusions. Tier 2 is characterised as "the most dangerous tier because it looks authoritative on the surface but has not been challenged." It is susceptible to cherry-picked sources, sub-agent hallucinations, confirmation-bias source selection, and heuristics transferred from other contexts without flagging.</p>
+<p><strong>Tier 3 — User-verified.</strong> The user actively engaged with the content: pushed back on framings, challenged sources, requested re-checks, and gave explicit accept/reject/revise feedback per claim. The highest-confidence tier. Still not infallible, but the active challenge process catches the failure modes Tier 2 misses.</p>
+<p>All existing framework prose was retagged under this system. The Labour Market and Financial Conditions frameworks, generated autonomously overnight before this audit, were tagged Tier 1. The earlier autonomous verification passes on Monetary Policy, Inflation, GDP, Housing, and Financial were tagged Tier 2. Claims the user had actively reviewed (Labour Claims 1–3; the Inflation and Monetary Policy blurb voice) were tagged Tier 3.</p>
+<h3>What the audit found</h3>
+<p>Per-claim verification logs were produced for all six sections. The findings were worse than expected: every section had defects, and the "VERIFICATION STATUS: verified end-to-end (May 2026)" header on four sections was empirically wrong.</p>
+<p>The defects clustered into identifiable classes:</p>
+<p><strong>Fabricated quotes and numbers (CRITICAL).</strong> The Labour section's Claim 8 attributed "1.6% annual real wage gains since 2023" to MPR October 2024, but no such quote could be located in any retrieved HTML chapter from that MPR. The figure plausibly originated as a conflation with the September 2024 headline CPI figure (also 1.6%). An earlier pass had already caught two fully fabricated quotes on NAIRU attributed to the BoC (Claim 1 of Labour, resolved Tier 3 after user review). Fabrications surviving an autonomous verification pass is exactly the failure mode that Tier 2 is documented to be susceptible to.</p>
+<p><strong>Threshold values contradicted by project data (CRITICAL).</strong> The <code>bocfed_spread</code> tier thresholds in <code>analysis_framework.md</code> and in <code>analyze.py</code> had been calibrated against daily data since 2009 but labelled as "since 1996 monthly." The Financial section's USDCAD stress-corridor peak was stated as "1.466 (March 2020)" but the actual peak in <code>data/usdcad.csv</code> was 1.4539. The Housing section's long-run starts average was anchored to "since 1977" but the project's CSV starts in 1990, and the stated recent 10-year average of ~245k starts overstated the actual 10-year mean of ~234k by roughly 10,000 units, with the 245k figure appearing to correspond to calendar 2024 alone. The GDP section had C.D. Howe Business Cycle Council methodology terms mis-stated as "depth, duration, breadth" when the canonical wording is "amplitude, duration, scope" with the BCC's own descriptor "pronounced, persistent, and pervasive."</p>
+<p><strong>Citation conflation (high severity).</strong> The Housing section's CMHC housing-gap reference mixed two different reports: the 2023 CMHC Housing Shortages report estimated 3.5M units by 2030 under a certain scenario, while the 4.8M-unit figure and the 430–500k/year starts target come from a June 2025 "Solving the Affordability Crisis" report targeting 2035. The Financial section incorrectly attributed certain CAD-driver decompositions to MPR January 2025 when the relevant analysis was in Staff Analytical Note 2025-2.</p>
+<p><strong>Rigid analytical decoders presented as canonical.</strong> The Inflation breadth section classified the breadth signal into four states (broad-based pressure, broad-based softening, clustered near target, polarized), but this typology was analyst synthesis covering only 4 of the 9 logical 3×3 deviation states. The Policy section's 3×2 conditional grid for <code>can2y_overnight_spread</code> × <code>action_state</code> was similarly analyst synthesis that the framework prose did not mark as such. An earlier user review had already flagged and resolved the Labour section's 2×2 utilization decoder as the same defect class.</p>
+<p><strong>US heuristics transferred to Canada without flagging.</strong> The original Labour Claim 3 applied V/U tightness thresholds calibrated to the US JOLTS survey to Canadian Job Vacancy and Wage Survey data — two surveys with materially different coverage and structural characteristics. The 2022 peak V/U in Canada was ~0.99 versus ~2.0 in the US, reflecting sectoral mix, survey-coverage differences, and Great Resignation dynamics that were US-specific. The claim was revised to Canadian-calibrated bands with explicit cross-country caveats, and marked Tier 3 after user sign-off.</p>
+<h3>The morning-review workflow</h3>
+<p>The audit produced 44 mechanical patch proposals across all six verification logs, formatted as <code>old_string</code> / <code>new_string</code> pairs ready for direct application via the Edit tool, each accompanied by the primary-source URL and direct quote that motivates the change. The design intent was to restructure the user's morning review from composing corrections from scratch to a fast accept/reject pass through pre-built patches. The verification logs also identify approximately 38 "judgment items" — deferred items where the correct answer requires user judgment (unsourced thresholds, competing analytical framings, indicator-naming choices) — separated into a distinct review batch to avoid interleaving mechanical corrections with higher-stakes analytical decisions.</p>
+<hr />
+<h2>5. The Distribution Conventions Framework</h2>
+<p>The <code>bocfed_spread</code> threshold defect — calibrated against daily data since 2009 but labelled "monthly since 1996" — exposed a structural problem that went beyond a single wrong number. The underlying issue was that any analyst writing framework prose can introduce empirical thresholds without documenting what those thresholds are actually measuring. A threshold stated as "high = above 100 bp (historical)" does not reveal whether "historical" means monthly or daily, which time window, what the N is, or whether the calculation is symmetric or absolute-value. Silent methodology drift is invisible until an audit compares the stated label against the actual data.</p>
+<p>The response was <code>markdown-files/distribution_conventions.md</code> (commit <code>c994fb0</code>), introduced through a design discussion on 2026-05-09. The document establishes a five-tier vocabulary and a methodology-disclosure requirement for every empirical threshold in the framework.</p>
+<h3>The five-tier ladder</h3>
+<p>The convention standardises how indicator readings are described relative to their historical distribution:</p>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Share of all observations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Typical</td>
+<td>central 50%</td>
+</tr>
+<tr>
+<td>Uncommon</td>
+<td>next 30% out (P50–P80)</td>
+</tr>
+<tr>
+<td>Pronounced</td>
+<td>next 15% out (P80–P95)</td>
+</tr>
+<tr>
+<td>Rare</td>
+<td>next 4% out (P95–P99)</td>
+</tr>
+<tr>
+<td>Extreme</td>
+<td>most extreme 1%</td>
+</tr>
+</tbody>
+</table>
+<p>The boundary choices — P50, P80, P95, P99 — are anchored to three independent calibrated-language frameworks: the Mosteller-Youtz 1990 survey of probability-word meanings, the IPCC likelihood scale, and the EU pharmacovigilance adverse-event frequency categories. All three converge on a tighter-at-extremes ladder of similar shape. Equal-sized buckets (quartiles, quintiles) were rejected because "rare" and "extreme" carry inherent low-frequency content in everyday English that a top-25% threshold would contradict.</p>
+<h3>Per-indicator metadata requirements</h3>
+<p>Every indicator introduced to the framework must specify two pieces of metadata at its definition:</p>
+<p><strong>Tail axis:</strong> what is actually being percentile-ranked. For two-tailed signed values (BoC–Fed spread can be positive or negative), the tail axis is the absolute magnitude <code>|spread|</code>. For target-anchored indicators like CPI, the tail axis is deviation from the 2% target: <code>|CPI Y/Y - 2%|</code>. The tail axis makes the distribution calculation unambiguous and replicable.</p>
+<p><strong>Descriptor pair:</strong> the natural English words for "high" and "low" at the Pronounced tier and above, calibrated to the indicator's direction. Inflation indicators use "hot / soft"; labour-market tightness uses "tight / slack"; spreads use "high / low"; volume/flow indicators use "strong / weak."</p>
+<p>For indicators where the BoC publishes an authoritative band or target (inflation at 1–3%, policy rate vs. the 2.25–3.25% neutral band, the output gap), the convention requires dual classification: the binary BoC frame (in-band or outside-band, using the BoC's published edge) and the empirical five-tier ladder. Prose surfaces whichever frame is analytically salient. Inside-band readings typically need only the BoC frame; far-outside readings typically need only the empirical tier because the band breach is already the headline.</p>
+<h3>The methodology-disclosure rule</h3>
+<p>Every threshold citation in framework prose must state the window, resolution, tail axis, and sample size. The model phrase is: <code>(median |spread| 62.5 bp, monthly month-start, since 1996, N=364)</code>. This makes silent methodology drift structurally impossible: you cannot cite a threshold without revealing what it actually measures.</p>
+<p>Thresholds are to be recomputed annually, ideally pre-MPR, with the recompute date documented in framework prose so staleness is visible.</p>
+<h3>Worked examples landed</h3>
+<p>As of 2026-05-09, the convention has been applied end-to-end to four indicators, producing the reference catalog in <code>distribution_conventions.md</code>:</p>
+<p>The <strong><code>bocfed_spread</code></strong> — absolute monthly spread in basis points, since 1996, N=364 — has thresholds: typical ≤62.5 bp (P50), uncommon to 100 bp (P80), pronounced to 187 bp (P95), rare to 231 bp (P99), extreme above 231 bp. The 38 bp discrepancy between the old thresholds and the recomputed ones was diagnosed in <code>analyses/bocfed_spread_38bp_test.md</code>: the prior thresholds used daily data since 2009, while the correct baseline is monthly month-start since 1996. Monthly data has lower variance than daily (the tails are narrower because noise averages out), and the 2009 start date excluded the 1996–2008 pre-GFC era in which the spread was structurally closer to zero. Both effects pushed the prior thresholds upward — what looked like a "pronounced" reading under the old calibration would actually be at the P65–P70 level in the correct distribution.</p>
+<p>The <strong><code>can2y_overnight_spread</code></strong> — absolute monthly spread since 2001, N=304 — has thresholds: typical ≤32 bp, uncommon to 71 bp, pronounced to 120 bp, rare to 179 bp, extreme above 179 bp. The small-N caveat applies: at N=304 the extreme tier (top 1%, about three observations) is sparsely populated, making the extreme threshold sensitive to single new outliers.</p>
+<p>The <strong>headline CPI</strong> and several inflation sub-indicators — M/M momentum deviation, core band width, and headline-core gap — were convention-swept in commit <code>7c8b170</code> using <code>analyses/inflation_distribution.py</code> (N=315, January 2000 to March 2026). Key finding: the framework's prior threshold of 0.3 percentage points for "notable" headline-core divergence sits at the 27th percentile empirically, meaning it fires in 73% of months. The P50 (0.55 pp) is the defensible "uncommon divergence" trigger, and the P80 (1.05 pp) is the threshold for "clearly material." The prior threshold of 0.5 pp for "tight" core dispersion similarly sat at P35 — a very common occurrence, not noteworthy.</p>
+<p>The Financial Conditions section indicators are queued for the convention sweep next.</p>
+<h3>Design notes preserved in the document</h3>
+<p>The convention document includes a "Design notes" section recording the non-obvious calls behind the rules — a practice introduced to prevent the same tradeoffs from being re-argued in future sessions. These cover the choice of English labels over numeric tiers (three independent calibrated-language frameworks settle on labelled tiers), the decision to use central-X% framing rather than symmetric absolute deviation for skewed distributions, and the rationale for binary BoC-band classification rather than a three-state (in / outside / far-outside) scheme (the BoC publishes band edges, not "far-outside" thresholds, so three-state would invent calibration the BoC did not publish).</p>
+<hr />
+<h2>6. Current State and What Is Queued</h2>
+<h3>What works end-to-end</h3>
+<p>All six sections have charts wired into the dashboard and blurbs in <code>data/blurbs.json</code>. The Inflation and Monetary Policy blurbs have gone through multiple user-iterated voice cycles and are Tier 3 in their prose. The other four sections (Labour, GDP, Housing, Financial) have autonomous-draft blurbs classified as Tier 1, generated before the verification audit and before the distribution convention sweep. These blurbs are accurate in broad strokes but should not be treated as final — they were generated against framework prose that has since been corrected.</p>
+<p>The Monetary Policy section is the most complete: <code>bocfed_spread</code> thresholds are Tier 3 (convention-derived, committed <code>3f020ad</code>), <code>can2y_overnight_spread</code> thresholds are convention-swept (<code>760b254</code>), and the policy rate neutral band (2.25–3.25%), balance sheet anchors, and floor-system operating target are all verified against BoC primary sources.</p>
+<p>The Labour Market section has the deepest user-review history: Claims 1–3 are Tier 3. Claim 1 (NAIRU ~6%) is anchored to the IMF's July 2024 Article IV Consultation for Canada with the BoC's own position noted as a caveat. Claim 2 (employment/participation utilization pair) dropped a rigid 2×2 decoder in favour of explicit starting-hypothesis framing. Claim 3 (V/U tightness bands) uses Canadian-calibrated thresholds rather than the US JOLTS-derived bands that appeared in the original draft.</p>
+<h3>Immediate-fix items</h3>
+<p>Several mechanical corrections are ready for user-accept/reject from the verification logs. The most significant are:</p>
+<p>The <strong>Housing section</strong> has a citation conflation in Claim 2: the framework mixes the 2023 CMHC Housing Shortages report (which estimated 3.5M units by 2030) with the June 2025 "Solving the Affordability Crisis" report (which introduces the 4.8M-unit gap and the 430–480k/year starts target for 2035). The framework currently presents these as if they came from the same document. The starts long-run average ("since 1977") cannot be verified against project data, and the stated 10-year average (~245k) overstates the computed 10-year mean by about 11,000 units. Patch proposals with old/new strings are in <code>markdown-files/verification/housing.md</code>.</p>
+<p>The <strong>Financial Conditions section</strong> has a data error in Claim 2: the stress-corridor peak is stated as "March 2020 (1.466)" but <code>data/usdcad.csv</code> shows the actual peak was 1.4539. Patch proposed in <code>markdown-files/verification/financial.md</code>.</p>
+<p>The <strong>GDP section</strong> has the C.D. Howe BCC methodology criteria mis-stated. The framework quotes "depth, duration, breadth" but the BCC's own published wording uses "amplitude, duration, scope" with the evaluative descriptor "pronounced, persistent, and pervasive." Patch in <code>markdown-files/verification/gdp.md</code>.</p>
+<p>The <strong>Labour Claim 8</strong> fabricated MPR quote needs user confirmation or removal. The claim as written attributes "1.6% annual real wage gains since 2023" to MPR October 2024; no such quote has been located in the retrieved source.</p>
+<h3>Queued analytical work</h3>
+<p><strong>Convention sweep across remaining sections.</strong> GDP, Housing, Labour, and the remaining Financial indicators need the distribution convention applied. Each requires running a calibration script (following the pattern of <code>analyses/inflation_distribution.py</code>), producing tier thresholds from the project's own CSVs, and updating framework prose with the methodology-disclosure string (window, resolution, tail axis, N). Financial Conditions' <code>usdcad</code> and oil indicators are next in the queue.</p>
+<p><strong>Framework verification headers.</strong> The "VERIFICATION STATUS: verified end-to-end (May 2026)" header on the GDP, Housing, and Financial sections is now factually wrong — the audit surfaced concrete defects in each. The pending decision is whether to downgrade these headers to "Tier 2 audit identified defects; see verification/<section>.md" before any further blurb regeneration, or to leave them and rely on the per-section logs for ground truth.</p>
+<p><strong>Blurb regeneration.</strong> After the mechanical patches land and the convention sweep completes, the four Tier-1 autonomous-draft blurbs (Labour, GDP, Housing, Financial) should be regenerated against the corrected framework prose. The current blurbs predate every framework change since they were generated.</p>
+<p><strong>Code changes.</strong> The <code>compute_labour_values</code> function in <code>analyze.py</code> still uses a 12-month moving average for the job vacancy rate; the framework was updated to a 3-month MA to avoid the 7-month lag at cyclical turns. The Indeed Hiring Lab postings index (daily SA, covering the JVWS COVID gap) is fetched and saved to <code>data/</code> but not yet wired into a chart — this requires a secondary y-axis extension to <code>MultiLineSpec</code> since the Indeed index (baseline Feb 2020 = 100) and the vacancy rate (percentage of all positions) share no natural axis.</p>
+<p><strong>Judgment items</strong> (separate review batch): the four-state CPI breadth typology (analyst synthesis; needs user decision on whether to keep, simplify, or replace); the Policy section's 3×2 conditional grid for <code>can2y_overnight_spread × action_state</code>; the Housing section's CREA MLS HPI methodology description (currently says "hedonic"; actually hybrid repeat-sales plus hedonic); and the Labour V/U 0.45–0.60 "approaching balance" band's anchor narrative.</p>
+<h3>Future projects</h3>
+<p>The <strong>deep-dive pages</strong> are scaffolded (six HTML files at project root) with placeholder content and a shared navigation bar, but no real analytical content beyond the Beveridge curve iframe in the Labour deep-dive. Planned content per section is documented in HANDOFF. The deep-dive pages are the right home for component-level CPI decomposition, regional housing breakdowns, GDP industry decomposition, and the Beveridge curve analysis — content that is useful to a reader who wants to drill in but would bloat or distract on the overview page.</p>
+<p><strong>CI authentication automation</strong>: the GitHub Actions workflow requires <code>ANTHROPIC_API_KEY</code> as a repo secret for blurb regeneration. The local development path currently uses Claude Code's subscription authentication (<code>claude</code> CLI), which does not port directly to CI. The workaround (set <code>CLAUDE_AUTH_MODE=api</code> and pass <code>ANTHROPIC_API_KEY</code>) is documented in <code>fetch.py</code>'s run instructions.</p>
+<p><strong>Market-implied rate path</strong>: currently blocked on the absence of a free Canadian OIS or CRA-futures data feed. TMX has no public API; BoC Valet has no implied-rate series. The 2Y term-premium framework in the Monetary Policy section is a partial substitute, with explicit caveats about when the spread is and is not interpretable as a rate-path signal.</p>
+<hr />
+<h2>7. Appendix: Canonical Documents and References</h2>
+<p><strong>Canonical first-read documents</strong> (in load order per <code>CLAUDE.md</code>):</p>
+<ol>
+<li><code>markdown-files/dashboard_purpose.md</code> — the six sub-questions each section answers; the filter for what belongs on the overview vs. deep-dive vs. out of scope.</li>
+<li><code>markdown-files/HANDOFF.md</code> — current state, file structure, data series table, architecture, Next Steps. The session-startup document.</li>
+<li><code>markdown-files/chart_style_guide.md</code> — formatting principles and the §8 exception/revision protocol.</li>
+<li><code>markdown-files/analysis_framework.md</code> — the internal analytical brief driving blurb generation. Per-section questions, signals, thresholds.</li>
+<li><code>markdown-files/distribution_conventions.md</code> — the five-tier ladder, methodology-disclosure requirements, per-indicator reference catalog.</li>
+</ol>
+<p><strong>Verification logs:</strong> <code>markdown-files/verification/{_tiers,policy,inflation,gdp,labour,housing,financial}.md</code></p>
+<p><strong>Analyses (one-off research scripts):</strong> <code>analyses/bocfed_spread_distribution.py</code>, <code>analyses/can2y_overnight_spread_distribution.py</code>, <code>analyses/inflation_distribution.py</code>, <code>analyses/bocfed_spread_38bp_test.md</code>, <code>analyses/beveridge_curve_canada.html</code>, <code>analyses/statscan_zero_audit.md</code></p>
+<p><strong>Live dashboard:</strong> https://jayzhaomurray.github.io/boc-tracker/</p>
+<p><strong>GitHub repository:</strong> https://github.com/jayzhaomurray/boc-tracker</p>
+<p><strong>Commit range covered by this document:</strong> <code>34e70a2</code> (initial commit, 2026-05-06) through <code>7c8b170</code> (distribution conventions applied to Inflation section, 2026-05-09).</p>
+</body>
+</html>

@@ -82,7 +82,7 @@ And the threshold-block restatement:
 
 *Reason:* The 0.35 pp figure requires unstated 100% WTI-to-pump pass-through; with BoC's actual ~40–50% crude share the mechanical impulse is roughly half that.
 *Source:* https://www.bankofcanada.ca/2024/06/what-you-pay-for-at-the-pump/ — BoC names crude, refining, taxes, retail margin and exchange rate as pump-price components; external industry trackers (Canadian Fuels Association) place crude at 40–50% of retail.
-*Verification log change*: mark Claim 1 verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+*Verification log change*: **(DEFERRED -- judgment item)** algebraic inconsistency in 0.35 pp deferred to user per explicit instruction. The 0.35 pp number remains in the framework prose untouched pending user review. See open questions above.
 
 **Patch 2: update the threshold-block restatement to match the re-derived magnitude**
 
@@ -164,7 +164,7 @@ The historical stress corridor for CAD weakness is **1.45–1.47**, hit in three
 
 *Reason:* Two of three named peaks (Jan 2016, Mar 2020) don't match `data/usdcad.csv`; the Dec 2024–Jan 2025 figure should be a single number, not a range, to match the other two episodes' format.
 *Source:* `data/usdcad.csv` — daily BoC noon-rate file, peaks within each episode window: 2016-01-20 = 1.4592; 2020-03-23 = 1.4539; 2025-01-31 = 1.4459. (Corridor-bounds qualification and 1998–2003 regime context deferred as judgment.)
-*Verification log change*: mark Claim 2 verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+*Verification log change*: **(PATCH APPLIED 2026-05-09)** USDCAD peaks corrected to project-data-verified values in analysis_framework.md. Tier 2 -> resolved (mechanical fix).
 
 ---
 
