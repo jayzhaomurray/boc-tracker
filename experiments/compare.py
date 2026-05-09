@@ -12,8 +12,8 @@ Example:
         experiments/results/20260508T120000Z/baseline.labour.md \\
         experiments/results/20260508T122000Z/obs_inf_rule.labour.md
 
-If --out is not supplied, writes to the current working directory as
-compare.<section>.md.
+If --out is not supplied, writes to experiments/results/comparisons/compare.<section>.md
+so test artifacts stay inside experiments/ rather than littering the project root.
 """
 
 from __future__ import annotations
@@ -22,6 +22,8 @@ import argparse
 import re
 import sys
 from pathlib import Path
+
+DEFAULT_COMPARE_DIR = Path(__file__).resolve().parent / "results" / "comparisons"
 
 
 def extract_blurb(result_file: Path) -> str:
@@ -108,7 +110,7 @@ def main() -> None:
     parser.add_argument("file_b", type=Path, help="Second result file (.md from a run).")
     parser.add_argument(
         "--out", type=Path, default=None,
-        help="Output path. Default: compare.<section>.md in the current directory.",
+        help="Output path. Default: experiments/results/comparisons/compare.<section>.md.",
     )
     args = parser.parse_args()
 
@@ -119,7 +121,11 @@ def main() -> None:
 
     section, markdown = render_comparison(args.file_a, args.file_b)
 
-    out_path = args.out if args.out is not None else Path.cwd() / f"compare.{section}.md"
+    if args.out is not None:
+        out_path = args.out
+    else:
+        DEFAULT_COMPARE_DIR.mkdir(parents=True, exist_ok=True)
+        out_path = DEFAULT_COMPARE_DIR / f"compare.{section}.md"
     out_path.write_text(markdown, encoding="utf-8")
     print(f"Written: {out_path}")
     print()

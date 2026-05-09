@@ -13,7 +13,8 @@ Example:
         experiments/results/20260509T030523Z \\
         experiments/results/20260509T030655Z
 
-Default output directory: ./compare-<config_a>-vs-<config_b>/
+Default output directory: experiments/results/comparisons/<config_a>-vs-<config_b>/
+so test artifacts stay inside experiments/ rather than littering the project root.
 """
 
 from __future__ import annotations
@@ -23,6 +24,8 @@ import sys
 from pathlib import Path
 
 from compare import render_comparison, extract_frontmatter_field
+
+DEFAULT_COMPARE_DIR = Path(__file__).resolve().parent / "results" / "comparisons"
 
 
 def parse_filename(name: str) -> tuple[str, str] | None:
@@ -69,7 +72,7 @@ def main() -> None:
     parser.add_argument("dir_b", type=Path, help="Second run directory.")
     parser.add_argument(
         "--out-dir", type=Path, default=None,
-        help="Output directory. Default: ./compare-<config_a>-vs-<config_b>/",
+        help="Output directory. Default: experiments/results/comparisons/<config_a>-vs-<config_b>/",
     )
     args = parser.parse_args()
 
@@ -91,7 +94,7 @@ def main() -> None:
     out_dir = (
         args.out_dir
         if args.out_dir is not None
-        else Path.cwd() / f"compare-{config_a}-vs-{config_b}"
+        else DEFAULT_COMPARE_DIR / f"{config_a}-vs-{config_b}"
     )
     out_dir.mkdir(parents=True, exist_ok=True)
 
