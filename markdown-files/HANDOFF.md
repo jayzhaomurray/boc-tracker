@@ -175,8 +175,11 @@ $env:FRED_API_KEY = "<your-key>"                          # PowerShell; or set p
 python fetch.py
 
 # Step 2 (optional but recommended): regenerate the dashboard blurbs
-$env:ANTHROPIC_API_KEY = "sk-ant-..."                    # PowerShell; set once
+# Local path: if `claude` CLI is installed and authenticated, no API key needed.
 python analyze.py                                         # writes data/blurbs.json
+# CI / forced SDK path: set ANTHROPIC_API_KEY and CLAUDE_AUTH_MODE=api
+# $env:ANTHROPIC_API_KEY = "sk-ant-..."
+# $env:CLAUDE_AUTH_MODE = "api"
 
 # Step 3: regenerate the dashboard HTML from saved CSVs + blurbs
 python build.py
@@ -597,6 +600,7 @@ All six sections (`policy`, `inflation`, `gdp`, `labour`, `housing`, `financial`
 - `analyze.py --print-only` previews prompt + values without calling the API.
 - `analyze.py --section <id>` selects a single section to regenerate.
 - After blurb generation, a self-review pass (`review_blurb()`) runs a factual-correctness checklist; flagged blurbs save with `review_flags` for user review rather than blocking.
+- **Auth paths for `call_claude()`:** default prefers the `claude` CLI subprocess (subscription path -- no API key needed if `claude` is on PATH and authenticated). Falls back to the Anthropic SDK if `ANTHROPIC_API_KEY` is set. Override via `CLAUDE_AUTH_MODE=cli` or `CLAUDE_AUTH_MODE=api`. CI uses the SDK path (`CLAUDE_AUTH_MODE=api` or no CLI on runner); local regen uses the CLI path. A future session reading this: local `python analyze.py --section <id>` works today without any API key.
 - **Policy section data architecture:** action-state classification uses a daily series (`overnight_rate_daily`, V39079, since 2009) + FAD calendar (`data/fad_calendar.json` from BoC iCal feed + `data/fad_history.json` static bootstrap). The chart still uses monthly `overnight_rate` for longer history.
 - **Internal naming note:** `compute_external_values` / `format_external_values` in `analyze.py` and `financial` in `PageSpec.sections` refer to the same domain (Financial Conditions); the `external` name is a historical artifact.
 
@@ -604,10 +608,10 @@ All six sections (`policy`, `inflation`, `gdp`, `labour`, `housing`, `financial`
 
 ## What is not yet implemented
 
-- [ ] **`ANTHROPIC_API_KEY` secret not set in repo Settings** — workflow code is in place; requires the user to add the secret at https://github.com/jayzhaomurray/boc-tracker/settings/secrets/actions. Until set, blurbs stay at the last manually-seeded values; CI runs green.
-- [ ] **GDP blurb predates `compute_gdp_values` rewiring** — `compute_gdp_values` was rewired to `gdp_total_contribution` (v79448580) in commit `b51bef0`; the saved blurb in `data/blurbs.json` predates this. Regeneration blocked on `ANTHROPIC_API_KEY`.
-- [ ] **Labour blurb predates `compute_labour_values` rewiring** — `compute_labour_values` was rewired in commit `945fa8f` to surface utilization, V/U ratio, and ULC; the saved blurb predates this. Regeneration blocked on `ANTHROPIC_API_KEY`.
-- [ ] **Regenerate housing blurb against the rewired framework** — `compute_housing_values` was rewired in May 2026 to include CREA MLS HPI and housing affordability (mirrors the labour / GDP wiring commits 945fa8f / b51bef0). The saved blurb in `data/blurbs.json` predates the rewiring. Regeneration blocked on `ANTHROPIC_API_KEY` (or the Claude Code subscription workaround).
+- [ ] **`ANTHROPIC_API_KEY` secret not set in repo Settings** — workflow code is in place; requires the user to add the secret at https://github.com/jayzhaomurray/boc-tracker/settings/secrets/actions. Until set, nightly CI blurb regen is skipped (::warning:: annotation); the last committed `data/blurbs.json` holds. Local regen is available now via `python analyze.py --section <id>` (CLI subscription path).
+- [ ] **GDP blurb predates `compute_gdp_values` rewiring** — `compute_gdp_values` was rewired to `gdp_total_contribution` (v79448580) in commit `b51bef0`; the saved blurb in `data/blurbs.json` predates this. Queued for regen after framework patches land (see Next Steps item 3); available locally via CLI path.
+- [ ] **Labour blurb predates `compute_labour_values` rewiring** — `compute_labour_values` was rewired in commit `945fa8f` to surface utilization, V/U ratio, and ULC; the saved blurb predates this. Queued for regen after framework patches land; available locally via CLI path.
+- [ ] **Regenerate housing blurb against the rewired framework** — `compute_housing_values` was rewired in May 2026 to include CREA MLS HPI and housing affordability (mirrors the labour / GDP wiring commits 945fa8f / b51bef0). The saved blurb in `data/blurbs.json` predates the rewiring. Queued for regen after framework patches land; available locally via CLI path.
 - [ ] **Average hours worked + involuntary part-time rate** — flagged as coverage gaps in the labour framework but deferred. Avg hours (V3411411) is NSA-only monthly (would need 12M MA); involuntary PT (table 14-10-0029) is annual-only. Decision pending on whether to add either.
 - [ ] **Output gap as a live indicator** — BoC publishes a live range each MPR (currently -1.5% to -0.5%); GDP section references it but doesn't fetch it.
 - [ ] **Mortgage rate spreads / mortgage debt-service ratio** — flagged in the housing framework's coverage gaps; tracked by BoC FSR but not loaded.
@@ -618,17 +622,17 @@ All six sections (`policy`, `inflation`, `gdp`, `labour`, `housing`, `financial`
 
 ## Next steps, in priority order
 
-### 1. Set `ANTHROPIC_API_KEY` in repo Secrets to activate full automation
+### 1. Set `ANTHROPIC_API_KEY` in repo Secrets to activate nightly CI blurb regen
 
-The single switch that turns the dashboard from "data-and-charts auto-update; blurbs hold at last manual seed" into "everything auto-updates nightly." Add the secret at https://github.com/jayzhaomurray/boc-tracker/settings/secrets/actions. After setting it, manually dispatch the workflow once to confirm blurbs regenerate.
+Local blurb regeneration already works via the Claude Code CLI subscription path -- `python analyze.py --section <id>` works any time `claude` is on PATH and authenticated (no API key needed). What this secret unlocks is the nightly **GitHub Actions** runner: the runner doesn't have the `claude` CLI installed, so CI falls back to the SDK path and gates on `ANTHROPIC_API_KEY`. Until the secret is set, the workflow emits a `::warning::` and skips blurb regen; the last committed `data/blurbs.json` holds. Add the secret at https://github.com/jayzhaomurray/boc-tracker/settings/secrets/actions, then manually dispatch the workflow once to confirm CI blurbs regenerate.
 
 ### 2. User iteration on autonomous-draft blurbs (Labour, Financial, GDP, Housing)
 
 Labour Market and Financial Conditions blurbs were generated overnight May 8, 2026; GDP and Housing verified May 8 but also autonomous-draft. Monetary Policy and Inflation went through user iteration and are ground-truth voice. The other four need the same treatment — iterate against the framework writing principles (plain language, semantic preservation, action-state verbs, no journey phrasing, takeaway-first). Before iterating GDP and Labour, wire their blurbs against the rewired compute functions (items above).
 
-### 3. Regenerate all four autonomous-draft blurbs once `ANTHROPIC_API_KEY` is set
+### 3. Regenerate all four autonomous-draft blurbs (after framework patches land)
 
-Labour, Financial Conditions, GDP, and Housing blurbs are autonomous drafts generated May 8, 2026. All four compute functions have since been rewired (GDP: commit b51bef0; Labour: commit 945fa8f; Housing: May 2026 CREA/affordability wiring). Regenerating all four in one pass once the API key is available will align the blurbs with the rewired compute functions and give the user a clean starting point for the voice-iteration pass (item 2 above).
+Labour, Financial Conditions, GDP, and Housing blurbs are autonomous drafts generated May 8, 2026. All four compute functions have since been rewired (GDP: commit b51bef0; Labour: commit 945fa8f; Housing: May 2026 CREA/affordability wiring). The actual blocker is the framework defects surfaced in the 2026-05-09 audit -- the morning-review patches (bocfed_spread thresholds, CMHC citation conflation, USDCAD peaks, BCC wording) should land before regenerating so the blurbs don't bake stale anchors. Once framework patches are accepted, regenerate all four locally via `python analyze.py --section <id>` (CLI subscription path; no API key needed). This gives the user a clean starting point for the voice-iteration pass (item 2 above).
 
 ### 4. Eventually: deep-dive Monetary Policy page
 
@@ -672,6 +676,10 @@ These were considered 2026-05-09 against the project's actual failure modes (see
 - **`/add-chart`** — trigger: scaling deep-dive page real charts. The 6 placeholder deep-dive pages will need real charts; estimate 40+ total at full build-out. When that work begins, package a skill that scaffolds ChartSpec + PAGES entry + `_DERIVED_SERIES_SOURCES` registration following established patterns.
 - **`/audit-section`** — trigger: re-auditing on a cadence (annually as BoC publications update — new MPRs, SANs, FSRs). The Tier 2 audit prompt template was used 5× on 2026-05-09; if re-audit becomes recurring, packaging it pays back. Lower priority than `/add-chart` since cadence isn't established yet.
 - **Hooks: ~never become high-value** for this project (content-bound failure mode, not code-shape). One narrow exception: a data-shape validator on `fetch.py` to catch fetcher regressions like the JVWS stale-zero bug. Set up only if bitten again.
+
+### 6c. Automate the CLI auth path in CI (future project, low priority)
+
+`claude setup-token` produces a long-lived OAuth token. Storing it as a GitHub Actions secret (e.g. `CLAUDE_CODE_OAUTH_TOKEN`) and adding a workflow step to install the Claude CLI and export the token would route nightly blurb regen through the Max subscription instead of the paid API. Caveats: Max plan rate limits apply to CLI usage; headless CI behaviour of the CLI is less battle-tested than the SDK path; actual API cost for this dashboard is pennies per month, so this is nice-to-have, not urgent. The `ANTHROPIC_API_KEY` SDK path (item 1) is the pragmatic near-term solution.
 
 ### 7. Charts still on the wishlist
 
@@ -718,7 +726,7 @@ These were considered 2026-05-09 against the project's actual failure modes (see
 
 6. **CPI chart NSA toggle in Y/Y view** — Headline (SA) and Headline (NSA) Y/Y are essentially identical in Y/Y view. Default has NSA off; the toggle is useful in M/M view where SA matters.
 
-7. **`ANTHROPIC_API_KEY` required for `analyze.py`** — without it, `analyze.py` prints computed values + a clear error and exits with code 1. CI skips blurb regeneration with a `::warning::` annotation; the last committed `data/blurbs.json` holds current blurbs.
+7. **`analyze.py` auth-path resolution** — `call_claude()` resolves auth in this order: (1) `CLAUDE_AUTH_MODE=api` forces the SDK path and requires `ANTHROPIC_API_KEY`; (2) `CLAUDE_AUTH_MODE=cli` forces the CLI subprocess path; (3) default: prefer `claude` CLI if on PATH, fall back to SDK if `ANTHROPIC_API_KEY` is set, otherwise raise. Locally, if `claude` is installed and authenticated, no API key is needed. The SDK path is used in CI (GitHub Actions runner has no `claude` CLI) and gates on the `ANTHROPIC_API_KEY` secret; if absent, the workflow emits `::warning::` and skips regen.
 
 8. **Author display name** — `AUTHOR_DISPLAY_NAME = "jayzhaomurray"` in `build.py`.
 
