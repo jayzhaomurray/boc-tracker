@@ -62,11 +62,11 @@ boc-tracker/
     ├── HANDOFF.md
     ├── analysis_framework.md             ← internal analytical brief for blurb generation
     ├── chart_style_guide.md              ← formatting principles + workflow rules (first-read)
-    ├── reading_guide.md                  ← human-readable interpretation guide per chart
     ├── dashboard_purpose.md              ← what the dashboard exists to answer (first-read)
     ├── blurb_quality_log.md              ← May 2026 testing-session lessons + open questions
     └── archive/                          ← superseded / deprioritised planning docs
         ├── vision.md
+        ├── reading_guide.md
         ├── gdp_inventories_research.md
         ├── boc_mpr_charts_inventory.md
         ├── boc_mpr_tracking_priority.md

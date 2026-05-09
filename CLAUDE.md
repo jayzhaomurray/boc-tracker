@@ -10,7 +10,6 @@ Read these documents in order before doing anything substantive. They are the so
 2. **`markdown-files/HANDOFF.md`** — current state, file structure, ordered next-steps. Orient here.
 3. **`markdown-files/chart_style_guide.md`** — formatting principles + workflow rules (§8 governs how to break or revise a principle).
 4. **`markdown-files/analysis_framework.md`** — internal analytical brief for blurb generation. Per-section questions, signals, thresholds.
-5. **`markdown-files/reading_guide.md`** — short reader-facing dashboard orientation.
 
 **Escape hatch:** for genuinely trivial edits — typo fix, single comment edit, single color tweak, one-line text change — skip the canonical reading. Anything that touches logic, data, analytical framing, or chart structure still earns the full first-moves pass.
 
@@ -29,7 +28,7 @@ Read these documents in order before doing anything substantive. They are the so
   - Tiny commits (typo, single-color tweak, comment fix) don't need HANDOFF updates.
   - Level of detail: enough that a fresh session reading HANDOFF understands current state, not a per-commit changelog.
   - Model: routine HANDOFF updates (table row, marking a todo done, adding a sub-bullet) run fine on Sonnet via subagent — delegate it after the main code commit. Major restructuring (re-prioritising the entire Next Steps list, rewriting an architecture section because the architecture changed) needs Opus on the main thread.
-  - Same applies to the other canonical docs when the change touches their domain: chart_style_guide.md when introducing a new chart treatment pattern; analysis_framework.md when adding a new section signal; reading_guide.md when a section's chart contents change.
+  - Same applies to the other canonical docs when the change touches their domain: chart_style_guide.md when introducing a new chart treatment pattern; analysis_framework.md when adding a new section signal.
 
 ## Analytical bar
 
