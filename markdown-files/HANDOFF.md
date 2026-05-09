@@ -30,6 +30,8 @@ Four major milestones completed in a single day:
 
 The convention sweep is the main analytical milestone: all six sections are now convention-aligned, all six verification logs updated, and blurb regen is now a clean operation (no stale anchors).
 
+**Late-afternoon analytical milestones** (commits `15442ca`, `5a952d1`, `242ec83`): V/U fifth-pass research completed; Labour Claim 3 V/U bands relabelled to empirical descriptors (bottom-of-history / low / elevated / high / exceptionally high) with locked-in paragraph framing distinguishing BoC-likely-synthesis from wage-confirmed-synthesis. Policy Claim 10 (3×2 grid) dropped as the third rigid n×n decoder rejected. "Verification, not speculation" extended with general epistemic rule. Claims 3 and 10 marked Tier 3 resolved. New `reference/` folder convention for personal-reference documents (versioned PDFs, research artifacts).
+
 ---
 
 ## Overnight checkpoint (2026-05-09 → 10)
@@ -58,14 +60,17 @@ User went to sleep around 04:00 with the prompt "do work overnight that requires
 | 15 | `637f7bd` | **Convention applied to GDP & Activity.** BCC criteria corrected to canonical "amplitude, duration, scope." Housing-trough anchors corrected (April 2009 = 111.8k). Inventories threshold retuned to P80 (±3.55pp) from asserted ±3pp. Data-source probe doc landed. | `analysis_framework.md`; `analyze.py`; `analyses/gdp_distribution.py`; `analyses/data-source-probe-2026-05-09.md` |
 | 16 | `7b80c79` | **Convention applied to Housing.** CMHC citation conflation resolved (2023 vs 2025 reports). CREA HPI methodology corrected. Cyclical anchors retuned against project data. | `analysis_framework.md`; `analyze.py`; `markdown-files/verification/housing.md` |
 | 17 | `90bdb5d` | **Convention applied to Labour Market (final section).** Claim 8 fabricated quote removed. Claim 10 US-heuristic propagation removed. Real wage benchmark added per user direction. LFS gross-flows probe landed. | `analysis_framework.md`; `analyze.py`; `markdown-files/verification/labour.md`; `analyses/lfs-gross-flows-probe-2026-05-09.md` |
+| 18 | `15442ca` | **End-of-day wrap: Policy Claim 10 dropped.** Policy Claim 10 (3×2 conditional grid) dropped per user decision; same construct class as Labour Claim 2 and Inflation Claim 3 (both previously rejected). Framework prose retains interpretive logic as paragraph framing; continuous tier handles magnitude. Verification log marked Tier 3. Labour-tightness research document landed: `analyses/labour_tightness_research_2026-05-09.md`. | `markdown-files/verification/policy.md`; `analysis_framework.md`; `analyses/labour_tightness_research_2026-05-09.md` |
+| 19 | `5a952d1` | **V/U fifth-pass resolution applied.** Labour Claim 3 V/U bands relabelled to empirical descriptors (bottom-of-history / low / elevated / high / exceptionally high); paragraph framing locked in distinguishing BoC-likely-synthesis from wage-confirmed-synthesis. "Verification, not speculation" extended with general epistemic rule (state only dashboard observations; calibration anchors in background). Claims 3 and 10 marked Tier 3. | `markdown-files/verification/labour.md`; `analysis_framework.md` |
+| 20 | `242ec83` | **HANDOFF refresh: prune stale Next Steps, integrate design-doc references.** Convention sweep item removed (complete); blurb regen item unblocked. Three post-refresh items added: RBA two-sided methodology, BOS labour-shortage indicator, real-wage-benchmark prose extension. | This file |
 
-### Open judgment items (as of 2026-05-09 end of day)
+### Open judgment items (updated 2026-05-09)
 
-All mechanical defects and factual corrections from the original five-section Tier 2 audit have been resolved via the convention sweep. What remains requires domain judgment from the user:
+All mechanical defects and factual corrections from the original five-section Tier 2 audit have been resolved via the convention sweep. Late-afternoon milestones resolved the two highest-priority items:
 
-1. **Labour Claim 3 — V/U threshold bands.** Discussion was mid-flight 2026-05-09; no resolution committed. Whether 0.45–0.60 is genuine tightness or status-quo-bias employer baseline remains open. Resolution also gates Claim 10 (V/U-line propagation).
-2. **Labour Claim 10 — V/U-line propagation.** Depends entirely on Claim 3 resolution. Not actionable until Claim 3 is settled.
-3. **Policy — 3×2 conditional grid for `can2y_overnight_spread` × `action_state`.** Analyst synthesis; same construct class as the Labour Claim 2 decoder (which was Tier 3 resolved by softening). No patch applied during convention sweep — deferred as judgment item.
+1. **Labour Claim 3 — V/U threshold bands.** **RESOLVED 2026-05-09 (Tier 3).** Bands relabelled to empirical descriptors (bottom-of-history / low / elevated / high / exceptionally high) with locked-in paragraph framing. Labour-tightness research confirmed three evidence anchors for the resolution. Verification log updated.
+2. **Labour Claim 10 — V/U-line propagation.** **RESOLVED 2026-05-09 (Tier 3).** Claim 3 resolution unblocked Claim 10. Verification log updated.
+3. **Policy — 3×2 conditional grid for `can2y_overnight_spread` × `action_state`.** **RESOLVED 2026-05-09 (Tier 3).** Dropped per user decision 2026-05-09; same construct class as Labour Claim 2 and Inflation Claim 3 (both previously rejected). Framework prose retains interpretive logic as paragraph framing; continuous tier handles magnitude.
 4. **Output gap implementation.** Valet path confirmed (`INDINF_OUTGAPMPR_Q`, via data-source probe). User wants HP-filter-based potential GDP comparison added alongside. Awaiting implementation in `fetch.py` + framework wiring.
 5. **Real wage benchmark.** Added to Labour framework per user direction during sweep; framework cites live computation but no current-state assessment exists yet (Tier 1 placeholder).
 
@@ -83,8 +88,8 @@ All mechanical defects and factual corrections from the original five-section Ti
 | Threshold values disagreeing with project data (Policy bocfed_spread, GDP housing-trough, Financial USDCAD, Housing anchors) | **RESOLVED** — All retuned per convention sweep; Tier 3 in per-section verification logs |
 | Citation conflation (Housing CMHC, Financial MPR vs SAN, GDP BCC wording) | **RESOLVED** — Corrected in framework prose during sweep |
 | Threshold values asserted without primary-source backing (Inflation 3 thresholds, Labour Claim 4, GDP inventories) | **RESOLVED** — All retuned to empirical P80 per convention; sources in distribution analysis files |
-| Rigid n×n decoder (Inflation Claim 3 four-state breadth, Policy 3×2 grid) | Inflation Claim 3: **RESOLVED** — breadth classification dropped per user Q1 decision. Policy 3×2 grid: **open** (judgment item, not addressed in convention sweep) |
-| US heuristic transferred to Canada (Labour Claims 3, 10) | Claim 3: **RESOLVED** Tier 3 (provisional, re-review). Claim 10: **open** — blocked on Claim 3 resolution |
+| Rigid n×n decoder (Inflation Claim 3 four-state breadth, Policy 3×2 grid) | Inflation Claim 3: **RESOLVED** — breadth classification dropped per user Q1 decision. Policy 3×2 grid: **RESOLVED** — dropped per user decision 2026-05-09; prose retains interpretive logic. |
+| US heuristic transferred to Canada (Labour Claims 3, 10) | **RESOLVED** Tier 3 — both claims resolved 2026-05-09. Claim 3: bands relabelled to empirical descriptors with locked-in framing. Claim 10: unblocked by Claim 3 resolution. |
 | Indicator-naming-leak risk (Labour Claim 9, Financial Claim 10) | Low priority; not addressed in sweep |
 
 ### What's now unblocked (2026-05-09 end of day)
@@ -129,6 +134,7 @@ boc-tracker/
 ├── labour.html             ← deep-dive scaffolding (placeholder); embeds Beveridge curve via iframe
 ├── housing.html            ← deep-dive scaffolding (placeholder)
 ├── financial.html          ← deep-dive scaffolding (placeholder)
+├── reference/              ← personal-reference documents (PDFs, Word docs, research artifacts; gitignored)
 ├── data/                   ← all fetched CSVs + generated blurbs (source-of-truth for build.py)
 │   ├── CPI series: cpi_all_items.csv (SA v41690914), cpi_all_items_nsa.csv (NSA v41690973),
 │   │     cpi_food.csv, cpi_energy.csv, cpi_goods.csv, cpi_services.csv, cpi_shelter.csv,
@@ -741,3 +747,5 @@ These were considered 2026-05-09 against the project's actual failure modes (see
 8. **Author display name** — `AUTHOR_DISPLAY_NAME = "jayzhaomurray"` in `build.py`.
 
 9. **Vector ID label drift** — the `cpi_services` comment was historically wrong (claimed table 18-10-0006-01, actually 18-10-0004-01); `cpi_all_items` was mislabelled NSA but is actually SA. Both fixed. **Verify any new vector ID against cube metadata (`getSeriesInfoFromVector`) before adding it.**
+
+10. **Hook `if` filter mis-firing.** The `pre-commit-checkpoint.sh` hook fires the system-reminder on any Bash tool call, not just `git commit`-prefixed commands. The configured `if "Bash(git commit*)"` permission-rule filter isn't gating the hook firing as expected. Worth investigating — either the filter syntax needs adjustment or the hook execution logic doesn't honour the if clause for system-reminder injection. Doesn't block work; just adds noise.
