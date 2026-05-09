@@ -646,77 +646,38 @@ All six sections (`policy`, `inflation`, `gdp`, `labour`, `housing`, `financial`
 
 ## Next steps, in priority order
 
-### 1. Apply `distribution_conventions.md` to remaining indicators (sweep)
-
-`bocfed_spread` is the worked example (commits `c994fb0` + this one). The same treatment should land on every other indicator the framework tiers — each one gets tail axis + descriptor pair metadata at definition, retuned thresholds where empirical percentiles are claimed, and dual classification (BoC frame + empirical) for BoC-band indicators. Order suggested by audit-defect severity:
-
-- **Policy:** `can2y_overnight_spread` (audit found this one VERIFIED, just needs vocabulary update to convention)
-- **Inflation:** the four-state breadth classification + three unsourced calibration thresholds (Inflation Claim 3 — also needs the convention's BoC-band rule for the 2% target / 1-3% range)
-- **Financial:** USDCAD stress-corridor anchors (Financial Claim 2 already flagged; convention application replaces mechanical patches)
-- **GDP:** housing-trough anchors and ±3pp inventories threshold (GDP Claim 4 + others)
-- **Housing:** cyclical anchors (Housing Claim 2 + others)
-- **Labour:** Claims 4, 7, 9 thresholds + Claim 3 V/U bands (Labour Claim 3 still flagged for dedicated re-review per Tuesday's note)
-
-Each section's sweep is roughly: read the section's framework prose, identify each tier-language claim, retune thresholds against project data using `analyses/`-style scripts where needed, write per-indicator metadata, mark verification log entries Tier 3.
-
-### 2. Set `ANTHROPIC_API_KEY` in repo Secrets to activate nightly CI blurb regen
+### 1. Set `ANTHROPIC_API_KEY` in repo Secrets to activate nightly CI blurb regen
 
 Local blurb regeneration already works via the Claude Code CLI subscription path -- `python analyze.py --section <id>` works any time `claude` is on PATH and authenticated (no API key needed). What this secret unlocks is the nightly **GitHub Actions** runner: the runner doesn't have the `claude` CLI installed, so CI falls back to the SDK path and gates on `ANTHROPIC_API_KEY`. Until the secret is set, the workflow emits a `::warning::` and skips blurb regen; the last committed `data/blurbs.json` holds. Add the secret at https://github.com/jayzhaomurray/boc-tracker/settings/secrets/actions, then manually dispatch the workflow once to confirm CI blurbs regenerate.
 
-### 3. User iteration on autonomous-draft blurbs (Labour, Financial, GDP, Housing)
+### 2. User iteration on autonomous-draft blurbs (Labour, Financial, GDP, Housing)
 
-Labour Market and Financial Conditions blurbs were generated overnight May 8, 2026; GDP and Housing verified May 8 but also autonomous-draft. Monetary Policy and Inflation went through user iteration and are ground-truth voice. The other four need the same treatment — iterate against the framework writing principles (plain language, semantic preservation, action-state verbs, no journey phrasing, takeaway-first). Before iterating GDP and Labour, wire their blurbs against the rewired compute functions (items above).
+Labour Market and Financial Conditions blurbs were generated overnight May 8, 2026; GDP and Housing verified May 8 but also autonomous-draft. Monetary Policy and Inflation went through user iteration and are ground-truth voice. The other four need the same treatment — iterate against the framework writing principles (plain language, semantic preservation, action-state verbs, no journey phrasing, takeaway-first). Before iterating GDP and Labour, wire their blurbs against the rewired compute functions (framework patches landed 2026-05-09).
 
-### 4. Regenerate all four autonomous-draft blurbs (after framework patches land)
+### 3. Regenerate four autonomous-draft blurbs (now unblocked)
 
-Labour, Financial Conditions, GDP, and Housing blurbs are autonomous drafts generated May 8, 2026. All four compute functions have since been rewired (GDP: commit b51bef0; Labour: commit 945fa8f; Housing: May 2026 CREA/affordability wiring). The actual blocker is the framework defects surfaced in the 2026-05-09 audit -- the morning-review patches (bocfed_spread thresholds, CMHC citation conflation, USDCAD peaks, BCC wording) should land before regenerating so the blurbs don't bake stale anchors. Once framework patches are accepted, regenerate all four locally via `python analyze.py --section <id>` (CLI subscription path; no API key needed). This gives the user a clean starting point for the voice-iteration pass (item 2 above).
+Framework patches all landed 2026-05-09 across all six sections (bocfed_spread thresholds, CMHC citation conflation, USDCAD peaks, BCC wording, all framework defects resolved). Blurb regen is now a clean operation. Run `python analyze.py --section <id>` for Labour, Financial, GDP, and Housing locally (CLI subscription path; no API key needed). This gives the user a clean starting point for the voice-iteration pass (item 2 above). Inflation and Policy were user-iterated previously and are ground-truth voice.
 
-### RBA two-sided labour methodology — replicate for Canada
+### 4. RBA two-sided labour methodology — replicate for Canada
 
 User raised 2026-05-09 after reviewing labour-tightness research. The intent is to ensure the Labour deep-dive covers BOTH demand-side AND supply-side labour-market signals as the RBA does ([RBA Bulletin April 2024 — "Assessing Full Employment in Australia"](https://www.rba.gov.au/publications/bulletin/2024/apr/assessing-full-employment-in-australia.html)), so the framework can detect tightness asymmetrically (demand-side complaint without supply-side bargaining power — the Canadian 2018-2019 / 2022 pattern). The RBA's specific signals: vacancies + employment intentions on the demand side; **job switching rates (ABS Labour Mobility), underemployment (R-indicators analog), hours worked** on the supply side. Canadian equivalents mostly identified but not all in dashboard. Substantive gap: **no Canadian economy-wide voluntary quit-rate series.** Closest path is reconstructing from LFS gross flows (Table 14-10-0125). Full mapping in memory at `~/.claude/projects/.../memory/project_rba_methodology.md`. User wants to search for closer Canadian comparables to ABS Labour Mobility later.
 
-### BOS labour-shortage indicators — candidate Valet pull
+### 5. BOS labour-shortage indicators — candidate Valet pull
 
 Came up during the V/U fifth-pass discussion 2026-05-09. The dashboard currently does not pull BOS labour-shortage indicators; this is the central reason V/U band labels had to be retitled to purely empirical descriptors (we can't claim "employers are reporting shortages" when we don't observe it). Closing this epistemic gap via a Valet probe + fetch.py addition would let blurbs make stronger statements. Probe: search Valet series list for `BOS`, `LABOUR_SHORTAGE`, `BOS_*`. If found, add to fetch.py and integrate into Labour section as a complement to V/U.
 
-### Real-wage benchmark prose extension
+### 6. Real-wage benchmark prose extension
 
 The Labour convention sweep (commit `90bdb5d`) added live real-wage computation across 4 measures (LFS-all, LFS-permanent, SEPH, LFS-Micro). Framework prose needs a small extension to make the cross-check rule explicit: any "tight" assertion in blurbs must be wage-pressure-confirmed (real wage Y/Y > 0 AND nominal wage Y/Y above productivity baseline). Currently the rule is in the V/U paragraph framing; pulling it into the Labour Thresholds block would make it more visible. Small edit, deferred from V/U fifth-pass to keep that patch focused.
 
-### 5. Eventually: deep-dive Monetary Policy page
+### 7. Deep-dive implementation (Monetary Policy, Labour Market, GDP, Housing, Inflation, Financial)
 
-A separate page for practitioner-grade detail that doesn't fit on the overview:
-- Yield curve term structure (5Y, 10Y, 30Y; 2Y vs 10Y spread for recession indicator)
-- Real rates (nominal yields minus inflation expectations)
-- CORRA tracking target
-- Forward guidance / MPR forecast comparison
-- Balance sheet decomposition (maturity, BoC holdings as % of total GoC debt outstanding)
-- Cross-central-bank balance sheet comparison
+**Scaffolding landed 2026-05-09 (commit `ccf5244`)** — `policy.html`, `inflation.html`, `gdp.html`, `labour.html`, `housing.html`, `financial.html` exist as placeholder pages with shared cross-page nav. Real-chart migration is now blocked only on dependent Valet pulls (yield_5yr, yield_10yr, CORRA for Monetary Policy; BOS labour-shortage for Labour).
 
-### 6. Eventually: deep-dive Labour Market page
-
-All entries below are **tentative** — surfaced during the framework verification pass on 2026-05-09 and earlier labour scoping discussions. The verification log at `markdown-files/verification/labour.md` carries the discussion that motivated several of them.
-
-**Direct-indicator triangulation for the framework's joint-move read.** The overview-page Labour framework reads employment-rate and participation-rate moves together to infer dynamics (layoffs, discouragement, slack). The 9-state combinatorial space means the inference often forces wrong assignments. Direct indicators that would verify or refute specific inferences:
-- LFS reason-for-unemployment (StatsCan Table 14-10-0125) — job-loser share as a direct layoff signal
-- LFS R-indicators (R3, R7, R8 etc.) — broader unemployment / discouragement / part-time-for-economic-reasons
-- Long-term unemployment share (≥27 weeks) — direct persistent-slack signal
-- EI initial claims / beneficiaries (StatsCan Table 14-10-0010 family) — real-time labour-loss read
-
-**Own NAIRU estimation.** The overview-page anchor is currently the IMF's July 2024 estimate (~6%) — a borrowed figure with limited transparency on whether it captures the 2022–2024 immigration-surge skill-mismatch effects. A self-grounded estimate using post-2022 Canadian data (Beveridge-curve regression or Phillips-curve regression with population-growth controls) would materially improve precision. The 2024–2025 immigration policy pullback should reduce structural distortion in the data over time, making a re-estimate increasingly tractable.
-
-**Beveridge curve chart (already built, ready to recycle).** `analyses/beveridge_curve_canada.html` (built 2026-05-09) is a Plotly Beveridge curve for Canada — vacancy rate (3M MA) vs unemployment rate (3M MA), monthly, period-coloured (pre-pandemic, COVID shock, post-COVID overheat, cooling, recent slack). Post-COVID outward shift visually obvious. Source script: `analyses/beveridge_curve_canada.py`. The matching-efficiency / labour-force-composition shift the Labour framework's V/U-bands caveat references is what this chart shows directly. Strong candidate as the lead chart for the deep-dive labour page.
-
-**Other candidate content:**
-- Sectoral employment moves (manufacturing layoffs vs services resilience; trade-exposed sectors during tariff cycles)
-- Hours worked (NSA monthly with 12M MA — deferred from the May 2026 overview add-pass for data-quality reasons)
-- Involuntary part-time rate (annual cadence; deferred similarly)
-- Demographic decompositions (newcomer vs Canadian-born; youth 15–24 vs prime-age 25–54 unemployment)
-- Regional decompositions (provincial labour-market dispersion; Toronto / Vancouver / Calgary employment patterns)
-
-### 7. Multi-page split (eventually)
-
-When chart count grows further, split into themed pages (policy, inflation, labour, housing deep-dives). **Scaffolding landed 2026-05-09 (commit `ccf5244`)** — `policy.html`, `inflation.html`, `gdp.html`, `labour.html`, `housing.html`, `financial.html` exist as placeholder pages with shared cross-page nav. Real-chart migration into these pages is pending (each placeholder section names what would go there).
+For the full chart list and dependencies, see `analyses/deep-dive-design-2026-05-09.md`. Key summary:
+- **Monetary Policy:** 6 charts pending yield_5yr + yield_10yr + CORRA Valet pulls
+- **Labour Market:** Beveridge curve (built 2026-05-09, ready to recycle), supply-side triangulation, NAIRU estimation, sectoral moves
+- **GDP, Housing, Inflation, Financial:** outlined in design doc
 
 ### 7b. Skills worth packaging when triggered (not pre-emptively)
 
