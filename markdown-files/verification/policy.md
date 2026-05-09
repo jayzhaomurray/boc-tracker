@@ -134,6 +134,26 @@ The framework prose is on lines 88-154 of `markdown-files/analysis_framework.md`
 1. Adopt operational-dates-throughout convention or announcement-dates-throughout?
 2. Verify the "$2-5B per operation" size band against term-repo announcement records?
 
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 1: GBPP scope tightening (line 115 vs line 133 use the program name with different implicit scopes — line 115 says "the 2020–2022 GBPP" which extends through reinvestment, while line 133 labels only the QE phase as GBPP)**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+  - **April 1, 2020 – October 27, 2021:** Government of Canada Bond Purchase Program (GBPP), QE phase.
+```
+
+`new_string`:
+```
+  - **April 1, 2020 – October 27, 2021:** Government of Canada Bond Purchase Program (GBPP) QE phase (the GBPP itself ran through April 2022 including the reinvestment phase below).
+```
+
+*Reason:* Reconciles the QE-phase-only labelling on line 133 with the broader "2020-2022 GBPP" usage on line 115; both reference the same BoC program, which had a QE phase and a reinvestment phase per the BoC's own taxonomy.
+*Source:* https://www.bankofcanada.ca/markets/market-operations-liquidity-provision/market-operations-programs-and-facilities/government-canada-bond-purchase-program/ — BoC's own GBPP page describes the program as spanning both phases.
+*Verification log change*: mark Defect 2 (GBPP scope ambiguity) with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+
 ---
 
 ## Claim 3: $20-60B post-QT settlement-balance target (Gravelle, March 2024)
@@ -202,6 +222,44 @@ None on this specific claim. The framework's parenthetical citation is accurate.
 
 None.
 
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 1: Floor-system April 2022 date precision (tighten "April 2022" to "April 13, 2022" for consistency with day-precise dates elsewhere in the timeline)**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+- `boc_settlement_balances` level: the operating regime indicator. The BoC adopted the floor system as its **permanent operating regime in [April 2022](https://www.bankofcanada.ca/2022/04/bank-of-canada-provides-operational-details-for-quantitative-tightening-and-announces-that-it-will-continue-to-implement-monetary-policy-using-a-floor-system/)** ("the floor system will remain in place even after QT has run its course").
+```
+
+`new_string`:
+```
+- `boc_settlement_balances` level: the operating regime indicator. The BoC adopted the floor system as its **permanent operating regime on [April 13, 2022](https://www.bankofcanada.ca/2022/04/bank-of-canada-provides-operational-details-for-quantitative-tightening-and-announces-that-it-will-continue-to-implement-monetary-policy-using-a-floor-system/)** ("the floor system will remain in place even after QT has run its course").
+```
+
+*Reason:* Day-precise dates appear throughout the surrounding timeline (April 1 2020, October 27 2021, April 25 2022, January 29 2025, March 5 2025); aligning April 2022 to April 13 2022 closes the precision gap.
+*Source:* https://www.bankofcanada.ca/2022/04/bank-of-canada-provides-operational-details-for-quantitative-tightening-and-announces-that-it-will-continue-to-implement-monetary-policy-using-a-floor-system/ — press release is dated April 13, 2022.
+*Verification log change*: mark Defect 1 (date precision) with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+
+**Patch 2: Same date precision in line 150 thresholds banner**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+- **Floor system permanent since April 2022; QT ran April 25, 2022 – January 29, 2025**
+```
+
+`new_string`:
+```
+- **Floor system permanent since April 13, 2022; QT ran April 25, 2022 – January 29, 2025**
+```
+
+*Reason:* Same date-precision tightening; the threshold banner already uses day-precise dates for the QT window, so April 2022 should match.
+*Source:* https://www.bankofcanada.ca/2022/04/bank-of-canada-provides-operational-details-for-quantitative-tightening-and-announces-that-it-will-continue-to-implement-monetary-policy-using-a-floor-system/ — press release is dated April 13, 2022.
+*Verification log change*: same — mark Defect 1 with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+
 ---
 
 ## Claim 5: bocfed_spread empirical-distribution thresholds since 1996
@@ -264,6 +322,82 @@ None of these alternatives are documented in `analysis_framework.md` or the veri
 
 1. **What window / resolution / alignment was originally used to compute the bocfed_spread thresholds?** Without that, this audit cannot reconcile the framework's numbers with the data.
 2. **If the empirical thresholds need updating to ~150bp = top 10%, ~190bp = top 5%, recompute the tier banner in `analyze.py` and the framework prose together.** The framework's late-2024-onward "rare" episode characterization may also need revisiting — under the corrected thresholds, was 2024-onward actually "rare" or merely "unusual"?
+
+### Proposed patches (mechanical only — judgment items deferred)
+
+These patches correct the **fact errors** (the median value and the percentile labels) at the existing ±50/100/150 anchors, *without* shifting the anchors themselves. Whether to retune the anchors to ~150bp/~190bp so the "top 10% / top 5%" language reattaches cleanly is a JUDGMENT call deferred to the user.
+
+**Patch 1: Correct median and percentile labels in the framework's per-spread paragraph (line 114)**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+- BoC−Fed spread (`bocfed_spread`): level and direction. Negative spread (BoC below Fed) is broadly CAD-negative; positive supports CAD. Empirical distribution since 1996 (median |spread| 38bp): **±50bp = notable** (top half); **±100bp = unusual** (top 10%, flag prominently); **±150bp = rare** (top 5%, reserved for cycle-defining episodes — 1995–98, late-2024-onward).
+```
+
+`new_string`:
+```
+- BoC−Fed spread (`bocfed_spread`): level and direction. Negative spread (BoC below Fed) is broadly CAD-negative; positive supports CAD. Empirical distribution since 1996 (median |spread| 62.5bp, monthly resolution): **±50bp = notable** (top ~58%); **±100bp = unusual** (top ~18%, flag prominently); **±150bp = rare** (top ~10%, reserved for cycle-defining episodes — 1996–98, late-2024-onward).
+```
+
+*Reason:* The cited percentile labels ("top half", "top 10%", "top 5%") are factually wrong against the project data and the median value (38bp) is wrong by ~25bp. Correcting both leaves the tier ladder (notable / unusual / rare) intact and lets the user separately decide whether to shift the threshold anchors so the percentile language reattaches at "top 10% / top 5%". 1995-98 is also tightened to 1996-98 to match the data window.
+*Source:* Project data — `data/overnight_rate.csv` × `data/fed_funds.csv`, monthly N=364, 1996-01 to 2026-04. Quoted directly from this verification log: median |spread| 62.5 bp; |spread| ≤ 50 bp = 41.8% (so ±50bp = top 58%); |spread| ≤ 100 bp = 82.1% (so ±100bp = top 18%); |spread| ≤ 150 bp = 89.8% (so ±150bp = top 10%).
+*Verification log change*: mark Defect 1 (CRITICAL: Threshold-vs-data mismatch) with "(partial mechanical patch proposed 2026-05-09 — corrects median and percentile labels; threshold-anchor shift deferred as judgment; awaiting user accept/reject)".
+
+**Patch 2: Correct percentile labels in the line-144 threshold banner**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+- **`bocfed_spread`:** ±50bp notable; ±100bp unusual (top 10% of observations since 1996); ±150bp rare (top 5%)
+```
+
+`new_string`:
+```
+- **`bocfed_spread`:** ±50bp notable (top ~58%); ±100bp unusual (top ~18% of observations since 1996, monthly resolution); ±150bp rare (top ~10%)
+```
+
+*Reason:* Same factual correction as Patch 1; the threshold banner duplicates the percentile labels and must move in lockstep.
+*Source:* Same project-data computation as Patch 1.
+*Verification log change*: same — mark Defect 1 (CRITICAL) with the partial-mechanical-patch note.
+
+**Patch 3 (code patch): Remove the "verified May 2026" claim from the line-90 status banner where it covers `bocfed_spread`**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+> **VERIFICATION STATUS: verified end-to-end (May 2026).** Every analytical claim audited against BoC primary sources (r* update, floor system announcement, settlement-balance target, QT operational timeline) and empirical distributions (BoC-Fed spread tiers, Canada 2Y-overnight tiers, correlation with `bocfed_spread`); 2Y term-premium magnitudes and regime distortions sourced from BoC ACM literature; balance-sheet anchors (~$120B baseline, ~$575B March 2021 peak) verified directly from `boc_total_assets`. Compute and format functions in `analyze.py`; blurb in `data/blurbs.json` under `policy`.
+```
+
+`new_string`:
+```
+> **VERIFICATION STATUS: Tier 2 audit 2026-05-09 — not user-reviewed.** Most BoC primary-source claims (r* update, floor system announcement, settlement-balance target, QT operational timeline) and the Canada 2Y-overnight empirical distribution and the bocfed-vs-can_us_2y correlation reproduce against project data. **Open defects** (see `markdown-files/verification/policy.md`): bocfed_spread tier percentile labels do not match project data; 2Y term-premium magnitudes (0–40 bp / 20–60 bp) not surfaced by the cited Financial Stability Indicators page; the 3×2 conditional grid for `can2y_overnight_spread × action_state` is analyst synthesis presented as canonical. Balance-sheet anchors (~$120B baseline, ~$575B March 2021 peak) verified directly from `boc_total_assets`. Compute and format functions in `analyze.py`; blurb in `data/blurbs.json` under `policy`.
+```
+
+*Reason:* The line-90 banner asserts "verified end-to-end" coverage that the audit could not reproduce for at least Claims 5, 7, 10, and 11. Replacing it with a Tier-2-with-defects banner is a mechanical fix (the existing banner's specific claim is contradicted by the verification log itself). This also brings the banner in line with the tier glossary in `_tiers.md`.
+*Source:* This verification log file — `markdown-files/verification/policy.md`, lines 7 and 562, plus the per-claim audit findings.
+*Verification log change*: mark this as part of the same partial-mechanical-patch tracking note (Patches 1-3 hang together).
+
+**Patch 4 (code patch): Update the `bocfed_spread` tier banner in `analyze.py` line ~581 to mark percentile labels as approximate**
+
+*Code patch* — File: `analyze.py`, approximate line: `~581`.
+
+`old_string`:
+```
+BoC - Fed spread:                {v['bocfed_spread']:+.2f}pp   tier: {v['bocfed_tier']}  (typ <+/-0.5pp; notable >=+/-0.5pp; unusual >=+/-1.0pp; rare >=+/-1.5pp)
+```
+
+`new_string`:
+```
+BoC - Fed spread:                {v['bocfed_spread']:+.2f}pp   tier: {v['bocfed_tier']}  (typ <+/-0.5pp; notable >=+/-0.5pp ~top 58%; unusual >=+/-1.0pp ~top 18%; rare >=+/-1.5pp ~top 10%; monthly 1996-onward)
+```
+
+*Reason:* The tier-classification anchors (`_classify_bocfed`) themselves are not changed in this mechanical pass; only the descriptive percentile labels in the banner are corrected to match the data. Whether to shift the underlying anchors so the labels round to top-10% / top-5% is the judgment call deferred to the user.
+*Source:* Same project-data computation as Patch 1 — `data/overnight_rate.csv` × `data/fed_funds.csv`, monthly 1996-01 to 2026-04.
+*Verification log change*: mark Cross-check note "Code (`analyze.py`) and prose agree with each other but disagree with data" with "(partial mechanical patch proposed 2026-05-09 — banner percentile labels updated; anchor-shift deferred; awaiting user accept/reject)".
 
 ---
 
@@ -479,6 +613,16 @@ Framework: *"±50bp = notable (top half); ±100bp = unusual (top 10%, flag promi
 ### Open questions
 
 1. Same as Claim 5: what was the original methodology for these thresholds, and should they be recomputed and updated in both prose and code?
+
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 1: "1995–98" historical anchor → "1996–98" (data starts 1996-01, so 1995 is not in the underlying series)**
+
+This patch is **already folded into Claim 5 Patch 1** above (the 1995-98 → 1996-98 change is part of the same line-114 edit that corrects the median and percentile labels). Recording it here as Claim 11's mechanical defect for traceability — accepting Claim 5 Patch 1 also resolves this defect.
+
+*Verification log change*: mark Defect 2 ("1995-98 historical anchor") with "(patch proposed 2026-05-09 via Claim 5 Patch 1; awaiting user accept/reject)".
+
+The other Claim 11 defects (code-and-prose-disagree-with-data; late-2024 recharacterization) are addressed by Claim 5's patches and Claim 5's deferred judgment items respectively.
 
 ---
 

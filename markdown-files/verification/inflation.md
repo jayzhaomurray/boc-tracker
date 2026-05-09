@@ -309,6 +309,28 @@ The BoC describes the multi-measure approach in the Oct 2025 MPR In Focus: *"und
 2. User to manually retrieve BoC Expectations definitions page text and SWP 2025-5 body to confirm the BoC's exact framing.
 3. CSCE methodology note (per the BoC overview page): the CSCE is a quarterly rotating-panel survey of ~2,000 households, conducted Feb / May / Aug / Nov. The framework correctly says "quarterly" in the data line.
 
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 1: soften the 5y-vs-1y ranking from declarative to anchor-diagnostic framing**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+Consumer 1-year-ahead (CSCE) reflects near-term expectations; the 5-year-ahead measure is the long-run anchor and the more important one for assessing whether expectations have slipped.
+```
+
+`new_string`:
+```
+Consumer 1-year-ahead (CSCE) reflects near-term expectations; the 5-year-ahead measure is the long-run anchor measure and is more diagnostic of whether expectations have slipped.
+```
+
+*Reason:* The BoC's recurring monetary-policy phrasing — *"Longer-term inflation expectations remain anchored"* — and the title of SWP 2025-5 ("Anchored Inflation Expectations: What Recent Data Reveal") support the *"long-run anchor"* framing in spirit but do not explicitly rank the 5y above the 1y. The original wording *"the long-run anchor and the more important one"* asserts a definitive ranking the BoC does not publish; *"a long-run anchor measure"* + *"more diagnostic of"* preserves the analytical point without the overstatement.
+
+*Source:* BoC Staff Working Paper 2025-5, *"Anchored Inflation Expectations: What Recent Data Reveal"* (https://www.bankofcanada.ca/2025/01/staff-working-paper-2025-5/) — paper title verifies the BoC's "anchored" framing. BoC monetary-policy communications recurringly use *"Longer-term inflation expectations remain anchored"* (web search synthesis 2026-05-09 across MPRs / opening statements). Neither source ranks 5y above 1y as "more important," so the patch removes the rank assertion while keeping the anchor framing.
+
+*Verification log change* (in this file): mark verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+
 ---
 
 ## Claim 7: BOS ABOVE3 ~54% in late 2023 to ~11% in Q1 2026

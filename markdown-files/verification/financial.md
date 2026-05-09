@@ -64,6 +64,44 @@ And the threshold-block restatement:
 1. Recast the derivation to make the gasoline-retail-vs-WTI assumption explicit, and add an empirical anchor (e.g. recent 12-month gasoline-vs-WTI elasticity from `data/cpi_energy.csv` and `data/wti.csv`)?
 2. Or keep the simplified 0.35 pp as a back-of-envelope and flag it as such?
 
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 1: re-derive the headline-CPI gasoline impulse with realistic WTI-to-pump pass-through**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+- **WTI Y/Y as headline CPI impulse.** Gasoline carries roughly 3.7% weight in the StatsCan CPI basket (2025 basket update). A 10% drop in WTI passes through to pump prices on a 2–6 week lag, suppressing headline CPI by about 0.35 pp on impact. The effect is mechanical and front-loaded; it does not systematically pass through to core CPI at comparable magnitude. WTI Y/Y is therefore a primary driver of the headline-vs-core inflation gap in any given month.
+```
+
+`new_string`:
+```
+- **WTI Y/Y as headline CPI impulse.** Gasoline carries roughly 3.7% weight in the StatsCan CPI basket (2025 basket update). Crude is roughly 40–50% of the Canadian pump price (the rest is refining, taxes, retail margin), so a 10% drop in WTI mechanically passes through to gasoline retail at roughly 4–5% on a 2–6 week lag, suppressing headline CPI by roughly 0.15–0.20 pp on impact. The effect is mechanical and front-loaded; it does not systematically pass through to core CPI at comparable magnitude. WTI Y/Y is therefore a primary driver of the headline-vs-core inflation gap in any given month.
+```
+
+*Reason:* The 0.35 pp figure requires unstated 100% WTI-to-pump pass-through; with BoC's actual ~40–50% crude share the mechanical impulse is roughly half that.
+*Source:* https://www.bankofcanada.ca/2024/06/what-you-pay-for-at-the-pump/ — BoC names crude, refining, taxes, retail margin and exchange rate as pump-price components; external industry trackers (Canadian Fuels Association) place crude at 40–50% of retail.
+*Verification log change*: mark Claim 1 verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+
+**Patch 2: update the threshold-block restatement to match the re-derived magnitude**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+- **WTI Y/Y < 0** = mechanical disinflationary impulse on headline CPI; magnitude ~0.35 pp per 10% oil decline (via gasoline, 3.7% basket weight).
+```
+
+`new_string`:
+```
+- **WTI Y/Y < 0** = mechanical disinflationary impulse on headline CPI; magnitude ~0.15–0.20 pp per 10% oil decline (via gasoline, 3.7% basket weight × ~40–50% crude share of pump price).
+```
+
+*Reason:* Threshold block must stay consistent with the re-derived signal block (Patch 1).
+*Source:* Same as Patch 1.
+*Verification log change*: same as Patch 1.
+
 ---
 
 ## Claim 2: USDCAD stress corridor 1.45–1.47 (Jan 2016 = 1.457; Mar 2020 = 1.466; Dec 2024–Jan 2025 = 1.44–1.45)
@@ -107,6 +145,26 @@ And the threshold-block restatement:
 1. Replace the three peak values with the data-verified ones (1.4592 / 1.4539 / 1.4459 or 1.4601 depending on window choice)?
 2. Qualify the corridor framing — "post-2008 modern stress corridor" — and explicitly note the 1998-2003 regime as a separate context?
 3. Update the Dec 2024–Jan 2025 episode to "Dec 2024–Feb 2025" and adjust the cited peak?
+
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 3: replace the three named USDCAD peak values with the project-data-verified ones**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+The historical stress corridor for CAD weakness is **1.45–1.47**, hit in three episodes: January 2016 oil crash (1.457), March 2020 COVID dual shock (1.466), and December 2024–January 2025 trade-policy episode (1.44–1.45).
+```
+
+`new_string`:
+```
+The historical stress corridor for CAD weakness is **1.45–1.47**, hit in three episodes: January 2016 oil crash (1.4592), March 2020 COVID dual shock (1.4539), and December 2024–January 2025 trade-policy episode (1.4459).
+```
+
+*Reason:* Two of three named peaks (Jan 2016, Mar 2020) don't match `data/usdcad.csv`; the Dec 2024–Jan 2025 figure should be a single number, not a range, to match the other two episodes' format.
+*Source:* `data/usdcad.csv` — daily BoC noon-rate file, peaks within each episode window: 2016-01-20 = 1.4592; 2020-03-23 = 1.4539; 2025-01-31 = 1.4459. (Corridor-bounds qualification and 1998–2003 regime context deferred as judgment.)
+*Verification log change*: mark Claim 2 verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
 
 ---
 
@@ -157,6 +215,44 @@ And the threshold-block restatement:
 2. Drop "12–18 months" or replace with "over the first year, with the rate-of-inflation impulse peaking and decaying by ~2 years per dp2015-91 Figure 2"?
 3. Either source the post-COVID-stability claim or remove it?
 
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 4: replace the mis-paired pass-through ranges with dp2015-91's actual point estimates**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+- **CAD pass-through to CPI.** A 10% sustained CAD depreciation passes through to total CPI at roughly **0.3–0.6 pp over 12–18 months**, concentrated in goods (BoC Discussion Paper 2015, dp2015-91). On core/CPIX the effect is smaller (~0.1–0.3 pp). The pass-through coefficient does not appear to have shifted materially post-COVID. The "1–2 pp" figure that appears in some earlier framings corresponds to a 25–30% depreciation episode (the 2012–2015 cycle), not a 10% move.
+```
+
+`new_string`:
+```
+- **CAD pass-through to CPI.** A 10% sustained CAD depreciation passes through to total CPI at roughly **0.6 pp** in the long run, concentrated in goods (BoC Discussion Paper 2015, dp2015-91). On core/CPIX the effect is smaller (~0.3 pp). The pass-through coefficient does not appear to have shifted materially post-COVID. The "1–2 pp" figure that appears in some earlier framings corresponds to a 25–30% depreciation episode (the 2012–2015 cycle), not a 10% move.
+```
+
+*Reason:* dp2015-91 reports point estimates (0.6 pp on total CPI, 0.3 pp on CPIX) from a single regression. The framework's "0.3–0.6 pp" range mis-pairs the two point estimates as the bounds of one range; "0.1–0.3 pp" extends below the source's CPIX point estimate without basis. (Time-horizon "12–18 months" deferred as judgment per known-defects list; post-COVID-stability sourcing deferred as judgment.)
+*Source:* dp2015-91 page 5: *"Long-run ERPT to CPIX and total CPI is estimated at 3 and 6 per cent, respectively. In other words, a 10 per cent depreciation in the Canadian dollar is estimated to boost CPIX inflation by 0.3 percentage points and total CPI inflation by 0.6 percentage points."* https://www.oar-rao.bank-banque-canada.ca/record/6365/files/dp2015-91.pdf
+*Verification log change*: mark Claim 3 verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+
+**Patch 5: update the threshold-block restatement of CAD pass-through**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+- **~10% sustained CAD move ≈ 0.3–0.6 pp goods/total CPI over 12–18 months**, ~0.1–0.3 pp on core. Not the older 1–2 pp figure (which was for 25–30% depreciations).
+```
+
+`new_string`:
+```
+- **~10% sustained CAD move ≈ 0.6 pp goods/total CPI in the long run**, ~0.3 pp on core (dp2015-91 point estimates). Not the older 1–2 pp figure (which was for 25–30% depreciations).
+```
+
+*Reason:* Threshold block must match the re-stated point estimates (Patch 4). "12–18 months" left to judgment review.
+*Source:* Same as Patch 4.
+*Verification log change*: same as Patch 4.
+
 ---
 
 ## Claim 4: "1–2 pp" figure for 25–30% depreciation (2012–2015 cycle)
@@ -185,6 +281,26 @@ dp2015-91, page 7 quote (above): *"ERPT is currently boosting CPIX inflation by 
 ### Open questions
 
 1. Replace "1-2 pp" with "~1 pp on total CPI / ~0.6 pp on CPIX" with the dp2015-91 page-7 multi-pronged-analysis citation? Drop the spurious 2 pp ceiling.
+
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 6: replace the unsourced "1–2 pp" upper bound with dp2015-91's actual multi-pronged assessment**
+
+*Framework prose change* in `markdown-files/analysis_framework.md` (note: this patch should be applied after Patch 4, since Patch 4 rewrites the surrounding bullet but leaves the "1–2 pp" sentence intact):
+
+`old_string`:
+```
+The "1–2 pp" figure that appears in some earlier framings corresponds to a 25–30% depreciation episode (the 2012–2015 cycle), not a 10% move.
+```
+
+`new_string`:
+```
+The "1–2 pp" figure that appears in some earlier framings is on the high side of dp2015-91's own multi-pronged assessment of the 2012–2015 cycle, which boosted total CPI by ~0.9–1.1 pp and CPIX by ~0.5–0.7 pp from a roughly 26% depreciation — not a 10% move.
+```
+
+*Reason:* dp2015-91 page 7 puts the 2012-2015 cycle's actual assessed impact at 0.9–1.1 pp on total CPI; the "2 pp" upper bound has no source.
+*Source:* dp2015-91 page 7: *"Based on this multi-pronged analysis, we assess that ERPT is currently boosting CPIX inflation by 0.5 to 0.7 percentage points and total inflation by 0.9 to 1.1 percentage points."* Page 1: *"the depreciation of the Canadian dollar of about 26 per cent vis-à-vis the U.S. dollar since September 2012."*
+*Verification log change*: mark Claim 4 verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
 
 ---
 
@@ -238,6 +354,44 @@ The Alberta Central "0.4 since 2005" averages roughly check out (2003–2014 sub
 1. Replace "post-2016, the relationship is statistically weak" with "the rolling correlation has fallen sharply post-2023; the regression coefficient on energy prices in CAD models has been statistically non-significant since 2016 (Alberta Central)" — separating the two statistical statements?
 2. Drop or source the repatriation-shares claim?
 
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 7: separate the two statistical statements about the post-break CAD–oil relationship**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+- **CAD–oil correlation has structurally weakened.** Pre-2014 the rolling 1-year correlation between CAD and WTI was roughly 0.4 and energy prices were significant in CAD models. Post-2016, the relationship is statistically weak — Alberta Central research finds energy price coefficients become non-significant. Smaller proportions of oil revenues are repatriated than during the 2010s peak. Treat the petrocurrency relationship as a weak prior, not a strong one. Co-movement when present is informative; divergence is no longer surprising and isn't strong evidence of a non-commodity driver dominating by itself.
+```
+
+`new_string`:
+```
+- **CAD–oil correlation has structurally weakened.** Pre-2014 the rolling 1-year correlation between CAD and WTI was roughly 0.4 and energy prices were significant in CAD models. The regression coefficient on energy prices in CAD models has been statistically non-significant from 2016 onward (Alberta Central). The rolling-correlation magnitude itself only fell sharply post-2023; from 2016 through 2023 the rolling 52-week correlation magnitude sat in the 0.38–0.46 range — comparable to or stronger than the pre-2014 baseline. Treat the petrocurrency relationship as a weak prior, not a strong one. Co-movement when present is informative; divergence is no longer surprising and isn't strong evidence of a non-commodity driver dominating by itself.
+```
+
+*Reason:* Framework's "post-2016 statistically weak" conflates two distinct statistical findings. The Alberta Central regression-coefficient result is genuinely 2016-dated; the rolling-correlation collapse is post-2023 per project data. (Repatriation-shares claim deferred as judgment per known-defects-list — no separate source retrieved.)
+*Source:* Alberta Central, *"The Canadian dollar: A petro-currency no more"* (https://albertacentral.com/intelligence-centre/economic-news/the-canadian-dollar-a-petro-currency-no-more/): *"From 1997 to 2014, the coefficient associated with energy commodity prices is significant and of anticipated sign … from 2016 to 2024, the coefficient becomes non-significant."* Project data (`data/wti.csv`, `data/usdcad.csv`, weekly Friday-resampled, 52-week rolling correlation of weekly pct changes): 2016-2020 mean = -0.455; 2020-2023 mean = -0.381; 2023-2026 mean = -0.119.
+*Verification log change*: mark Claim 5 verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+
+**Patch 8: update the petrocurrency threshold-block restatement**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+- **Petrocurrency relationship is a weak prior post-2016** — energy-price coefficients in CAD models are statistically non-significant; rate differential + FX risk premium do the heavy lifting.
+```
+
+`new_string`:
+```
+- **Petrocurrency relationship is a weak prior** — energy-price coefficients in CAD models have been statistically non-significant since 2016 (Alberta Central); rolling correlation magnitude only collapsed post-2023 in project data; rate differential + FX risk premium do the heavy lifting.
+```
+
+*Reason:* Threshold block must mirror Patch 7's clarified split between the two statistical findings.
+*Source:* Same as Patch 7.
+*Verification log change*: same as Patch 7.
+
 ---
 
 ## Claim 6: BoC MPR Jan 2025 In Focus three drivers — trade policy primary; rate diff ~25%; FX risk premium ~75%
@@ -289,6 +443,44 @@ The Alberta Central "0.4 since 2005" averages roughly check out (2003–2014 sub
 1. Re-attribute the decomposition to SAN 2025-2 (with the MPR In Focus as the qualitative summary)?
 2. Recast the "trade policy" driver from a separate channel into "the FX risk premium spike has been associated by BoC with trade-policy uncertainty"?
 3. Flag "~75%" as inferred (100 - "a little more than one-quarter") rather than quoted?
+
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 9: re-attribute the 25%/75% decomposition to SAN 2025-2 and flag "~75%" as inferred**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+- **What drives CAD when it diverges from oil.** Per [BoC MPR January 2025 In Focus](https://www.bankofcanada.ca/publications/mpr/mpr-2025-01-29/in-focus-2/), three dominant drivers in 2024–2025: (a) trade policy / political uncertainty (described as the primary 2024–2025 driver); (b) BoC–Fed rate differential (about 25% of the August–December 2024 4.5% depreciation); (c) FX risk premium (about 75% of that same episode). The earlier framing "rate differentials drive CAD via UIP" captures only the smaller of these channels — UIP is the long-run intuition; the FX risk premium and political uncertainty premium do most of the short-run work.
+```
+
+`new_string`:
+```
+- **What drives CAD when it diverges from oil.** Per [BoC SAN 2025-2](https://www.bankofcanada.ca/2025/02/staff-analytical-note-2025-2/) (with [MPR January 2025 In Focus](https://www.bankofcanada.ca/publications/mpr/mpr-2025-01-29/in-focus-2/) as the qualitative summary), the August–December 2024 4.5% depreciation breaks down as: (a) BoC–Fed rate differential — "a little more than one-quarter" of the move; (b) FX risk premium — "most" of the remainder (~75%, inferred as the residual); (c) trade policy / political uncertainty associated by BoC with the FX-risk-premium spike. The earlier framing "rate differentials drive CAD via UIP" captures only the smaller of these channels — UIP is the long-run intuition; the FX risk premium and political uncertainty premium do most of the short-run work.
+```
+
+*Reason:* Specific quantitative decomposition (the 4.5% magnitude, the rate-differential share, the FX-risk-premium share) is in SAN 2025-2; the MPR In Focus carries only the qualitative version. The "~75%" figure is the analyst's residual inference from "a little more than one-quarter" + "most," not a quoted figure — it should be flagged as such. The structural recasting of "trade policy" from a separate channel into the FX-risk-premium-driver is deferred as judgment.
+*Source:* SAN 2025-2 (https://www.bankofcanada.ca/2025/02/staff-analytical-note-2025-2/): *"The Canadian dollar fell by 4.5% between August and the end of 2024."* … *"The widening gap between the model's expected interest rates in Canada and the United States explains a little more than one-quarter of this depreciation."* … *"variations in the [exchange rate risk] premium … played a larger role in 2024, accounting for most of [the year-end depreciation]."* MPR Jan 2025 In Focus, by contrast: *"The widening interest rate differential is estimated to account for a relatively modest share of the overall depreciation. … Most of the depreciation is explained by the foreign exchange rate risk premium"* — qualitative only.
+*Verification log change*: mark Claim 6 verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+
+**Patch 10: update the synthesis-paragraph attribution to SAN 2025-2's actual numbers**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+When CAD and oil are moving in opposite directions, name the tension and identify the dominant non-commodity driver from BoC's recent decompositions (rate differential ~25%, FX risk premium ~75% of recent episodes, plus trade-policy uncertainty as the primary 2024–2025 driver).
+```
+
+`new_string`:
+```
+When CAD and oil are moving in opposite directions, name the tension and identify the dominant non-commodity driver from BoC's recent decomposition (per SAN 2025-2: rate differential a little more than one-quarter, FX risk premium "most" of the remainder; the FX-risk-premium spike has been associated by BoC with trade-policy uncertainty).
+```
+
+*Reason:* Synthesis paragraph propagates the same attribution defect; must be updated in lockstep with Patch 9. Drops the unsourced "~75%" inference from the synthesis prose; re-attributes to SAN 2025-2.
+*Source:* Same as Patch 9.
+*Verification log change*: also mark Claim 11 verdict with "(synthesis attribution patch proposed 2026-05-09; awaiting user accept/reject)".
 
 ---
 
@@ -474,6 +666,46 @@ BoC MPRs canonically include Current Conditions sections that discuss credit spr
 
 1. Hold synthesis update until Claims 1-3 and 6 are resolved, then propagate?
 2. Or strip numeric specifics from synthesis (lead with structural framings: oil disinflation magnitude, CAD direction-and-stress, BoC-decomposition flavour, WCS-WTI signal) and let the bullets above carry the verified numbers?
+
+### Proposed patches (mechanical only — judgment items deferred)
+
+These patches propagate the upstream mechanical fixes (Patches 1, 4) into the synthesis paragraph. Patch 10 (Claim 6 propagation) is already drafted above. Indicator-leak repetition is judgment and deferred.
+
+**Patch 11: propagate the re-derived gasoline impulse into the synthesis paragraph**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+Lead with whether oil is adding to or subtracting from headline CPI pressure, with the magnitude grounded in the gasoline-basket calculation (~0.35 pp per 10% WTI move).
+```
+
+`new_string`:
+```
+Lead with whether oil is adding to or subtracting from headline CPI pressure, with the magnitude grounded in the gasoline-basket calculation (~0.15–0.20 pp per 10% WTI move, accounting for the ~40–50% crude share of pump price).
+```
+
+*Reason:* Synthesis must mirror Patch 1's re-derivation of the headline-CPI impulse from realistic WTI-to-pump pass-through.
+*Source:* Same as Patch 1.
+*Verification log change*: mark Claim 11 verdict with "(synthesis-propagation patches proposed 2026-05-09; awaiting user accept/reject)".
+
+**Patch 12: propagate the dp2015-91 point estimates into the synthesis paragraph**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+if cumulative move is large enough to matter, note the 0.3–0.6 pp goods CPI pass-through magnitude over 12–18 months.
+```
+
+`new_string`:
+```
+if cumulative move is large enough to matter, note the ~0.6 pp total CPI pass-through magnitude (concentrated in goods) per dp2015-91.
+```
+
+*Reason:* Synthesis must mirror Patch 4's point-estimate restatement (drops the mis-paired range and the "12–18 months" horizon, which is itself a separate judgment-deferred item).
+*Source:* Same as Patch 4.
+*Verification log change*: same as Patch 11.
 
 ---
 

@@ -54,6 +54,41 @@ Repeated in thresholds bullet:
 - Source the "since 1977" anchor against a CMHC publication (e.g. Housing Information Monthly) or StatsCan annual table, and either confirm the date or replace with "since 1990 (project data start)."
 - Recompute the recent 10-year average against project data and update to ~234k (or specify a calendar window).
 
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 1: Soften "since 1977" anchor to "since 1990 (project data start)" and update recent 10-year average from 245k to 234k**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+Long-run average since 1977 is ~194k SAAR. Recent 10-year averages have been higher (~245k) but **CMHC has explicitly flagged that even 245k is well below the affordability-restoring pace**
+```
+
+`new_string`:
+```
+Long-run average since 1990 (project data start) is ~194k SAAR. Recent 10-year averages have been higher (~234k) but **CMHC has explicitly flagged that even ~234k is well below the affordability-restoring pace**
+```
+
+*Reason:* The "since 1977" anchor cannot be verified against project data (series begins 1990); the 10-year mean is 233-235k depending on window, not 245k.
+*Source:* Project data `data/housing_starts.csv` (StatsCan vector 52300157). Mean Jan 1990 - Dec 2024 = 193.33k; recent 10-year mean (May 2016 - Apr 2026) = 235.46k; calendar 2016-2025 = 233.99k.
+
+**Patch 2: Update thresholds bullet to match**
+
+`old_string`:
+```
+- **Long-run average since 1977: ~194k SAAR; recent 10-year average: ~245k SAAR.**
+```
+
+`new_string`:
+```
+- **Long-run average since 1990 (project data start): ~194k SAAR; recent 10-year average: ~234k SAAR.**
+```
+
+*Reason:* Same data correction as Patch 1; threshold bullet must match prose.
+*Source:* Same as Patch 1.
+*Verification log change*: mark verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+
 ---
 
 ## Claim 2: CMHC 2023 Housing Shortages report — 4.8M-unit gap and 430-500k starts/year through 2030
@@ -105,6 +140,41 @@ CBC News URL: https://www.cbc.ca/news/business/cmhc-affordability-homes-1.756552
 3. Tighten upper bound to 480k (or quote the range "430,000-480,000").
 4. Decide whether to keep the 2023 report reference at all (the 3.5M figure may also warrant inclusion, since it sets the historical baseline that the 2025 report updated).
 
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 1: Re-attribute the 4.8M / 430-480k figures to the June 2025 "Solving the Affordability Crisis" report and update the horizon to 2035 (CRITICAL)**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+the 2023 CMHC Housing Shortages report estimated Canada needs ~430-500k starts/year through 2030 to close the 4.8M-unit affordability gap.
+```
+
+`new_string`:
+```
+the June 2025 CMHC report "Housing Shortages in Canada: Solving the Affordability Crisis" estimated Canada needs 430,000-480,000 starts/year through 2035 to close the up-to-4.8M-unit affordability gap.
+```
+
+*Reason:* The 4.8M and 430-480k figures come from the June 2025 CMHC report, not the 2023 Housing Shortages report; the 2023 report's figure is 3.5M units by 2030. The framework's "500k" upper bound is also a rounding-up beyond CMHC's 480k.
+*Source:* CMHC, "Housing Shortages in Canada: Solving the Affordability Crisis" (June 2025), https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/research-reports/accelerate-supply/housing-shortages-canada-solving-affordability-crisis. Public reporting (CBC News, June 19 2025): *"Up to 4.8 million new homes will need to be built over the next decade to restore affordability levels last seen in 2019"* and *"Between 430,000 and 480,000 new housing units are needed per year across the ownership and rental markets by 2035."*
+
+**Patch 2: Update the thresholds bullet to match**
+
+`old_string`:
+```
+**Affordability-restoring pace per CMHC: 430-500k/year.**
+```
+
+`new_string`:
+```
+**Affordability-restoring pace per CMHC (June 2025 report, by 2035): 430,000-480,000/year.**
+```
+
+*Reason:* Same correction as Patch 1; threshold bullet must match prose. Upper bound tightened from 500k to 480k.
+*Source:* Same as Patch 1.
+*Verification log change*: mark verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+
 ---
 
 ## Claim 3: Permits-to-starts lag (2-10 months single-detached, 9-15+ months multi-unit) cited as CMHC Spring 2026 analysis
@@ -152,6 +222,26 @@ All three city-specific lag numbers are verified. The 2-10 / 9-15 month split is
 1. Replace "CMHC's Spring 2026 analysis" with **"CMHC Observer (April 17, 2026), 'Building permits are early indicators of housing market sentiment'"**.
 2. Optionally specify the Calgary/Toronto/Montreal numbers in days (517/334/486.5) rather than approximating to months — but the framework's month rounding is reasonable for a thresholds bullet.
 
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 1: Re-attribute permits-to-starts lag analysis from "Spring 2026" Supply Report to April 17 2026 Observer article**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+per CMHC's Spring 2026 analysis, single-detached permits lead starts by 2-10 months, but **multi-unit / high-rise permits lead by 9-15+ months** (Calgary high-rise ~17 months; Toronto ~11 months; Montreal ~16 months).
+```
+
+`new_string`:
+```
+per CMHC's April 17, 2026 Observer article "Building permits are early indicators of housing market sentiment," single-detached permits lead starts by 2-10 months, but **multi-unit / high-rise permits lead by 9-15+ months** (Calgary high-rise ~17 months; Toronto ~11 months; Montreal ~16 months).
+```
+
+*Reason:* The Spring 2026 Housing Supply Report does not contain a permits-to-starts lag analysis; the cited numbers are from the April 17 2026 Observer article. Numbers are correct; only the citation needs updating.
+*Source:* CMHC Observer, "Building permits are early indicators of housing market sentiment" (April 17, 2026), https://www.cmhc-schl.gc.ca/observer/2026/canadas-construction-pulse-permits-lead-starts-confirm. Direct quote: *"high-rise structures show a longer delay between the acquisition of a building permit and the housing start (roughly 9 to 15 months) relative to single-detached houses (roughly 2-10 months)."*
+*Verification log change*: mark verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+
 ---
 
 ## Claim 4: SAN 2025-21 mortgage renewal claims — ~60% renew 2025-2026; ~60% see higher payments; 5-year fixed face 15-20% increases
@@ -191,6 +281,26 @@ Additional finding (not currently in framework prose): *"Holders of these mortga
 1. Tag the citation as **SAN 2025-21**, not "FSR 2025." Or, if you want to keep both, add the FSR 2025 update separately (next claim).
 2. Drop the "vs. December 2024 levels" qualifier or source it.
 
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 1: Correct the threshold-bullet citation tag from "FSR 2025" to "SAN 2025-21"**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+- **Mortgage renewal stress (FSR 2025 quantification): ~60% of outstanding mortgages renew 2025-26; 5-year fixed holders face 15-20% payment increases.**
+```
+
+`new_string`:
+```
+- **Mortgage renewal stress (BoC SAN 2025-21): ~60% of outstanding mortgages renew 2025-26; 5-year fixed holders face 15-20% payment increases.**
+```
+
+*Reason:* The three numbers (60% / 60% / 15-20%) are direct quotes from BoC Staff Analytical Note 2025-21, not FSR 2025. FSR 2025 cites SAN 2025-21 but reports a smaller average payment increase across all renewing mortgages.
+*Source:* BoC Staff Analytical Note 2025-21, "How will mortgage payments change at renewal? An updated analysis" (July 2025), https://www.bankofcanada.ca/2025/07/staff-analytical-note-2025-21/. Direct quote: *"mortgage holders with a five-year, fixed rate contract renewing in 2025 or 2026 could face an average payment increase of around 15%-20%."*
+*Verification log change*: mark verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+
 ---
 
 ## Claim 5: SAN 2023-19 payment projection — $1,200 (Feb 2022) → $1,600 by end-2027 (+34%); variable-rate fixed-payment up to ~54%
@@ -223,6 +333,26 @@ The variable-rate-fixed-payment ~54% number is a point estimate (54%, not "up to
 ### Open questions for user review
 
 1. Tighten "up to ~54%" to "+54% (median variable-rate fixed-payment holder by end-2027)" to match SAN 2023-19's own framing.
+
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 1: Tighten "up to ~54%" wording to match SAN 2023-19's "+54%" point projection**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+SAN 2023-19 projects median monthly mortgage payment rising from $1,200 (Feb 2022) to $1,600 by end-2027 (+34%); variable-rate fixed-payment holders face up to ~54% increase.
+```
+
+`new_string`:
+```
+SAN 2023-19 projects median monthly mortgage payment rising from $1,200 (Feb 2022) to $1,600 by end-2027 (+34%); the median variable-rate fixed-payment holder faces a +54% increase by end-2027.
+```
+
+*Reason:* SAN 2023-19 reports +54% as a point projection for the median variable-rate fixed-payment holder, not "up to ~54%." The "up to" softening misrepresents a specific median figure as a range upper bound.
+*Source:* BoC Staff Analytical Note 2023-19, "The impact of higher interest rates on mortgage payments" (December 2023), https://www.bankofcanada.ca/2023/12/staff-analytical-note-2023-19/. Direct quote: *"the median payment for this mortgage type [variable-rate, fixed-payment] increases sharply in those years, reaching $2,190 by the end of 2027 — an increase of 54% from the February 2022 level."*
+*Verification log change*: mark verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
 
 ---
 
@@ -296,6 +426,41 @@ Verified directly by reading the CSV (StatsCan vector 52300157, monthly SAAR, un
 2. Update COVID April 2020 to 161k.
 3. Update annual 2021 peak to ~274k.
 4. Or, if these numbers came from a different source (CMHC annual press release vs. StatsCan monthly SAAR), name the source so the discrepancy is intentional and traceable.
+
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 1: Update the 2008-09 trough range and COVID April 2020 reading in the recessionary-territory bullet**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+- **Housing starts < 180k SAAR** = recessionary territory. 2008-09 recession bottomed at ~118-149k annualized; COVID April 2020 monthly SAAR was ~165k. Below 180k signals acute construction contraction.
+```
+
+`new_string`:
+```
+- **Housing starts < 180k SAAR** = recessionary territory. 2008-09 recession bottomed at ~112-150k annualized (April 2009 minimum 111.8k); COVID April 2020 monthly SAAR was 161k. Below 180k signals acute construction contraction.
+```
+
+*Reason:* Project data shows the 2008-09 minimum at 111.78k (April 2009), not 118k; COVID April 2020 was 161.00k, not 165k. Framework consistently rounded toward making cyclical episodes look milder.
+*Source:* Project data `data/housing_starts.csv` (StatsCan vector 52300157, monthly SAAR). 2008-09 bottom 8 months: 111.78, 115.72, 127.86, 132.31, 137.57, 141.14, 142.73, 150.31; COVID April 2020 = 161.00k.
+
+**Patch 2: Update the 2021 annual peak in the elevated-readings bullet**
+
+`old_string`:
+```
+- **Housing starts > 280k SAAR** = elevated; readings above 300k SAAR are exceptional (March 2021 peaked at ~321k; November 2021 was ~306k). Annual starts peaked at ~271k in 2021.
+```
+
+`new_string`:
+```
+- **Housing starts > 280k SAAR** = elevated; readings above 300k SAAR are exceptional (March 2021 peaked at ~320k; November 2021 was ~305k). Annual starts peaked at ~274k in 2021.
+```
+
+*Reason:* Project data shows 2021 annual starts at 273.75k (~274k), not 271k; March 2021 = 319.84k (~320k); November 2021 = 305.21k (~305k). Within-rounding adjustments on the monthly figures, plus a meaningful correction on the annual.
+*Source:* Project data `data/housing_starts.csv` (StatsCan vector 52300157, monthly SAAR averaged annually).
+*Verification log change*: mark verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
 
 ---
 
@@ -380,6 +545,26 @@ The pre-2015 IQR (0.30-0.33) is much tighter than the framework's "0.28-0.40" or
 1. Verify "custom-built homes" exclusion against the StatsCan NHPI methodology PDF directly.
 2. Replace "contractor-reported" with "builder-reported."
 
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 1: Replace "contractor-reported" with "builder-reported" for NHPI**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+NHPI tracks contractor-reported prices for newly built single-detached, semi-detached, and row homes across 27 CMAs;
+```
+
+`new_string`:
+```
+NHPI tracks builder-reported prices for newly built single-detached, semi-detached, and row homes across 27 CMAs;
+```
+
+*Reason:* NHPI is derived from the CMHC Market Absorption Survey, which captures builder-reported prices, not contractor-reported. "Builder-reported" is the precise term.
+*Source:* StatsCan NHPI methodology (Survey 2310 / Catalogue 62-007-X), https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=2310. Methodology highlight: *"Sales values…from the Canada Mortgage and Housing Corporation's Market Absorption Survey provide the weights."*
+*Verification log change*: mark verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+
 ---
 
 ## Claim 10: CREA MLS HPI methodology + "BoC's affordability indicator anchored to it"
@@ -427,6 +612,26 @@ The framework conflates the two. The BoC page does not mention CREA MLS HPI in t
 1. **Correct the methodology description:** "CREA MLS HPI is a hybrid repeat-sales / hedonic index on MLS transactions (resale-dominant)."
 2. **Correct the BoC anchoring claim:** The BoC's affordability indicator uses the **MLS average resale price** (a 6-month moving average), not the CREA MLS HPI. Either (a) replace the CREA MLS HPI claim with the MLS average resale price, (b) drop the BoC-anchoring sentence entirely if the dashboard isn't using the BoC's affordability indicator's house-price input, or (c) verify whether the BoC has any *other* indicator that is in fact anchored to the CREA MLS HPI (the Financial Vulnerability Indicators page may use HPI; not yet checked).
 3. The framework also separately describes CREA MLS HPI as a series in `data/` (line 225: "BoC Financial Vulnerability Indicators; available 2014-present"). Verify whether the BoC Financial Vulnerability Indicators page uses the CREA MLS HPI directly — that may be the source of the framework's "anchored" claim, but if so the wording should specifically name FVI, not "the BoC's affordability indicator."
+
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 1: Correct CREA MLS HPI methodology description from "hedonic" to "hybrid repeat-sales + hedonic" and correct the BoC anchoring claim (CRITICAL)**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+CREA MLS HPI is hedonic on all MLS transactions (resale-dominant) and is the index the BoC's own affordability indicator is anchored to.
+```
+
+`new_string`:
+```
+CREA MLS HPI is a hybrid repeat-sales / hedonic constant-quality index on MLS resale transactions. The BoC's affordability indicator uses a different series — a 6-month moving average of the MLS *average resale price* — not the CREA MLS HPI.
+```
+
+*Reason:* Two distinct mechanical errors in one sentence. (a) CREA's own methodology describes the HPI as a hybrid model combining repeat-sales and hedonic components, not purely hedonic. (b) The BoC's Real Estate Market Definitions page explicitly states the affordability indicator's house-price input is the MLS average resale price (6-month moving average), not the CREA MLS HPI; these are different series.
+*Source:* CREA MLS HPI methodology (https://www.crea.ca/files/HPI_Methodology-July-2023-rev-ENG.pdf): *"The MLS-HPI uses a hybrid model, combining repeat sales and hedonic components."* BoC Real Estate Market Definitions (https://www.bankofcanada.ca/rates/indicators/capacity-and-inflation-pressures/real-estate-market-definitions/): *"P_0 is the 6-month moving average of the Multiple Listing Service average resale price; therefore, this measure strictly reflects existing homes and would include all housing types sold in Canada."*
+*Verification log change*: mark verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
 
 ---
 
@@ -501,6 +706,26 @@ The Y/Y stayed in **double digits** (10-12%) for ~10 consecutive months from May
 ### Open questions for user review
 
 1. Update to "peaked at ~12% in August 2021" or similar.
+
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 1: Update NHPI 2021-22 episode peak from "9-10%+" to "~12% in August 2021"**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+- **NHPI Y/Y > 5%** nationally = meaningful acceleration; the typical national range in non-boom years is 0-4%. The 2021-22 episode reached 9-10%+; the 1989 peak was 16.6% nationally (Toronto-Oshawa +32.7%, Vancouver +14.2%).
+```
+
+`new_string`:
+```
+- **NHPI Y/Y > 5%** nationally = meaningful acceleration; the typical national range in non-boom years is 0-4%. The 2021-22 episode peaked at ~12% in August 2021, with double-digit Y/Y readings sustained for ~10 consecutive months (May 2021 - Feb 2022); the 1989 peak was 16.6% nationally (Toronto-Oshawa +32.7%, Vancouver +14.2%).
+```
+
+*Reason:* Project data shows the 2021-22 NHPI Y/Y peak at 12.17% (August 2021) with double-digit readings sustained for ~10 months, not "9-10%+." The framework's "9-10%+" understates the actual peak by roughly 2 percentage points.
+*Source:* Project data `data/new_housing_price_index.csv`. Y/Y values: May 2021 +11.3%, Jun 2021 +11.9%, Jul 2021 +11.9%, **Aug 2021 +12.17% (peak)**, Sep 2021 +11.3%, Dec 2021 +11.6%, Jan 2022 +11.8%, Mar 2022 +11.0%.
+*Verification log change*: mark verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
 
 ---
 

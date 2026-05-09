@@ -209,6 +209,26 @@ All entries below are Tier 2 (autonomously verified 2026-05-09; not user-reviewe
 3. Soften the "two-consecutive-quarters rule explicitly rejected" framing to "the BCC does not use a mechanical two-consecutive-quarters rule" — accurate without overclaiming an explicit rejection?
 4. Update the 2022-2023 explanatory gloss from "depth/breadth criteria not met" to "persistence and breadth criteria not met (declines were 0.1% per quarter, bracketed by growth, employment grew through both)."
 
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 1: Replace BCC criteria names with canonical "amplitude, duration, and scope".**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+Council methodology requires a "pronounced, pervasive, and persistent decline" assessed on **depth, duration, and breadth** (across sectors and indicators including employment).
+```
+
+`new_string`:
+```
+Council methodology requires a "pronounced, persistent, and pervasive decline" assessed on **amplitude, duration, and scope** (across sectors and indicators including employment).
+```
+
+*Reason:* Both the criteria triple and the literal-quoted phrase are presented in framework prose as BCC terminology, but the BCC's canonical methodology page names the three dimensions as "amplitude, duration, and scope" and orders the adjectives as "pronounced, persistent, and pervasive." The framework's wording is an analyst paraphrase dressed as a primary-source citation.
+*Source:* https://cdhowe.org/publication/business-cycle-council-methodology/ — *"to identify a recession three dimensions need to be considered simultaneously: amplitude, duration, and scope"*. Word-order quote *"pronounced, persistent and pervasive"* from the March 2024 "So Far, So Good" communiqué (https://cdhowe.org/publication/so-far-so-good-cd-howe-institute-business-cycle-council-declares-recession/).
+*Verification log change*: mark verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+
 ---
 
 ## Claim 5: 2008-09 housing trough ~118-149k annualized; COVID April 2020 monthly SAAR ~165k
@@ -260,6 +280,26 @@ All entries below are Tier 2 (autonomously verified 2026-05-09; not user-reviewe
 
 1. Update the framework's housing-trough numbers to match the project's CSV exactly, or tolerate ~5k of rounding for narrative simplicity?
 2. Should the framework note these are the project's CSV-vintage numbers (CMHC has historical revisions), or treat them as authoritative?
+
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 1: Update housing-trough numerical anchors to match project CSV vintage.**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+2008-09 recession bottomed at ~118-149k annualized; COVID April 2020 monthly SAAR was ~165k.
+```
+
+`new_string`:
+```
+2008-09 recession bottomed at ~112-150k annualized; COVID April 2020 monthly SAAR was ~161k.
+```
+
+*Reason:* Project CSV ground truth shows the 2008-09 trough hit 111.781k (April 2009), below the framework's 118k floor; the COVID April 2020 SAAR is 161.004k, not 165k. The framework's numbers don't reproduce the data the dashboard ships with.
+*Source:* `data/housing_starts.csv` — April 2009 = 111.781; April 2020 = 161.004. Range 2008-12 through 2009-07 spans roughly 112k–150k.
+*Verification log change*: mark verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
 
 ---
 
@@ -355,6 +395,26 @@ No BoC or StatsCan publication located that names ±3pp (or any numerical pp thr
 ### Open questions for user review
 
 1. Soften "price stability, not growth management" to acknowledge the 2021 maximum-sustainable-employment supporting objective?
+
+### Proposed patches (mechanical only — judgment items deferred)
+
+**Patch 1: Acknowledge the 2021 maximum-sustainable-employment supporting objective.**
+
+*Framework prose change* in `markdown-files/analysis_framework.md`:
+
+`old_string`:
+```
+Connect to monetary policy carefully: **the BoC's mandate is price stability, not growth management** — restrictive policy aims to bring inflation back to the 2% target, with slower growth as the transmission effect, not the objective.
+```
+
+`new_string`:
+```
+Connect to monetary policy carefully: **the BoC's primary mandate is price stability via the 2% inflation target** (with a supporting maximum-sustainable-employment objective added in the 2021 framework renewal); growth management per se is not the goal — restrictive policy aims to bring inflation back to the 2% target, with slower growth as the transmission effect, not the objective.
+```
+
+*Reason:* The hard-line "price stability, NOT growth management" framing elides the supporting maximum-sustainable-employment objective that the 2021 framework renewal added. The substantive point (slower growth is a transmission channel, not a goal) is preserved; the framing is brought into line with the BoC's actual post-2021 posture.
+*Source:* https://www.bankofcanada.ca/core-functions/monetary-policy/ — confirms the 2021 framework renewal added the supporting objective that monetary policy should *"continue to support maximum sustainable employment."* The inflation-control target remains the primary anchor: *"At the heart of Canada's monetary policy framework is the inflation-control target, which is the 2% midpoint of the 1%–3% control range."*
+*Verification log change*: mark verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
 
 ---
 
