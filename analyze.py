@@ -1083,29 +1083,61 @@ def compute_housing_values() -> dict:
     nhpi    = load_series("new_housing_price_index")      # index Dec 2016 = 100
     permits = load_series("residential_permits")          # $thousands SA
 
-    # Y/Y and M/M for each
-    starts_yoy = (starts.pct_change(12) * 100).dropna()
-    starts_mom = (starts.pct_change(1)  * 100).dropna()
-    nhpi_yoy   = (nhpi.pct_change(12)   * 100).dropna()
-    nhpi_mom   = (nhpi.pct_change(1)    * 100).dropna()
+    # New series (May 2026 expansion — CREA HPI and affordability wired in alongside
+    # existing dashboard charts; mirrors the labour / GDP wiring pattern).
+    crea    = load_series("crea_mls_hpi")                 # index 2019=100, monthly
+    afford  = load_series("housing_affordability")        # quarterly ratio (mortgage payment / income)
+
+    # Y/Y and M/M for monthly series
+    starts_yoy  = (starts.pct_change(12) * 100).dropna()
+    starts_mom  = (starts.pct_change(1)  * 100).dropna()
+    nhpi_yoy    = (nhpi.pct_change(12)   * 100).dropna()
+    nhpi_mom    = (nhpi.pct_change(1)    * 100).dropna()
     permits_yoy = (permits.pct_change(12) * 100).dropna()
     permits_mom = (permits.pct_change(1)  * 100).dropna()
+    crea_yoy    = (crea.pct_change(12)   * 100).dropna()
+    crea_mom    = (crea.pct_change(1)    * 100).dropna()
 
-    # Earliest of all latest dates
-    latest = min(s.index[-1] for s in [starts, starts_yoy, nhpi, nhpi_yoy, permits, permits_yoy])
+    # Affordability is quarterly — use pct_change(4) for Y/Y (4 quarters back).
+    afford_yoy  = (afford.pct_change(4) * 100).dropna()
 
-    starts_now      = float(asof(starts, latest))
-    starts_now_yoy  = float(asof(starts_yoy, latest))
-    starts_now_mom  = float(asof(starts_mom, latest))
-    starts_3mo_avg  = float(starts.tail(3).mean())  # 3-month moving average to filter noise
+    # Per-metric as-of dates. Cadences differ:
+    #   monthly (StatsCan / BoC Valet):  starts, nhpi, permits, crea
+    #   quarterly (BoC Valet):           housing_affordability
+    # `latest_date` is the max across all so the regen gate fires whenever any feed updates.
+    as_of_starts  = starts.index[-1]
+    as_of_nhpi    = nhpi.index[-1]
+    as_of_permits = permits.index[-1]
+    as_of_crea    = crea.index[-1]
+    as_of_afford  = afford.index[-1]
+    latest        = max(as_of_starts, as_of_nhpi, as_of_permits, as_of_crea, as_of_afford)
 
-    nhpi_now      = float(asof(nhpi, latest))
-    nhpi_now_yoy  = float(asof(nhpi_yoy, latest))
-    nhpi_now_mom  = float(asof(nhpi_mom, latest))
+    starts_now     = float(asof(starts, as_of_starts))
+    starts_now_yoy = float(asof(starts_yoy, as_of_starts))
+    starts_now_mom = float(asof(starts_mom, as_of_starts))
+    starts_3mo_avg = float(starts.tail(3).mean())  # 3-month moving average to filter noise
 
-    permits_now      = float(asof(permits, latest))
-    permits_now_yoy  = float(asof(permits_yoy, latest))
-    permits_now_mom  = float(asof(permits_mom, latest))
+    nhpi_now     = float(asof(nhpi, as_of_nhpi))
+    nhpi_now_yoy = float(asof(nhpi_yoy, as_of_nhpi))
+    nhpi_now_mom = float(asof(nhpi_mom, as_of_nhpi))
+
+    permits_now     = float(asof(permits, as_of_permits))
+    permits_now_yoy = float(asof(permits_yoy, as_of_permits))
+    permits_now_mom = float(asof(permits_mom, as_of_permits))
+
+    # CREA MLS HPI — resale-dominant comparator to NHPI (which excludes condo apartments).
+    # BoC's own affordability indicator is anchored to resale prices; CREA is the resale read.
+    crea_now     = float(asof(crea, as_of_crea))
+    crea_now_yoy = float(asof(crea_yoy, as_of_crea))
+    crea_now_mom = float(asof(crea_mom, as_of_crea))
+
+    # Directional agreement check: when CREA and NHPI disagree on Y/Y sign,
+    # that's an analytical signal about cycle-turn divergence (NHPI lags on downturns
+    # because builders are slow to cut asking prices).
+    common_price_date   = min(as_of_crea, as_of_nhpi)
+    crea_yoy_common     = float(asof(crea_yoy, common_price_date))
+    nhpi_yoy_common     = float(asof(nhpi_yoy, common_price_date))
+    price_direction_agree = (crea_yoy_common > 0) == (nhpi_yoy_common > 0)
 
     # Cycle-position interpretation for starts (HYPOTHESIS-GRADE thresholds).
     # Data is in thousands of units annualized (e.g. 251 = 251,000 SAAR).
@@ -1116,9 +1148,33 @@ def compute_housing_values() -> dict:
     else:
         starts_regime = "near trend"
 
+    # Housing affordability (BoC INDINF_AFFORD_Q) — ratio of mortgage payment to household income.
+    # Higher = less affordable. Historical 2000-2025 range: ~0.28-0.55.
+    # Framing: above ~0.40 is historically elevated (pre-2015 era averaged ~0.30-0.40).
+    afford_now     = float(asof(afford, as_of_afford))
+    afford_yoy_now = float(asof(afford_yoy, as_of_afford))
+
+    # 5-year range position
+    cutoff_5y   = as_of_afford - pd.DateOffset(years=5)
+    afford_5y   = afford[(afford.index >= cutoff_5y) & (afford.index <= as_of_afford)]
+    afford_5y_min = float(afford_5y.min())
+    afford_5y_max = float(afford_5y.max())
+    afford_5y_pct = float((afford_now - afford_5y_min) / (afford_5y_max - afford_5y_min) * 100) \
+                    if afford_5y_max > afford_5y_min else 50.0
+
+    # Historical range position (full 2000-present)
+    afford_hist_min = float(afford.min())
+    afford_hist_max = float(afford.max())
+    afford_hist_pct = float((afford_now - afford_hist_min) / (afford_hist_max - afford_hist_min) * 100) \
+                      if afford_hist_max > afford_hist_min else 50.0
+
     return {
         "latest_date":         latest.strftime("%B %Y"),
-        "as_of":               latest.strftime("%B %Y"),
+        "as_of_starts":        as_of_starts.strftime("%B %Y"),
+        "as_of_nhpi":          as_of_nhpi.strftime("%B %Y"),
+        "as_of_permits":       as_of_permits.strftime("%B %Y"),
+        "as_of_crea":          as_of_crea.strftime("%B %Y"),
+        "as_of_afford":        as_of_afford.strftime("%B %Y"),
 
         "housing_starts":            starts_now,
         "housing_starts_3mo_avg":    starts_3mo_avg,
@@ -1133,30 +1189,65 @@ def compute_housing_values() -> dict:
         "residential_permits":       permits_now,
         "residential_permits_yoy":   permits_now_yoy,
         "residential_permits_mom":   permits_now_mom,
+
+        "crea_hpi":                  crea_now,
+        "crea_hpi_yoy":              crea_now_yoy,
+        "crea_hpi_mom":              crea_now_mom,
+        "price_direction_agree":     price_direction_agree,
+        "crea_yoy_at_common_date":   crea_yoy_common,
+        "nhpi_yoy_at_common_date":   nhpi_yoy_common,
+
+        "affordability":             afford_now,
+        "affordability_yoy":         afford_yoy_now,
+        "affordability_5y_min":      afford_5y_min,
+        "affordability_5y_max":      afford_5y_max,
+        "affordability_5y_pct":      afford_5y_pct,
+        "affordability_hist_min":    afford_hist_min,
+        "affordability_hist_max":    afford_hist_max,
+        "affordability_hist_pct":    afford_hist_pct,
     }
 
 
 def format_housing_values(v: dict) -> str:
-    return f"""== Latest data: {v['as_of']} ==
+    agree_str = "YES — both moving in the same direction" if v['price_direction_agree'] \
+                else "NO — diverging (analytical signal: NHPI may be lagging a cycle turn)"
+    return f"""== Latest data: starts={v['as_of_starts']}, NHPI={v['as_of_nhpi']}, permits={v['as_of_permits']}, CREA={v['as_of_crea']}, affordability={v['as_of_afford']} ==
 
 Housing starts (SAAR; values are in thousands of units annualized — e.g. 251 means 251,000):
   Latest:                      {v['housing_starts']:,.0f}k   (= {int(v['housing_starts']*1000):,} units annualized)
   3-month moving average:      {v['housing_starts_3mo_avg']:,.0f}k   (filters month-to-month noise)
   Y/Y change:                  {v['housing_starts_yoy']:+.1f}%
   M/M change:                  {v['housing_starts_mom']:+.1f}%
-  Regime classification:       {v['housing_starts_regime']}   (HYPOTHESIS-GRADE thresholds: <180k subdued; 180-280k near trend; >280k elevated)
+  Regime classification:       {v['housing_starts_regime']}   (thresholds: <180k subdued; 180-280k near trend; >280k elevated)
 
-New Housing Price Index (Dec 2016 = 100):
+New Housing Price Index (Dec 2016 = 100) — new-home prices only; excludes condo apartments and resale:
   Latest:                      {v['nhpi']:.1f}
   Y/Y change:                  {v['nhpi_yoy']:+.1f}%   (>5% = meaningful price acceleration; <0% = price declines, rare)
   M/M change:                  {v['nhpi_mom']:+.2f}%
 
-Residential building permits (value, SA, leading indicator ~6-12 months ahead of starts):
+CREA MLS HPI (2019 = 100) — resale-dominant comparator to NHPI; BoC affordability index anchored to resale prices:
+  Latest:                      {v['crea_hpi']:.1f}
+  Y/Y change:                  {v['crea_hpi_yoy']:+.1f}%
+  M/M change:                  {v['crea_hpi_mom']:+.2f}%
+  CREA vs NHPI direction agree: {agree_str}
+    (At common date: CREA Y/Y = {v['crea_yoy_at_common_date']:+.1f}%, NHPI Y/Y = {v['nhpi_yoy_at_common_date']:+.1f}%)
+  Note: NHPI tracks builder-reported prices for new single/semi/row homes across 27 CMAs.
+        CREA is hedonic on all MLS transactions (resale-dominant). When they diverge directionally,
+        NHPI is typically the lagging series — builders are slow to cut asking prices on downturns.
+
+Residential building permits (value, SA, leading indicator ~9-15 months ahead of starts for multi-unit/high-rise):
   Latest:                      ${v['residential_permits']/1_000_000:,.2f}B   (raw value: ${v['residential_permits']:,.0f}k)
   Y/Y change:                  {v['residential_permits_yoy']:+.1f}%
   M/M change:                  {v['residential_permits_mom']:+.1f}%
 
-Coverage gap: this framework tracks new construction (starts, permits) and new-home prices (NHPI) only. It does NOT track resale activity (CREA MLS), mortgage rate spreads, mortgage renewal volumes, or regional breakdowns (Toronto / Vancouver vs. rest of Canada). Conclusions are macro-level; flag accordingly when a partial read might mislead.
+Housing Affordability Index (BoC INDINF_AFFORD_Q) — ratio of mortgage payment to household income; higher = less affordable:
+  Latest:                      {v['affordability']:.3f}
+  Y/Y change:                  {v['affordability_yoy']:+.1f}%   (negative = improving affordability)
+  5-year range (2020-present): {v['affordability_5y_min']:.3f} - {v['affordability_5y_max']:.3f}  (current at {v['affordability_5y_pct']:.0f}th pct of 5Y range)
+  Historical range (2000-now): {v['affordability_hist_min']:.3f} - {v['affordability_hist_max']:.3f}  (current at {v['affordability_hist_pct']:.0f}th pct of historical range)
+  Framing: ratio ~0.28-0.40 = pre-2015 era norm; ratio >0.40 = elevated vs. long-run; >0.50 = peak-stress (2022-23 episode).
+
+Coverage gap: this framework now tracks new construction (starts, permits), new-home prices (NHPI), resale prices (CREA HPI), and housing affordability. It does NOT track mortgage rate spreads, MDSR, resale activity / CREA sales counts, units under construction, or regional breakdowns (Toronto / Vancouver vs. rest of Canada). Conclusions are macro-level; flag accordingly when a partial read might mislead.
 """
 
 
@@ -1222,6 +1313,47 @@ Now generate the {section_name} section blurb."""
 
 
 def call_claude(prompt: str, max_tokens: int = 512) -> str:
+    """Dispatch a Claude call to one of two auth paths:
+
+    - Anthropic SDK (paid API, billed per token; requires ANTHROPIC_API_KEY)
+    - claude CLI subprocess (Claude Code subscription path; requires `claude`
+      installed and authenticated locally — see `claude setup-token`)
+
+    Resolution order:
+    1. CLAUDE_AUTH_MODE=api → force SDK; raises if ANTHROPIC_API_KEY unset.
+    2. CLAUDE_AUTH_MODE=cli → force claude CLI subprocess.
+    3. Default: prefer CLI if `claude` is on PATH; fall back to SDK if
+       ANTHROPIC_API_KEY is set; otherwise raise.
+
+    The default favours the subscription path so blurb generation runs against
+    the user's existing Max subscription rather than incurring API charges.
+    Set CLAUDE_AUTH_MODE=api to force the SDK path (e.g. for CI on a runner
+    without the claude CLI installed, or to test API behaviour explicitly).
+    """
+    import os
+    import shutil
+
+    mode = os.environ.get("CLAUDE_AUTH_MODE", "").lower()
+
+    if mode == "api":
+        return _call_claude_api(prompt, max_tokens)
+    if mode == "cli":
+        return _call_claude_cli(prompt, max_tokens)
+
+    # Default resolution: prefer CLI if available.
+    if shutil.which("claude"):
+        return _call_claude_cli(prompt, max_tokens)
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return _call_claude_api(prompt, max_tokens)
+    raise RuntimeError(
+        "No Claude auth path available. Either install Claude Code (so the "
+        "`claude` CLI is on PATH) or set ANTHROPIC_API_KEY. To force a "
+        "specific path, set CLAUDE_AUTH_MODE=cli or CLAUDE_AUTH_MODE=api."
+    )
+
+
+def _call_claude_api(prompt: str, max_tokens: int = 512) -> str:
+    """Call Claude via the Anthropic SDK (paid API)."""
     import anthropic
     client = anthropic.Anthropic()
     response = client.messages.create(
@@ -1230,6 +1362,35 @@ def call_claude(prompt: str, max_tokens: int = 512) -> str:
         messages=[{"role": "user", "content": prompt}],
     )
     return response.content[0].text.strip()
+
+
+def _call_claude_cli(prompt: str, max_tokens: int = 512) -> str:
+    """Call Claude via the `claude` CLI (Claude Code subscription path).
+
+    Passes the prompt on stdin (not argv) — real boc-tracker prompts exceed
+    Windows' ~32KB CreateProcess argv limit when the framework prose is
+    included. `--model` is set explicitly to keep parity with the SDK path.
+
+    `max_tokens` is currently ignored — the claude CLI doesn't expose this
+    parameter via --print, and our prompts already constrain output length
+    via sentence-count instructions in the prompt itself.
+    """
+    import subprocess
+    result = subprocess.run(
+        ["claude", "--print", "--model", MODEL],
+        input=prompt,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    if result.returncode != 0:
+        stderr_snippet = (result.stderr or "")[:500]
+        raise RuntimeError(
+            f"`claude --print` exited with code {result.returncode}.\n"
+            f"stderr: {stderr_snippet}"
+        )
+    return result.stdout.strip()
 
 
 def _normalize_dashes(text: str) -> str:

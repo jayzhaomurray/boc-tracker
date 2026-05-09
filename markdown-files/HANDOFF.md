@@ -494,7 +494,7 @@ All six sections (`policy`, `inflation`, `gdp`, `labour`, `housing`, `financial`
 - **Labour Market:** verified May 8, 2026. NAIRU replaced with BoC's multi-indicator benchmark approach (SAN 2025-17); ~3% wage threshold kept; LFS-Micro composition adjustment per SAN 2024-23; utilization, tightness, and ULC layers wired.
 - **Financial Conditions:** verified May 8, 2026. CAD pass-through corrected to 0.3–0.6 pp per 10% move (BoC DP 2015-91); petrocurrency relationship flagged as structurally weak post-2016; WCS-WTI spread bands established.
 - **GDP & Activity:** verified May 8, 2026. Potential growth range 1.2–1.5% (BoC April 2026 MPR, SAN 2025-14); recession definition corrected to C.D. Howe Business Cycle Council depth/duration/breadth criteria; StatsCan daily ÷4 AR convention made explicit.
-- **Housing:** verified May 8, 2026. CMHC SAAR thresholds anchored; NHPI vs CREA HPI methodology differences noted.
+- **Housing:** verified May 8, 2026. CMHC SAAR thresholds anchored; NHPI vs CREA HPI methodology differences noted. `compute_housing_values` rewired May 2026 to add CREA MLS HPI and housing affordability (per-metric as-of dates; CREA-vs-NHPI directional-agreement signal; affordability 5-year and historical range position).
 
 **Blurb voice quality:** Inflation and Monetary Policy blurbs went through user iteration cycles and represent ground-truth voice. Labour Market, Financial Conditions, GDP, and Housing blurbs were generated autonomously (May 8, 2026) against verified frameworks — prose is unverified by user; expect revision at next review.
 
@@ -513,7 +513,7 @@ All six sections (`policy`, `inflation`, `gdp`, `labour`, `housing`, `financial`
 - [ ] **`ANTHROPIC_API_KEY` secret not set in repo Settings** — workflow code is in place; requires the user to add the secret at https://github.com/jayzhaomurray/boc-tracker/settings/secrets/actions. Until set, blurbs stay at the last manually-seeded values; CI runs green.
 - [ ] **GDP blurb predates `compute_gdp_values` rewiring** — `compute_gdp_values` was rewired to `gdp_total_contribution` (v79448580) in commit `b51bef0`; the saved blurb in `data/blurbs.json` predates this. Regeneration blocked on `ANTHROPIC_API_KEY`.
 - [ ] **Labour blurb predates `compute_labour_values` rewiring** — `compute_labour_values` was rewired in commit `945fa8f` to surface utilization, V/U ratio, and ULC; the saved blurb predates this. Regeneration blocked on `ANTHROPIC_API_KEY`.
-- [ ] **`compute_housing_values` doesn't yet include CREA MLS HPI or housing affordability** — both are on the dashboard and in the framework, but `analyze.py` still only pulls `housing_starts`, `new_housing_price_index`, and `residential_permits`. Housing blurb does not yet reflect these indicators.
+- [ ] **Regenerate housing blurb against the rewired framework** — `compute_housing_values` was rewired in May 2026 to include CREA MLS HPI and housing affordability (mirrors the labour / GDP wiring commits 945fa8f / b51bef0). The saved blurb in `data/blurbs.json` predates the rewiring. Regeneration blocked on `ANTHROPIC_API_KEY` (or the Claude Code subscription workaround).
 - [ ] **Average hours worked + involuntary part-time rate** — flagged as coverage gaps in the labour framework but deferred. Avg hours (V3411411) is NSA-only monthly (would need 12M MA); involuntary PT (table 14-10-0029) is annual-only. Decision pending on whether to add either.
 - [ ] **Output gap as a live indicator** — BoC publishes a live range each MPR (currently -1.5% to -0.5%); GDP section references it but doesn't fetch it.
 - [ ] **Mortgage rate spreads / mortgage debt-service ratio** — flagged in the housing framework's coverage gaps; tracked by BoC FSR but not loaded.
@@ -532,9 +532,9 @@ The single switch that turns the dashboard from "data-and-charts auto-update; bl
 
 Labour Market and Financial Conditions blurbs were generated overnight May 8, 2026; GDP and Housing verified May 8 but also autonomous-draft. Monetary Policy and Inflation went through user iteration and are ground-truth voice. The other four need the same treatment — iterate against the framework writing principles (plain language, semantic preservation, action-state verbs, no journey phrasing, takeaway-first). Before iterating GDP and Labour, wire their blurbs against the rewired compute functions (items above).
 
-### 3. Wire CREA MLS HPI and housing affordability into `compute_housing_values`
+### 3. Regenerate all four autonomous-draft blurbs once `ANTHROPIC_API_KEY` is set
 
-Both indicators are on the dashboard (charts 15 and 17) and have verified framework treatments but are absent from `analyze.py`'s compute function. Extend `compute_housing_values` to pull `crea_mls_hpi` and `housing_affordability`, then regenerate the housing blurb.
+Labour, Financial Conditions, GDP, and Housing blurbs are autonomous drafts generated May 8, 2026. All four compute functions have since been rewired (GDP: commit b51bef0; Labour: commit 945fa8f; Housing: May 2026 CREA/affordability wiring). Regenerating all four in one pass once the API key is available will align the blurbs with the rewired compute functions and give the user a clean starting point for the voice-iteration pass (item 2 above).
 
 ### 4. Eventually: deep-dive Monetary Policy page
 
