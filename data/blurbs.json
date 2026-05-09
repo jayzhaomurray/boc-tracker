@@ -17,7 +17,7 @@
   "labour": {
     "as_of": "April 2026",
     "model": "claude-opus-4-7",
-    "text": "The Canadian labour market continues to loosen, and the cleaner wage measures now look consistent with the 2% inflation target. Unemployment sits at 6.90%—up 40 bps over three months and at the 84th percentile of its 5-year range—and the V/U ratio at 0.33 runs well below the 0.4–0.6 pre-pandemic baseline, a clear slack signal. Employment has fallen 30 bps over three months while participation held flat, consistent with layoffs absorbing the adjustment rather than workers leaving the labour force. Wage dispersion remains wide—raw LFS at 3.93% against composition-adjusted LFS-Micro at 2.60%—but unit labour costs at 1.56% imply productivity near 1%, and LFS-Micro now runs essentially even with services CPI rather than over a percentage point above."
+    "text": "The Canadian labour market continues to loosen, and the cleaner wage measures remain consistent with the 2% inflation target. Unemployment sits at 6.90%—up 40 bps over three months and at the 84th percentile of its 5-year range—and the V/U ratio at 0.33 runs well below the 0.45–0.60 pre-pandemic baseline, a clear slack signal. Employment fell 30 bps over three months while participation held flat, consistent with layoffs absorbing the adjustment rather than workers leaving the labour force. Wage dispersion remains wide—raw LFS at 3.93% against composition-adjusted LFS-Micro at 2.60%—but unit labour costs at 1.56% imply productivity near 1%, in line with BoC trend, and LFS-Micro now runs essentially even with services CPI."
   },
   "housing": {
     "as_of": "March 2026",
