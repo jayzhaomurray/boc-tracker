@@ -127,5 +127,4 @@ Live record of indicators that have had the convention applied. Each entry: tail
 | Indicator | Tail axis | Descriptor | BoC frame | Thresholds | Last computed | Source |
 |---|---|---|---|---|---|---|
 | `bocfed_spread` | `\|spread\|` in bp, monthly month-start, since 1996, N=364 | high / low | none | typical ≤62.5; uncommon to 100; pronounced to 187; rare to 231; extreme >231 | 2026-05-09 | `analyses/bocfed_spread_distribution.py` |
-
-(Other indicators added as the convention is applied.)
+| `can2y_overnight_spread` | `\|spread\|` in bp, monthly month-start, since 2001, N=304 | high (positive, hawkish-priced) / low (negative, dovish-priced) | none | typical ≤32; uncommon to 71; pronounced to 120; rare to 179; extreme >179 | 2026-05-09 | `analyses/can2y_overnight_spread_distribution.py` |

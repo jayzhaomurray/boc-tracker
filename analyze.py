@@ -214,11 +214,19 @@ def _classify_bocfed(s: float) -> str:
 
 
 def _classify_can2y_overnight(s: float) -> str:
+    """Tier classification per markdown-files/distribution_conventions.md.
+
+    Thresholds are empirical percentiles of |spread| in bp, monthly month-start,
+    since 2001, N=304 (last computed 2026-05-09; source
+    analyses/can2y_overnight_spread_distribution.py): P50=32.0, P80=71.4, P95=119.8,
+    P99=178.6.
+    """
     a = abs(s)
-    if a > 1.0:  return "unusual"
-    if a > 0.5:  return "notable"
-    if a > 0.25: return "modest"
-    return "near-zero"
+    if a > 1.786:  return "extreme"
+    if a > 1.198:  return "rare"
+    if a > 0.714:  return "pronounced"
+    if a > 0.320:  return "uncommon"
+    return "typical"
 
 
 def _classify_regime(rate: float, lo: float = 2.25, hi: float = 3.25) -> str:
@@ -591,7 +599,7 @@ BoC - Fed spread:                {v['bocfed_spread']:+.2f}pp   tier: {v['bocfed_
 2-Year yields (as of {v['as_of_yield']}):
   Canada 2Y:                     {v['cad_2y']:.2f}%
   US 2Y:                         {v['us_2y']:.2f}%
-  Canada 2Y - Overnight:         {v['can2y_overnight_spread']:+.2f}pp   tier: {v['can2y_overnight_tier']}  (near-zero <+/-0.25pp; modest >=+/-0.25pp; notable >=+/-0.5pp; unusual >=+/-1.0pp)
+  Canada 2Y - Overnight:         {v['can2y_overnight_spread']:+.2f}pp   tier: {v['can2y_overnight_tier']}  (typical <=0.32pp; uncommon to 0.71pp; pronounced to 1.20pp; rare to 1.79pp; extreme above; monthly 2001+, P50/P80/P95/P99; descriptor: high if positive, low if negative)
     4-week drift:                {v['drift_4w']:+.2f}pp   (tactical repricing)
     12-week drift:               {v['drift_12w']:+.2f}pp   (trend confirmation)
   Canada 2Y - US 2Y:             {v['can_us_2y_spread']:+.2f}pp

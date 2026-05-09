@@ -409,35 +409,15 @@ BoC - Fed spread:                {v['bocfed_spread']:+.2f}pp   tier: {v['bocfed_
 
 ### Provenance tier
 
-**Tier 2 — autonomously verified 2026-05-09.** Not user-reviewed.
+**Tier 3 — resolved 2026-05-09 via convention adoption.** The Tier-2 audit verified the pre-convention numerical claims at daily resolution (median 30bp, ±25bp = 44%, ±50bp = top 35%, ±100bp = top 10%). Convention adoption (same session) retuned to monthly month-start resolution to match `bocfed_spread` methodology and applied the five-tier ladder (typical / uncommon / pronounced / rare / extreme at P50/P80/P95/P99). Percentile script: `analyses/can2y_overnight_spread_distribution.py` (N=304, 2001-01 to 2026-04-01); thresholds: P50=32.0bp, P80=71.4bp, P95=119.8bp, P99=178.6bp. Framework updated at `analysis_framework.md` line ~115 and line ~145; `analyze.py` `_classify_can2y_overnight` and line ~594 banner updated in the same pass. The pre-convention prose (median 30bp; near-zero / notable / unusual vocabulary) is superseded.
 
-### Framework prose (verbatim, line 115)
+### Framework prose (verbatim, line 115) — superseded
 
 > Empirical distribution since 2001 (median |spread| 30bp): **within ±25bp = near-zero** (44%, market broadly aligned with current stance, no clear directional story); **±50bp = notable** (top third); **±100bp = unusual** (top 10%).
 
 ### Verification verdict
 
-**VERIFIED.** Computed from project data, all four numerical claims line up.
-
-### Source — Project data (`data/yield_2yr.csv` × `data/overnight_rate_daily.csv`/`overnight_rate.csv`)
-
-**Methodology:** Daily Canada 2Y yield (2001-01 onwards) joined to overnight rate (daily where available, forward-filled monthly elsewhere). N=6,338 daily observations, range 2001-01-02 to 2026-05-07. |spread| computed in basis points.
-
-**Computed values:**
-- Median |spread|: **30.0 bp** (matches framework's 30bp exactly)
-- |spread| ≤ 25 bp: **44.9% within** (matches framework's 44% near-zero)
-- |spread| ≤ 50 bp: 64.9% within (so ±50bp marks **top 35%, framework says "top third"** — close enough)
-- |spread| ≤ 100 bp: 89.8% within (so ±100bp marks **top 10.2%**, matches framework's "top 10%")
-
-**Verdict:** VERIFIED. The empirical distribution claims for `can2y_overnight_spread` are accurate at daily resolution since 2001-01-02.
-
-### Defects flagged
-
-None on the numerical thresholds themselves. The methodology, however, remains undocumented in framework prose — the user should still be able to verify these without re-deriving the methodology from scratch.
-
-### Open questions
-
-1. Should the methodology (daily resolution; overnight forward-filled from monthly pre-2009) be documented in framework prose or in this verification log?
+**VERIFIED** (original Tier-2 audit, daily resolution). Convention adoption retuned thresholds to monthly resolution; new values verified via `analyses/can2y_overnight_spread_distribution.py`.
 
 ---
 
