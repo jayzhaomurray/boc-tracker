@@ -198,10 +198,18 @@ CPI Breadth:
 # ── Monetary Policy section ──────────────────────────────────────────────────
 
 def _classify_bocfed(s: float) -> str:
+    """Tier classification per markdown-files/distribution_conventions.md.
+
+    Thresholds are empirical percentiles of |spread| in bp, monthly month-start,
+    since 1996, N=364 (last computed 2026-05-09; source
+    analyses/bocfed_spread_distribution.py): P50=62.5, P80=100.0, P95=187.5,
+    P99=231.0.
+    """
     a = abs(s)
-    if a > 1.5:  return "rare"
-    if a > 1.0:  return "unusual"
-    if a > 0.5:  return "notable"
+    if a > 2.310:  return "extreme"
+    if a > 1.875:  return "rare"
+    if a > 1.000:  return "pronounced"
+    if a > 0.625:  return "uncommon"
     return "typical"
 
 
@@ -578,7 +586,7 @@ Policy stance (as of {v['as_of_overnight']}):
   BoC cycle (last 5y):           peak {v['boc_cycle_peak']:.2f}% ({v['boc_cycle_peak_date']}) -> now ({v['boc_distance_from_peak']:+.2f}pp from peak); trough {v['boc_cycle_trough']:.2f}% ({v['boc_cycle_trough_date']})
   Fed cycle (last 5y):           peak {v['fed_cycle_peak']:.2f}% ({v['fed_cycle_peak_date']}) -> now {v['fed_funds']:.2f}% ({v['fed_distance_from_peak']:+.2f}pp from peak); trough {v['fed_cycle_trough']:.2f}% ({v['fed_cycle_trough_date']})
 
-BoC - Fed spread:                {v['bocfed_spread']:+.2f}pp   tier: {v['bocfed_tier']}  (typ <+/-0.5pp; notable >=+/-0.5pp; unusual >=+/-1.0pp; rare >=+/-1.5pp)
+BoC - Fed spread:                {v['bocfed_spread']:+.2f}pp   tier: {v['bocfed_tier']}  (typical <=0.63pp; uncommon to 1.00pp; pronounced to 1.88pp; rare to 2.31pp; extreme above; monthly 1996+, P50/P80/P95/P99; descriptor: high if positive, low if negative)
 
 2-Year yields (as of {v['as_of_yield']}):
   Canada 2Y:                     {v['cad_2y']:.2f}%

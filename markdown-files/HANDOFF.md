@@ -34,7 +34,9 @@ User went to sleep around 04:00 with the prompt "do work overnight that requires
 | 4 | `2a5fef7` | Tier 2 verification audits: Inflation, Policy, GDP, Housing, Financial. Each section gets a per-claim log file. **All five sections have defects.** Three sections have claims demonstrably wrong vs project data. | `markdown-files/verification/{inflation,policy,gdp,housing,financial}.md` |
 | 5 | `e318b0c` | End-of-night status note + per-section verification log links wired into HANDOFF status block. | This file |
 | 6 | `95c9ac5` | **Patch proposals across all six verification logs.** 44 mechanical patches drafted with copy-paste-able old_string / new_string pairs, ready for Edit-tool accept/reject. ~38 judgment items deferred. Restructures morning review from compose-from-scratch to fast accept/reject. | All `markdown-files/verification/*.md` files; "Proposed patches" subsection per claim |
-| 7 | this commit | **Deep-dive site scaffolding.** Multi-page architecture wired into `build.py`: shared cross-page nav bar; 6 placeholder deep-dive pages (one per section); Beveridge curve embedded as a real iframe in the Labour deep-dive. Placeholder content per planned-content list. | `build.py` (`NAV`, `_build_nav_html`, `DEEP_DIVES`, `_assemble_deep_dive_page`); `policy.html`, `inflation.html`, `gdp.html`, `labour.html`, `housing.html`, `financial.html` at project root |
+| 7 | `ccf5244` | **Deep-dive site scaffolding.** Multi-page architecture wired into `build.py`: shared cross-page nav bar; 6 placeholder deep-dive pages (one per section); Beveridge curve embedded as a real iframe in the Labour deep-dive. Placeholder content per planned-content list. | `build.py` (`NAV`, `_build_nav_html`, `DEEP_DIVES`, `_assemble_deep_dive_page`); `policy.html`, `inflation.html`, `gdp.html`, `labour.html`, `housing.html`, `financial.html` at project root |
+| 8 | `c994fb0` | **`distribution_conventions.md` introduced.** Five-tier ladder (typical / uncommon / pronounced / rare / extreme) at central 50/80/95/99% boundaries. Per-indicator metadata (tail axis, descriptor pair). Binary BoC-band frame for indicators with published BoC bands (inflation, policy rate vs neutral, output gap). Synonymic latitude within tier. New First-Moves doc; new "Preserve design rationale sparingly" workflow rule in CLAUDE.md. Designed via long discussion 2026-05-09 (research basis: Mosteller-Youtz 1990, IPCC, EU pharmacovigilance). | `markdown-files/distribution_conventions.md`; CLAUDE.md First Moves §5 + Workflow conventions; `analyses/bocfed_spread_distribution.py` (worked-example data); `analyses/bocfed_spread_38bp_test.md` (methodology drift evidence) |
+| 9 | this commit | **Convention applied end-to-end on `bocfed_spread` (worked example).** Framework prose retuned (`analysis_framework.md` line ~90 verification status, ~114 paragraph, ~144 threshold banner). Code retuned (`analyze.py` `_classify_bocfed` thresholds, line ~589 banner). Verification log Claim 5 marked Tier 3 (resolved via convention adoption); old patch proposals marked superseded. | `markdown-files/analysis_framework.md`; `analyze.py`; `markdown-files/verification/policy.md` Claim 5 |
 
 ### Highest-priority items for the morning review
 
@@ -42,7 +44,7 @@ The cross-section findings reveal a **defect-class pattern**: the same Tier-2-ve
 
 **Immediate-fix candidates** (defects where the framework prose is demonstrably wrong against project data; can be corrected without research):
 
-1. **Policy** — `bocfed_spread` thresholds in framework + `analyze.py` line ~581 disagree with project data. Median is **62.5bp**, not 38bp; ±100bp marks top 18%, not top 10%; ±150bp marks top 10%, not top 5%. Same defective thresholds appear in two places (framework prose + analyze.py code) — code and prose agree with each other but disagree with the data. (`verification/policy.md` Claim 3.)
+1. ~~**Policy** — `bocfed_spread` thresholds in framework + `analyze.py` line ~581 disagree with project data.~~ **Resolved 2026-05-09 via convention adoption** (commits `c994fb0`, this one). Underlying problem (silent methodology drift: thresholds calibrated against daily 2009+ data but labelled "since 1996") addressed at the framework level by introducing `markdown-files/distribution_conventions.md`. Bocfed_spread now has tail axis (`|spread|` monthly month-start since 1996) + descriptor (high/low) + retuned thresholds (P50=62.5bp, P80=100.0bp, P95=187.5bp, P99=231.0bp) per the convention. Tier 3 in `verification/policy.md` Claim 5.
 2. **Housing** — Citation conflation. Framework's *"2023 CMHC Housing Shortages report estimated Canada needs ~430-500k starts/year through 2030 to close the 4.8M-unit affordability gap"* mixes two reports: 2023 report says 3.5M units by 2030; 4.8M / 430-480k figures come from June 2025 "Solving the Affordability Crisis" report targeting 2035. (`verification/housing.md` Claim 2.)
 3. **Financial** — USDCAD stress-corridor peaks don't match project data: framework says "March 2020 (1.466)" but actual `data/usdcad.csv` peak was 1.4539. (`verification/financial.md` Claim 2.)
 4. **GDP** — C.D. Howe BCC criteria mis-named: framework says *"depth, duration, breadth"* with literal quote *"pronounced, pervasive, and persistent decline"*; canonical wording is *"amplitude, duration, scope"* with *"pronounced, persistent, and pervasive"*. (`verification/gdp.md` Claim 4.)
@@ -153,6 +155,7 @@ boc-tracker/
     ├── analysis_framework.md             ← internal analytical brief for blurb generation
     ├── chart_style_guide.md              ← formatting principles + workflow rules (first-read)
     ├── dashboard_purpose.md              ← what the dashboard exists to answer (first-read)
+    ├── distribution_conventions.md       ← five-tier ladder for indicator readings (first-read; adopted 2026-05-09)
     ├── blurb_quality_log.md              ← May 2026 testing-session lessons + open questions
     └── archive/                          ← superseded / deprioritised planning docs
         ├── vision.md
@@ -622,19 +625,32 @@ All six sections (`policy`, `inflation`, `gdp`, `labour`, `housing`, `financial`
 
 ## Next steps, in priority order
 
-### 1. Set `ANTHROPIC_API_KEY` in repo Secrets to activate nightly CI blurb regen
+### 1. Apply `distribution_conventions.md` to remaining indicators (sweep)
+
+`bocfed_spread` is the worked example (commits `c994fb0` + this one). The same treatment should land on every other indicator the framework tiers — each one gets tail axis + descriptor pair metadata at definition, retuned thresholds where empirical percentiles are claimed, and dual classification (BoC frame + empirical) for BoC-band indicators. Order suggested by audit-defect severity:
+
+- **Policy:** `can2y_overnight_spread` (audit found this one VERIFIED, just needs vocabulary update to convention)
+- **Inflation:** the four-state breadth classification + three unsourced calibration thresholds (Inflation Claim 3 — also needs the convention's BoC-band rule for the 2% target / 1-3% range)
+- **Financial:** USDCAD stress-corridor anchors (Financial Claim 2 already flagged; convention application replaces mechanical patches)
+- **GDP:** housing-trough anchors and ±3pp inventories threshold (GDP Claim 4 + others)
+- **Housing:** cyclical anchors (Housing Claim 2 + others)
+- **Labour:** Claims 4, 7, 9 thresholds + Claim 3 V/U bands (Labour Claim 3 still flagged for dedicated re-review per Tuesday's note)
+
+Each section's sweep is roughly: read the section's framework prose, identify each tier-language claim, retune thresholds against project data using `analyses/`-style scripts where needed, write per-indicator metadata, mark verification log entries Tier 3.
+
+### 2. Set `ANTHROPIC_API_KEY` in repo Secrets to activate nightly CI blurb regen
 
 Local blurb regeneration already works via the Claude Code CLI subscription path -- `python analyze.py --section <id>` works any time `claude` is on PATH and authenticated (no API key needed). What this secret unlocks is the nightly **GitHub Actions** runner: the runner doesn't have the `claude` CLI installed, so CI falls back to the SDK path and gates on `ANTHROPIC_API_KEY`. Until the secret is set, the workflow emits a `::warning::` and skips blurb regen; the last committed `data/blurbs.json` holds. Add the secret at https://github.com/jayzhaomurray/boc-tracker/settings/secrets/actions, then manually dispatch the workflow once to confirm CI blurbs regenerate.
 
-### 2. User iteration on autonomous-draft blurbs (Labour, Financial, GDP, Housing)
+### 3. User iteration on autonomous-draft blurbs (Labour, Financial, GDP, Housing)
 
 Labour Market and Financial Conditions blurbs were generated overnight May 8, 2026; GDP and Housing verified May 8 but also autonomous-draft. Monetary Policy and Inflation went through user iteration and are ground-truth voice. The other four need the same treatment — iterate against the framework writing principles (plain language, semantic preservation, action-state verbs, no journey phrasing, takeaway-first). Before iterating GDP and Labour, wire their blurbs against the rewired compute functions (items above).
 
-### 3. Regenerate all four autonomous-draft blurbs (after framework patches land)
+### 4. Regenerate all four autonomous-draft blurbs (after framework patches land)
 
 Labour, Financial Conditions, GDP, and Housing blurbs are autonomous drafts generated May 8, 2026. All four compute functions have since been rewired (GDP: commit b51bef0; Labour: commit 945fa8f; Housing: May 2026 CREA/affordability wiring). The actual blocker is the framework defects surfaced in the 2026-05-09 audit -- the morning-review patches (bocfed_spread thresholds, CMHC citation conflation, USDCAD peaks, BCC wording) should land before regenerating so the blurbs don't bake stale anchors. Once framework patches are accepted, regenerate all four locally via `python analyze.py --section <id>` (CLI subscription path; no API key needed). This gives the user a clean starting point for the voice-iteration pass (item 2 above).
 
-### 4. Eventually: deep-dive Monetary Policy page
+### 5. Eventually: deep-dive Monetary Policy page
 
 A separate page for practitioner-grade detail that doesn't fit on the overview:
 - Yield curve term structure (5Y, 10Y, 30Y; 2Y vs 10Y spread for recession indicator)
@@ -644,7 +660,7 @@ A separate page for practitioner-grade detail that doesn't fit on the overview:
 - Balance sheet decomposition (maturity, BoC holdings as % of total GoC debt outstanding)
 - Cross-central-bank balance sheet comparison
 
-### 5. Eventually: deep-dive Labour Market page
+### 6. Eventually: deep-dive Labour Market page
 
 All entries below are **tentative** — surfaced during the framework verification pass on 2026-05-09 and earlier labour scoping discussions. The verification log at `markdown-files/verification/labour.md` carries the discussion that motivated several of them.
 
@@ -665,11 +681,11 @@ All entries below are **tentative** — surfaced during the framework verificati
 - Demographic decompositions (newcomer vs Canadian-born; youth 15–24 vs prime-age 25–54 unemployment)
 - Regional decompositions (provincial labour-market dispersion; Toronto / Vancouver / Calgary employment patterns)
 
-### 6. Multi-page split (eventually)
+### 7. Multi-page split (eventually)
 
 When chart count grows further, split into themed pages (policy, inflation, labour, housing deep-dives). **Scaffolding landed 2026-05-09 (commit `ccf5244`)** — `policy.html`, `inflation.html`, `gdp.html`, `labour.html`, `housing.html`, `financial.html` exist as placeholder pages with shared cross-page nav. Real-chart migration into these pages is pending (each placeholder section names what would go there).
 
-### 6b. Skills worth packaging when triggered (not pre-emptively)
+### 7b. Skills worth packaging when triggered (not pre-emptively)
 
 These were considered 2026-05-09 against the project's actual failure modes (see `~/.claude/projects/...../memory/infrastructure_match_failure_mode.md`). Each is conditional on a specific evolution:
 
@@ -677,11 +693,11 @@ These were considered 2026-05-09 against the project's actual failure modes (see
 - **`/audit-section`** — trigger: re-auditing on a cadence (annually as BoC publications update — new MPRs, SANs, FSRs). The Tier 2 audit prompt template was used 5× on 2026-05-09; if re-audit becomes recurring, packaging it pays back. Lower priority than `/add-chart` since cadence isn't established yet.
 - **Hooks: ~never become high-value** for this project (content-bound failure mode, not code-shape). One narrow exception: a data-shape validator on `fetch.py` to catch fetcher regressions like the JVWS stale-zero bug. Set up only if bitten again.
 
-### 6c. Automate the CLI auth path in CI (future project, low priority)
+### 7c. Automate the CLI auth path in CI (future project, low priority)
 
 `claude setup-token` produces a long-lived OAuth token. Storing it as a GitHub Actions secret (e.g. `CLAUDE_CODE_OAUTH_TOKEN`) and adding a workflow step to install the Claude CLI and export the token would route nightly blurb regen through the Max subscription instead of the paid API. Caveats: Max plan rate limits apply to CLI usage; headless CI behaviour of the CLI is less battle-tested than the SDK path; actual API cost for this dashboard is pennies per month, so this is nice-to-have, not urgent. The `ANTHROPIC_API_KEY` SDK path (item 1) is the pragmatic near-term solution.
 
-### 7. Charts still on the wishlist
+### 8. Charts still on the wishlist
 
 | Chart | Data |
 |---|---|

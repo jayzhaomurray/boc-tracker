@@ -70,7 +70,7 @@ def main() -> None:
 
     print()
     print("Selected percentiles of |spread| (bp):")
-    for p in [50, 75, 90, 95, 99]:
+    for p in [50, 75, 80, 90, 95, 99]:
         print(f"  P{p:02d} : {np.percentile(abs_bp, p):6.1f}")
 
     print()

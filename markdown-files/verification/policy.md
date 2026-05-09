@@ -266,7 +266,11 @@ None.
 
 ### Provenance tier
 
-**Tier 2 — autonomously verified 2026-05-09.** Not user-reviewed.
+**Tier 3 — resolved 2026-05-09 via convention adoption.** The 2026-05-09 audit surfaced a critical defect (framework prose claimed median |spread| 38bp; project data gives 62.5bp at monthly resolution; the 38bp value reproduces only at daily 2009+ resolution — silent methodology drift). User decided to address the underlying problem at the framework level by introducing `markdown-files/distribution_conventions.md` (a five-tier ladder typical/uncommon/pronounced/rare/extreme at central 50/80/95/99% boundaries, with mandatory tail-axis + window/resolution/N citation), and applied it to bocfed_spread as the worked example. The mechanical patches drafted below (Patches 1-4, dated 2026-05-09) are SUPERSEDED by the convention application — bocfed_spread thresholds are now retuned to P50=62.5bp / P80=100.0bp / P95=187.5bp / P99=231.0bp at monthly month-start resolution since 1996, documented in `analysis_framework.md` line ~114, line ~144, and `analyze.py` `_classify_bocfed` (line ~200) and the line ~589 banner. Source script: `analyses/bocfed_spread_distribution.py`. The 38bp daily-resolution baseline is documented in `analyses/bocfed_spread_38bp_test.md` for reference.
+
+The historical Tier 2 audit details below are retained for the audit trail; the patch proposals are no longer applicable.
+
+**Original Tier 2 status (superseded):** Autonomously verified 2026-05-09. Not user-reviewed.
 
 ### Framework prose (verbatim, line 114)
 
