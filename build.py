@@ -27,6 +27,13 @@ SECTION_HEADINGS = {
     "inflation": "Inflation",
     "labour":    "Labour Market",
     "financial": "Financial Conditions",
+    # Policy deep-dive section headings
+    "policy_dd_yield_curve":  "GoC Yield Curve",
+    "policy_dd_real_rates":   "Real Rates",
+    "policy_dd_corra":        "CORRA vs Target",
+    "policy_dd_assets":       "BoC Assets",
+    "policy_dd_liabilities":  "BoC Liabilities",
+    "policy_dd_peers":        "Peer Central Banks",
 }
 
 DATA_DIR = Path("data")
@@ -100,6 +107,8 @@ class PageSpec:
     charts: list  # ChartSpec | CoreInflationSpec | ...
     # Map chart-index -> section_id; renders a heading + blurb above that chart.
     sections: dict = field(default_factory=dict)
+    # When True, _assemble_page adds the "under construction" deep-dive banner.
+    is_deep_dive: bool = False
 
 
 @dataclass
@@ -2213,6 +2222,14 @@ def _assemble_page(page: PageSpec, chart_panels: list[str],
         "</div>\n"
     )
 
+    dd_banner = (
+        '<div class="dd-banner">'
+        "<strong>Deep dive — work in progress.</strong> "
+        "Charts are being built out over time. "
+        'See the <a href="index.html">overview page</a> for the complete dashboard.'
+        "</div>\n"
+        if page.is_deep_dive else ""
+    )
     return (
         "<!DOCTYPE html>\n<html>\n<head>\n"
         '<meta charset="utf-8">\n'
@@ -2220,7 +2237,7 @@ def _assemble_page(page: PageSpec, chart_panels: list[str],
         "<title>" + page.title + "</title>\n"
         "<style>\n" + _CSS + "</style>\n"
         "</head>\n<body>\n"
-        + header + nav + gc
+        + header + nav + dd_banner + gc
         + "".join(chart_panels)
         + about + js
         + "</body>\n</html>\n"
@@ -2335,47 +2352,6 @@ def _assemble_deep_dive_page(title: str, tagline: str, output_file: str,
 # from _dd_section / _dd_iframe_section helpers so the structure stays uniform.
 
 DEEP_DIVES = [
-    {
-        "title": "Monetary Policy — deep dive",
-        "tagline": "Term structure, real rates, balance-sheet decomposition",
-        "output_file": "policy.html",
-        "intro": (
-            "What the overview page can't show: yield-curve shape across maturities, real-rate context, "
-            "the operational tooling around the floor system, and how Canada's policy stance compares to peer central banks."
-        ),
-        "body": (
-            _dd_section(
-                "Yield curve term structure",
-                "5Y, 10Y, 30Y GoC yields plus 2Y vs 10Y spread (recession indicator).",
-                "[Coming soon] Add 5Y, 10Y, 30Y benchmark GoC yields via BoC Valet (BD.CDN.5YR.DQ.YLD, BD.CDN.10YR.DQ.YLD, BD.CDN.LONG.DQ.YLD). 2Y-10Y spread historically inverts ahead of Canadian recessions; the 2024-2025 inversion was the deepest since the early 1990s.",
-            )
-            + _dd_section(
-                "Real rates",
-                "Nominal yields minus inflation expectations.",
-                "[Coming soon] Subtract CSCE 1y consumer expectations from 2Y nominal to derive a market-implied real-rate path. Cross-check with US TIPS-equivalent for cross-border real-rate differential.",
-            )
-            + _dd_section(
-                "CORRA tracking",
-                "How well the overnight rate is being implemented operationally.",
-                "[Coming soon] Daily CORRA vs target. Persistent CORRA-target drift signals balance-sheet management is binding (settlement balances too high or too low). The April 2022 floor-system declaration changed the operational dynamics; watch for episodes where CORRA drifts toward the lower bound.",
-            )
-            + _dd_section(
-                "Forward guidance vs MPR projections",
-                "Compare market expectations against successive MPR forecast vintages.",
-                "[Coming soon] Plot each MPR's projection of the policy rate path against the realized path + market-implied path at the time of each MPR. Tracks how often the BoC's projection has been wrong (often).",
-            )
-            + _dd_section(
-                "Balance sheet decomposition",
-                "BoC holdings broken out by asset type and maturity.",
-                "[Coming soon] Decompose total assets into GoC bonds, T-bills, term repos, and emergency facilities. Separately track BoC holdings as % of total GoC debt outstanding (peaked ~40% in 2021).",
-            )
-            + _dd_section(
-                "Cross-central-bank comparison",
-                "Canada vs peers on rates, balance sheets, framework.",
-                "[Coming soon] BoC vs Fed, ECB, BoE, RBA: policy rate trajectory, balance-sheet-as-% of GDP, framework features (corridor vs floor, asset-purchase capacity).",
-            )
-        ),
-    },
     {
         "title": "Inflation — deep dive",
         "tagline": "Component-level decomposition and persistence detail",
@@ -2898,6 +2874,102 @@ PAGES = [
             ),
         ],
     ),
+    PageSpec(
+        title="Monetary Policy — Deep Dive",
+        tagline="Term structure, real rates, balance-sheet detail, peer comparison",
+        output_file="policy.html",
+        is_deep_dive=True,
+        sections={
+            0: "policy_dd_yield_curve",
+            2: "policy_dd_real_rates",
+            3: "policy_dd_corra",
+            4: "policy_dd_assets",
+            5: "policy_dd_liabilities",
+            6: "policy_dd_peers",
+        },
+        charts=[
+            MultiLineSpec(
+                title="GoC Yield Curve",
+                lines=[
+                    LineConfig("yield_2yr",  "2Y",  "#1565c0"),
+                    LineConfig("yield_5yr",  "5Y",  "#2e7d32"),
+                    LineConfig("yield_10yr", "10Y", "#e65100"),
+                    LineConfig("yield_30yr", "30Y", "#6a1b9a"),
+                ],
+                ticksuffix="%",
+                smooth_window=20,
+                default_years=10,
+                footnote="GoC benchmark bond yields. Source: Bank of Canada Valet.",
+            ),
+            MultiLineSpec(
+                title="2Y–10Y Spread",
+                lines=[
+                    LineConfig("yield_10y_2y_spread", "10Y − 2Y", "#e65100"),
+                ],
+                ticksuffix="%",
+                smooth_window=20,
+                default_years=10,
+                footnote="10-year minus 2-year GoC yield. Negative (inverted) has historically preceded Canadian recessions.",
+            ),
+            MultiLineSpec(
+                title="Real Policy Rates (ex-post)",
+                lines=[
+                    LineConfig("real_overnight_rate", "Real overnight", "#1565c0"),
+                    LineConfig("real_2yr_monthly",    "Real 2Y (month-end)", "#2e7d32"),
+                ],
+                ticksuffix="%",
+                default_years=10,
+                footnote="Nominal rate minus trailing headline CPI Y/Y. Ex-post measure; reflects backward-looking realized inflation, not forward expectations.",
+            ),
+            MultiLineSpec(
+                title="CORRA vs Overnight Rate Target",
+                lines=[
+                    LineConfig("corra_daily",         "CORRA",         "#1565c0"),
+                    LineConfig("overnight_rate_daily", "Target (daily)", "#c62828"),
+                ],
+                ticksuffix="%",
+                smooth_window=20,
+                default_years=2,
+                footnote="CORRA (Canadian Overnight Repo Rate Average) vs the BoC overnight rate target. Under the floor system (April 2022–), CORRA trades at or just above the deposit rate.",
+            ),
+            MultiLineSpec(
+                title="BoC Assets",
+                lines=[
+                    LineConfig("boc_total_assets", "Total assets",     "#1565c0"),
+                    LineConfig("boc_goc_bonds",    "GoC bonds (held)", "#42a5f5"),
+                ],
+                ticksuffix="",
+                hoverformat=".0f",
+                default_years=10,
+                footnote="C$ billions. Source: Bank of Canada Statement of Financial Position, weekly.",
+            ),
+            MultiLineSpec(
+                title="BoC Liabilities — Settlement Balances",
+                lines=[
+                    LineConfig("boc_settlement_balances", "Settlement balances", "#6a1b9a"),
+                ],
+                ticksuffix="",
+                hoverformat=".0f",
+                default_years=10,
+                footnote="C$ billions. Cash banks hold overnight at the BoC. Post-QT steady-state target: $20–60B (Gravelle, March 2024).",
+            ),
+            MultiLineSpec(
+                title="Peer Central Bank Policy Rates",
+                lines=[
+                    LineConfig("overnight_rate", "BoC",  "#1565c0"),
+                    LineConfig("fed_funds",       "Fed",  "#c62828"),
+                    LineConfig("ecb_rate",        "ECB",  "#2e7d32"),
+                    LineConfig("boe_rate",        "BoE",  "#e65100"),
+                    LineConfig("rba_rate",        "RBA",  "#6a1b9a"),
+                ],
+                ticksuffix="%",
+                line_shape="hv",
+                default_years=10,
+                date_fmt="%b %Y",
+                footnote="BoC overnight rate; Fed funds target midpoint; ECB deposit facility rate (FRED ECBDFR); BoE Bank Rate and RBA cash rate (OECD/FRED monthly series).",
+            ),
+        ],
+    ),
 ]
 
 
@@ -2919,6 +2991,10 @@ _DERIVED_SERIES_SOURCES: dict[str, list[str]] = {
     "residential_permits_b": ["residential_permits"],
     "job_vacancy_rate_12m":  ["job_vacancy_rate"],
     "job_vacancy_level_12m": ["job_vacancy_level"],
+    # Policy deep-dive derived series
+    "yield_10y_2y_spread":   ["yield_10yr", "yield_2yr"],
+    "real_overnight_rate":   ["overnight_rate", "cpi_all_items_nsa"],
+    "real_2yr_monthly":      ["yield_2yr", "cpi_all_items_nsa"],
 }
 
 
@@ -3034,6 +3110,43 @@ def _add_derived_series(data: dict[str, pd.DataFrame]) -> None:
             df = data[src].sort_values("date").reset_index(drop=True)
             sm = df["value"].rolling(12, min_periods=6).mean()
             data[src + "_12m"] = pd.DataFrame({"date": df["date"], "value": sm}).dropna().reset_index(drop=True)
+
+    # Policy deep-dive: 10Y–2Y GoC yield spread (daily)
+    if "yield_10yr" in data and "yield_2yr" in data:
+        y10 = data["yield_10yr"].sort_values("date").reset_index(drop=True)
+        y2  = data["yield_2yr"].sort_values("date").rename(columns={"value": "y2"}).reset_index(drop=True)
+        merged = pd.merge_asof(y10, y2, on="date", direction="backward")
+        data["yield_10y_2y_spread"] = pd.DataFrame({
+            "date":  merged["date"],
+            "value": merged["value"] - merged["y2"],
+        }).dropna().reset_index(drop=True)
+
+    # Policy deep-dive: ex-post real rates (nominal minus trailing CPI Y/Y, monthly)
+    if "overnight_rate" in data and "cpi_all_items_nsa" in data:
+        cpi = data["cpi_all_items_nsa"].sort_values("date").reset_index(drop=True)
+        cpi_yoy = cpi["value"].pct_change(12) * 100
+        cpi_df = pd.DataFrame({
+            "ym":      cpi["date"].values.astype("datetime64[M]"),
+            "cpi_yoy": cpi_yoy,
+        }).dropna()
+        ov = data["overnight_rate"].sort_values("date").reset_index(drop=True)
+        ov_ym = ov.copy()
+        ov_ym["ym"] = ov["date"].values.astype("datetime64[M]")
+        merged = pd.merge(ov_ym[["date", "value", "ym"]], cpi_df, on="ym", how="inner")
+        data["real_overnight_rate"] = pd.DataFrame({
+            "date":  merged["date"],
+            "value": merged["value"] - merged["cpi_yoy"],
+        }).dropna().reset_index(drop=True)
+
+        if "yield_2yr" in data:
+            y2 = data["yield_2yr"].sort_values("date").set_index("date")
+            y2_m = y2["value"].resample("ME").last().reset_index()
+            y2_m["ym"] = y2_m["date"].values.astype("datetime64[M]")
+            merged2 = pd.merge(y2_m[["date", "value", "ym"]], cpi_df, on="ym", how="inner")
+            data["real_2yr_monthly"] = pd.DataFrame({
+                "date":  merged2["date"],
+                "value": merged2["value"] - merged2["cpi_yoy"],
+            }).dropna().reset_index(drop=True)
 
 
 def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:

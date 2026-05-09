@@ -94,6 +94,10 @@ BOC_VALET_SERIES = {
     # 2-tuple: (series_key, start_date). 3-tuple: (series_key, start_date, scale_factor)
     # Scale factor is applied to the fetched values (e.g. 0.001 to convert millions to billions)
     "yield_2yr":      ("BD.CDN.2YR.DQ.YLD",    "1990-01-01"),  # 2-yr GoC benchmark bond yield, daily
+    "yield_5yr":      ("BD.CDN.5YR.DQ.YLD",    "1990-01-01"),  # 5-yr GoC benchmark bond yield, daily
+    "yield_10yr":     ("BD.CDN.10YR.DQ.YLD",   "1990-01-01"),  # 10-yr GoC benchmark bond yield, daily
+    "yield_30yr":     ("BD.CDN.LONG.DQ.YLD",   "1990-01-01"),  # 30-yr GoC benchmark bond yield, daily
+    "corra_daily":    ("AVG.INTWO",             "2009-01-01"),  # CORRA (Canadian Overnight Repo Rate Average), daily
     "overnight_rate": ("STATIC_ATABLE_V39079",  "1990-01-01"),  # BoC overnight rate target, monthly (long history; used by chart)
     "overnight_rate_daily": ("V39079",          "2009-04-21"),  # BoC overnight rate target, DAILY (since 2009-04-21; used by analyze.py for meeting-resolution)
     "cpi_trim":       ("CPI_TRIM",              "1990-01-01"),  # CPI-trim, Y/Y %, monthly
@@ -121,10 +125,14 @@ BOC_VALET_SERIES = {
 }
 
 FRED_SERIES = {
-    "us_2yr": ("DGS2",           "1990-01-01"),  # 2-yr US Treasury constant maturity, daily
-    "usdcad": ("DEXCAUS",        "1990-01-01"),  # USD/CAD exchange rate (CAD per USD), daily
-    "wti":    ("DCOILWTICO",     "1990-01-01"),  # WTI crude oil, USD/barrel, daily
-    "brent":  ("DCOILBRENTEU",   "1990-01-01"),  # Brent crude oil, USD/barrel, daily
+    "us_2yr":   ("DGS2",             "1990-01-01"),  # 2-yr US Treasury constant maturity, daily
+    "usdcad":   ("DEXCAUS",          "1990-01-01"),  # USD/CAD exchange rate (CAD per USD), daily
+    "wti":      ("DCOILWTICO",       "1990-01-01"),  # WTI crude oil, USD/barrel, daily
+    "brent":    ("DCOILBRENTEU",     "1990-01-01"),  # Brent crude oil, USD/barrel, daily
+    # Peer central bank policy rates (OECD monthly series via FRED)
+    "ecb_rate": ("ECBDFR",           "1999-01-01"),  # ECB deposit facility rate, weekly
+    "boe_rate": ("IRSTCB01GBM156N",  "1990-01-01"),  # Bank of England Bank Rate, monthly (OECD/FRED)
+    "rba_rate": ("IRSTCB01AUM156N",  "1990-01-01"),  # RBA cash rate target, monthly (OECD/FRED)
 }
 # fed_funds is fetched separately as target midpoint — see fetch_fed_funds_target()
 
