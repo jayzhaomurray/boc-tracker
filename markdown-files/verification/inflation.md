@@ -113,7 +113,7 @@ None.
 
 ### Provenance tier
 
-**Tier 2 — autonomously verified 2026-05-09. Not user-reviewed.**
+**Tier 3 — user-resolved 2026-05-09 (Q3 decision: continuous |tilt| tier adopted; four-state typology retired as forced classification).**
 
 ### Framework prose (verbatim)
 
@@ -164,7 +164,12 @@ None.
 
 ### Convention application (2026-05-09)
 
-**Status: DEFERRED — judgment item, convention not applied.** The four-state breadth typology is analyst synthesis covering 4 of 9 logical 3×3 deviation states (same defect class as Labour Claim 2's 2×2 utilization decoder). Convention sweep explicitly excludes this claim per task instructions. Framework prose is unchanged. Marked as open judgment item pending user review.
+**Status: Tier 3 — user-resolved 2026-05-09 (Q3 decision).** Four-state typology retired as a forced classification. Replaced with continuous |tilt| percentile ladder:
+
+- **Tail axis:** |tilt| in pp, absolute envelope, monthly, since 1995-12, N=364 (source `analyses/inflation_distribution.py`, last computed 2026-05-09)
+- **Tier thresholds:** typical ≤10.88pp (P50); uncommon to 20.35pp (P80); pronounced to 41.10pp (P95); rare to 63.27pp (P99); extreme >63.27pp
+- **Descriptor:** pressure / softening
+- The four state names (broad-based pressure, broad-based softening, clustered near target, polarized) remain as natural prose vocabulary — not a forced classification. `_classify_breadth_tilt()` added to `analyze.py`.
 
 ### Open questions for user review
 
@@ -286,7 +291,7 @@ The BoC describes the multi-measure approach in the Oct 2025 MPR In Focus: *"und
 
 ### Provenance tier
 
-**Tier 2 — autonomously verified 2026-05-09. Not user-reviewed.**
+**Tier 3 — user-resolved 2026-05-09 (Q1 decision: per-indicator hybrid treatment applied — 5y CSCE gets BoC binary frame + empirical tier [N=44 SMALL-N]; 1y CSCE and BOS ABOVE3 empirical-only).**
 
 ### Framework prose (verbatim)
 
@@ -342,7 +347,7 @@ The BoC describes the multi-measure approach in the Oct 2025 MPR In Focus: *"und
 
 ### Proposed patches (mechanical only — judgment items deferred)
 
-**Patch 1: soften the 5y-vs-1y ranking from declarative to anchor-diagnostic framing**
+**Patch 1: soften the 5y-vs-1y ranking from declarative to anchor-diagnostic framing** *(Applied 2026-05-09 — Tier 3)*
 
 *Framework prose change* in `markdown-files/analysis_framework.md`:
 

@@ -1,12 +1,16 @@
 """Empirical distributions for Inflation section convention application.
 
-Computes P50/P80/P95/P99 for four inflation-related tail axes, covering:
+Computes P50/P80/P95/P99 for six inflation-related tail axes, covering:
   1. |headline CPI Y/Y - 2%|  -- BoC-band indicator empirical frame (target-anchored)
   2. M/M (SA) monthly prints  -- for M/M momentum threshold retuning
   3. Core band width (max core - min core across 5 measures)
                               -- for tight-band threshold retuning
   4. |headline Y/Y - core_avg Y/Y|
                               -- for headline-core gap threshold retuning
+  5. |tilt| where tilt = (above-3% dev) - (below-1% dev), monthly, since 1996
+                              -- Q3 decision: continuous breadth tier (replaces 4-state)
+  6. |5y CSCE - 2%|           -- Q1 decision: empirical frame for 5y anchor diagnostic
+                              -- (BoC band applied separately as binary in-/outside-band)
 
 Resolution: monthly, using the most recent observation per calendar month
 (same approach as bocfed_spread and can2y_overnight_spread worked examples).
@@ -30,6 +34,8 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 OUT_DIR = Path(__file__).resolve().parent
+
+import json  # for breadth mapping
 
 # Core measures tracked by the framework (BoC preferred trio + CPIX/CPIXFET)
 CORE_NAMES = ["cpi_trim", "cpi_median", "cpi_common", "cpix", "cpixfet"]
@@ -237,6 +243,118 @@ def main() -> None:
     print(f"    Share headline < core : {(signed_gap < 0).mean()*100:.1f}%")
 
     # ==================================================================
+    # SECTION 5: |tilt| -- breadth tilt envelope (Q3 decision: continuous tier)
+    # tilt = (above-3% share deviation from 1996-2019 avg)
+    #        - (below-1% share deviation from 1996-2019 avg)
+    # Tail axis: |tilt| in pp, monthly, since 1996 (full breadth window)
+    # ==================================================================
+    print()
+    print("=" * 72)
+    print("SECTION 5: Breadth tilt -- |tilt| in pp  (Q3: continuous tier)")
+    print("  tilt = (above-3% share deviation) - (below-1% share deviation)")
+    print("  from 1996-2019 historical averages.  Positive = pressure; Negative = softening.")
+    print("  Tail axis: |tilt| (absolute envelope of a signed statistic).")
+    print("=" * 72)
+    mapping = json.loads((DATA / "cpi_breadth_mapping.json").read_text())
+    weights_b = pd.Series({m["name"]: m["wt_value"] for m in mapping
+                           if m["wt_value"] is not None})
+    comp_b = pd.read_csv(DATA / "cpi_components.csv", parse_dates=["date"], index_col="date")
+    keep_b = [c for c in comp_b.columns
+              if c in weights_b.index
+              and comp_b[c].first_valid_index() <= pd.Timestamp("1995-01-01")]
+    comp_b = comp_b[keep_b]
+    w_b = weights_b.reindex(keep_b).fillna(0)
+    w_b = w_b / w_b.sum()
+    yoy_c_b = comp_b.pct_change(12) * 100
+    above3_b = yoy_c_b.gt(3).multiply(w_b, axis=1).sum(axis=1) * 100
+    below1_b = yoy_c_b.lt(1).multiply(w_b, axis=1).sum(axis=1) * 100
+    valid_b = yoy_c_b.notna().all(axis=1)
+    above3_b = above3_b[valid_b]
+    below1_b = below1_b[valid_b]
+    ha_above_b = float(above3_b["1996":"2019"].mean())
+    ha_below_b = float(below1_b["1996":"2019"].mean())
+    above_dev_b = above3_b - ha_above_b
+    below_dev_b = below1_b - ha_below_b
+    tilt_b = above_dev_b - below_dev_b
+    tilt_b = tilt_b.dropna()
+    arr5_signed = tilt_b.to_numpy()
+    arr5 = np.abs(arr5_signed)
+    n5 = len(arr5)
+    date_min5 = tilt_b.index.min().date()
+    date_max5 = tilt_b.index.max().date()
+    print(f"  Tail axis : |tilt| in pp, monthly, {date_min5} to {date_max5}")
+    print(f"  N         : {n5}")
+    print(f"  1996-2019 avg above-3% share : {ha_above_b:.2f}%")
+    print(f"  1996-2019 avg below-1% share : {ha_below_b:.2f}%")
+    print(f"  Signed tilt stats:")
+    print(f"    Median (signed): {np.median(arr5_signed):.2f}pp")
+    print(f"    Share positive  : {(arr5_signed > 0).mean()*100:.1f}%  (pressure tilt)")
+    print(f"    Share negative  : {(arr5_signed < 0).mean()*100:.1f}%  (softening tilt)")
+    print(f"  |tilt| stats:")
+    print(f"    Median |tilt|  : {np.median(arr5):.2f}pp")
+    print(f"    Mean   |tilt|  : {np.mean(arr5):.2f}pp")
+    print(f"    Min    |tilt|  : {np.min(arr5):.2f}pp")
+    print(f"    Max    |tilt|  : {np.max(arr5):.2f}pp")
+    print()
+    s5_p50, s5_p80, s5_p95, s5_p99 = pct_block(arr5, "pp |tilt|")
+    print()
+    print("  Selected percentiles of |tilt| (pp):")
+    for p in [50, 75, 80, 90, 95, 99]:
+        print(f"    P{p:02d} : {np.percentile(arr5, p):.2f}pp")
+    latest_tilt = float(tilt_b.iloc[-1])
+    latest_abs_tilt = abs(latest_tilt)
+    latest_tilt_pctile = float((arr5 <= latest_abs_tilt).mean() * 100)
+    descriptor5 = "pressure" if latest_tilt > 0 else "softening"
+    print(f"\n  Current reading (as of {date_max5}):")
+    print(f"    tilt = {latest_tilt:+.2f}pp  ({descriptor5})")
+    print(f"    |tilt| = {latest_abs_tilt:.2f}pp  (~P{latest_tilt_pctile:.0f} of historical distribution)")
+
+    # ==================================================================
+    # SECTION 6: |5y CSCE - 2%| -- anchor diagnostic (Q1 decision: empirical)
+    # BoC dual frame: binary in/outside 1-3% band + empirical 5-tier on |5y - 2%|
+    # Note small N (quarterly since 2015); state N, downgrade confidence.
+    # ==================================================================
+    print()
+    print("=" * 72)
+    print("SECTION 6: 5y CSCE anchor -- |5y CSCE - 2%| in pp  (Q1: empirical frame)")
+    print("  BoC frame (binary): in-band (1-3%) / outside-band.  Empirical: 5-tier ladder.")
+    print("  Small-N caveat: quarterly series, N << 200 -- extreme tier sparsely populated.")
+    print("=" * 72)
+    csce5_raw = load_csv(DATA / "infl_exp_consumer_5y.csv")
+    csce5 = csce5_raw.dropna()
+    arr6_raw = csce5.to_numpy()
+    arr6 = np.abs(arr6_raw - 2.0)
+    n6 = len(arr6)
+    date_min6 = csce5.index.min().date()
+    date_max6 = csce5.index.max().date()
+    print(f"  Tail axis : |5y CSCE - 2.0%| in pp, quarterly, {date_min6} to {date_max6}")
+    print(f"  N         : {n6}  (SMALL-N: extreme tier sparsely populated)")
+    in_band6 = ((arr6_raw >= 1.0) & (arr6_raw <= 3.0)).mean() * 100
+    above3_6 = (arr6_raw > 3.0).mean() * 100
+    below1_6 = (arr6_raw < 1.0).mean() * 100
+    print(f"  BoC binary frame: in-band (1-3%): {in_band6:.1f}%,  above-3%: {above3_6:.1f}%,  below-1%: {below1_6:.1f}%")
+    print(f"  NOTE: {above3_6:.0f}% of quarterly readings are above 3% -- binary BoC frame almost")
+    print(f"    always signals outside-band. Empirical tier provides richer signal here.")
+    print(f"  |5y - 2%| stats:")
+    print(f"    Median   : {np.median(arr6):.4f}pp")
+    print(f"    Mean     : {np.mean(arr6):.4f}pp")
+    print(f"    Min      : {np.min(arr6):.4f}pp")
+    print(f"    Max      : {np.max(arr6):.4f}pp")
+    print()
+    s6_p50, s6_p80, s6_p95, s6_p99 = pct_block(arr6, "pp |5y CSCE - 2%|")
+    print()
+    print("  Selected percentiles of |5y CSCE - 2%| (pp):")
+    for p in [50, 75, 80, 90, 95, 99]:
+        print(f"    P{p:02d} : {np.percentile(arr6, p):.4f}pp")
+    latest_5y = float(csce5.iloc[-1])
+    latest_abs_5y = abs(latest_5y - 2.0)
+    latest_5y_pctile = float((arr6 <= latest_abs_5y).mean() * 100)
+    boc_frame_5y = "in-band" if 1.0 <= latest_5y <= 3.0 else ("outside-band (above)" if latest_5y > 3.0 else "outside-band (below)")
+    print(f"\n  Current reading (as of {date_max6}):")
+    print(f"    5y CSCE = {latest_5y:.2f}%  (BoC frame: {boc_frame_5y})")
+    print(f"    |5y - 2%| = {latest_abs_5y:.4f}pp  (~P{latest_5y_pctile:.0f} of historical distribution)")
+
+    # ==================================================================
     # SUMMARY TABLE
     # ==================================================================
     print()
@@ -248,14 +366,18 @@ def main() -> None:
         ("M/M momentum |M/M - 0.165%| (%/mo)", "%/mo from neutral", s2_p50, s2_p80, s2_p95, s2_p99),
         ("core band width (pp)", "pp", s3_p50, s3_p80, s3_p95, s3_p99),
         ("|headline - core_avg| (pp)", "pp", s4_p50, s4_p80, s4_p95, s4_p99),
+        ("|tilt| breadth (pp) [monthly, N=364]", "pp", s5_p50, s5_p80, s5_p95, s5_p99),
+        ("|5y CSCE - 2%| (pp) [quarterly, N=44]", "pp", s6_p50, s6_p80, s6_p95, s6_p99),
     ]
-    print(f"  {'Indicator':<40}  {'P50':>7}  {'P80':>7}  {'P95':>7}  {'P99':>7}")
-    print("  " + "-" * 68)
+    print(f"  {'Indicator':<45}  {'P50':>7}  {'P80':>7}  {'P95':>7}  {'P99':>7}")
+    print("  " + "-" * 73)
     for row in rows:
         name, unit, p50, p80, p95, p99 = row
-        print(f"  {name:<40}  {p50:>7.4f}  {p80:>7.4f}  {p95:>7.4f}  {p99:>7.4f}")
+        print(f"  {name:<45}  {p50:>7.4f}  {p80:>7.4f}  {p95:>7.4f}  {p99:>7.4f}")
     print()
-    print(f"  Window: monthly month-last, {date_min} to {date_max}, N={n}")
+    print(f"  Sections 1-4 window: monthly month-last, {date_min} to {date_max}, N={n}")
+    print(f"  Section 5 window: monthly, {date_min5} to {date_max5}, N={n5}")
+    print(f"  Section 6 window: quarterly, {date_min6} to {date_max6}, N={n6} (SMALL-N)")
     print(f"  Last computed: 2026-05-09")
 
     # ==================================================================

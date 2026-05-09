@@ -144,12 +144,22 @@ def compute_inflation_values() -> dict:
         "breadth_above3_dev":  above_dev,
         "breadth_below1_dev":  below_dev,
         "breadth_tilt":        tilt,
+        "breadth_tilt_abs":    abs(tilt),
+        "breadth_tilt_tier":   _classify_breadth_tilt(abs(tilt)),
+        "breadth_tilt_descriptor": "pressure" if tilt >= 0 else "softening",
         # Inflation expectations (added May 2026; quarterly cadence)
         "expectations_as_of":           ie_as_of,
         "expectations_consumer_1y":     ie_consumer_1y_now,
         "expectations_consumer_5y":     ie_consumer_5y_now,
         "expectations_consumer_5y_drift_4q": ie_consumer_5y_drift,
         "expectations_bos_above3":      ie_above3_now,
+        "expectations_consumer_5y_dev":  (ie_consumer_5y_now - 2.0) if ie_consumer_5y_now is not None else None,
+        "expectations_consumer_5y_boc_frame": (
+            "in-band" if ie_consumer_5y_now is not None and 1.0 <= ie_consumer_5y_now <= 3.0
+            else ("outside-band (above)" if ie_consumer_5y_now is not None and ie_consumer_5y_now > 3.0
+            else ("outside-band (below)" if ie_consumer_5y_now is not None else None))
+        ),
+        "expectations_consumer_5y_tier": _classify_5y_csce_dev(ie_consumer_5y_now - 2.0) if ie_consumer_5y_now is not None else None,
     }
 
 
@@ -167,10 +177,9 @@ def format_inflation_values(v: dict) -> str:
 
 Inflation expectations (as of {v['expectations_as_of']}; quarterly):
   CSCE consumer 1y-ahead:    {v['expectations_consumer_1y']:+.2f}%   (near-term consumer expectation)
-  CSCE consumer 5y-ahead:    {v['expectations_consumer_5y']:+.2f}%   (long-run anchor measure; more diagnostic of anchor slippage)
+  CSCE consumer 5y-ahead:    {v['expectations_consumer_5y']:+.2f}%   (long-run anchor; BoC frame: {v['expectations_consumer_5y_boc_frame']}; empirical tier: {v['expectations_consumer_5y_tier']} [|dev from 2%|={abs(v['expectations_consumer_5y_dev']):.2f}pp; P50=1.55, P80=1.91, P95=2.00, P99=2.19pp; N=44 SMALL-N quarterly])
   5y drift over last 4q:     {v['expectations_consumer_5y_drift_4q']:+.2f}pp   (negative = re-anchoring; positive = drifting up)
-  BOS firms expecting > 3%:  {v['expectations_bos_above3']:.0f}%   (business-side anchor diagnostic; high = anchor under stress)
-  NOTE: No BoC-band frame for expectations (BoC publishes no hard band); only empirical framing applies."""
+  BOS firms expecting > 3%:  {v['expectations_bos_above3']:.0f}%   (business-side anchor diagnostic; empirical-only, no BoC band)"""
     else:
         exp_block = "\n\nInflation expectations data: not loaded."
     return f"""== Latest data: {v['latest_date']} ==
@@ -187,7 +196,7 @@ Headline 3M AR (SA):      {v['headline_3m_ar_sa']:+.2f}%
 Core measures (Y/Y):
   CPI-trim:               {c['trim']:+.2f}%   (BoC preferred; BoC frame: {'in-band' if 1.0 <= c['trim'] <= 3.0 else 'outside-band'})
   CPI-median:             {c['median']:+.2f}%   (BoC preferred; BoC frame: {'in-band' if 1.0 <= c['median'] <= 3.0 else 'outside-band'})
-  CPI-common:             {c['common']:+.2f}%   (BoC preferred; BoC frame: {'in-band' if 1.0 <= c['common'] <= 3.0 else 'outside-band'})
+  CPI-common:             {c['common']:+.2f}%   (NOT current BoC preferred since 2022; BoC frame: {'in-band' if 1.0 <= c['common'] <= 3.0 else 'outside-band'})
   CPIX:                   {c['cpix']:+.2f}%   (alternative; BoC frame: {'in-band' if 1.0 <= c['cpix'] <= 3.0 else 'outside-band'})
   CPIXFET:                {c['cpixfet']:+.2f}%   (alternative; BoC frame: {'in-band' if 1.0 <= c['cpixfet'] <= 3.0 else 'outside-band'})
 
@@ -203,10 +212,10 @@ Category breakdown (Y/Y):
   Goods:                  {v['goods_yoy']:+.2f}%
   Services:               {v['services_yoy']:+.2f}%
 
-CPI Breadth (four-state typology -- DEFERRED JUDGMENT ITEM; analyst synthesis, not BoC canon):
+CPI Breadth (continuous tier):
   Share above 3%:         {v['breadth_above3']:.1f}%   (1996-2019 avg deviation: {v['breadth_above3_dev']:+.1f}pp)
   Share below 1%:         {v['breadth_below1']:.1f}%   (1996-2019 avg deviation: {v['breadth_below1_dev']:+.1f}pp)
-  Breadth tilt:           {v['breadth_tilt']:+.1f}pp   (positive = broad-based pressure; negative = broad-based softening){exp_block}
+  Tilt:                   {v['breadth_tilt']:+.1f}pp   ({v['breadth_tilt_descriptor']}; |tilt|={v['breadth_tilt_abs']:.2f}pp; tier={v['breadth_tilt_tier']}; P50=10.88pp, P80=20.35pp, P95=41.10pp, P99=63.27pp; N=364){exp_block}
 """
 
 
@@ -322,6 +331,42 @@ def _classify_headline_core_gap(gap_abs_pp: float) -> str:
     if d > 1.70:  return "rare"
     if d > 1.05:  return "pronounced"
     if d > 0.55:  return "uncommon"
+    return "typical"
+
+
+
+def _classify_5y_csce_dev(dev_pp: float) -> str:
+    """Tier classification of |5y CSCE - 2%| per distribution_conventions.md.
+
+    Tail axis: |5y CSCE - 2%| in pp, quarterly, since 2015-Q1, N=44 SMALL-N
+    (last computed 2026-05-09; source analyses/inflation_distribution.py):
+    P50=1.55pp, P80=1.91pp, P95=2.00pp, P99=2.19pp.
+    SMALL-N caveat: N=44 quarterly; extreme tier sparsely populated; downgrade
+    confidence. Descriptor: hot (above 2%) / soft (below 2%).
+    """
+    d = abs(dev_pp)
+    if d > 2.19:  return "extreme"
+    if d > 2.00:  return "rare"
+    if d > 1.91:  return "pronounced"
+    if d > 1.55:  return "uncommon"
+    return "typical"
+
+
+def _classify_breadth_tilt(abs_tilt_pp: float) -> str:
+    """Tier classification of |breadth tilt| per distribution_conventions.md.
+
+    Tail axis: |tilt| in pp (absolute envelope), monthly, since 1995-12, N=364
+    (last computed 2026-05-09; source analyses/inflation_distribution.py):
+    P50=10.88pp, P80=20.35pp, P95=41.10pp, P99=63.27pp.
+    tilt = (above-3% share deviation from 1996-2019 avg) - (below-1% share
+    deviation from 1996-2019 avg). Descriptor: pressure (positive tilt) /
+    softening (negative tilt).
+    """
+    d = abs(abs_tilt_pp)
+    if d > 63.27:  return "extreme"
+    if d > 41.10:  return "rare"
+    if d > 20.35:  return "pronounced"
+    if d > 10.88:  return "uncommon"
     return "typical"
 
 
