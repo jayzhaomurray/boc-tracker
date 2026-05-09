@@ -1,0 +1,14 @@
+name: obs_inf_rule
+model: claude-opus-4-7
+framework: markdown-files/analysis_framework.md
+sections: [labour, gdp, inflation, policy, housing, financial]
+self_review: true
+overrides:
+  # The observation/inference rule is already present in analysis_framework.md
+  # (added in commit 31ae5ae). This config demonstrates how to append a
+  # reinforcing reminder to the Output instructions section without editing
+  # the framework file on disk.
+  output_rules_append: |
+
+    Additional rule — observation vs. inference discipline: Every factual claim in the blurb must be directly traceable to a number in the computed data block. If the data shows unemployment at 6.2%, you may write "unemployment at 6.2%". You may NOT write "the labour market is deteriorating" unless a directional signal (3mo change, 12mo change, percentile rank) explicitly supports it. Label inferences that go beyond the data as soft reads or tentative. Do not omit this discipline under time pressure.
+  output_rules_replace: ~

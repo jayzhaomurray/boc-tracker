@@ -1,0 +1,8 @@
+name: baseline
+model: claude-opus-4-7
+framework: markdown-files/analysis_framework.md
+sections: [labour, gdp, inflation, policy, housing, financial]
+self_review: true
+overrides:
+  output_rules_append: ~
+  output_rules_replace: ~
