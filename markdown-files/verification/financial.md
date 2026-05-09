@@ -233,7 +233,7 @@ The historical stress corridor for CAD weakness is **1.45–1.47**, hit in three
 
 *Reason:* dp2015-91 reports point estimates (0.6 pp on total CPI, 0.3 pp on CPIX) from a single regression. The framework's "0.3–0.6 pp" range mis-pairs the two point estimates as the bounds of one range; "0.1–0.3 pp" extends below the source's CPIX point estimate without basis. (Time-horizon "12–18 months" deferred as judgment per known-defects list; post-COVID-stability sourcing deferred as judgment.)
 *Source:* dp2015-91 page 5: *"Long-run ERPT to CPIX and total CPI is estimated at 3 and 6 per cent, respectively. In other words, a 10 per cent depreciation in the Canadian dollar is estimated to boost CPIX inflation by 0.3 percentage points and total CPI inflation by 0.6 percentage points."* https://www.oar-rao.bank-banque-canada.ca/record/6365/files/dp2015-91.pdf
-*Verification log change*: mark Claim 3 verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+*Verification log change*: **(PATCH APPLIED 2026-05-09)** CAD pass-through ranges replaced with dp2015-91 point estimates (0.6 pp total CPI, 0.3 pp CPIX). Time-horizon "12-18 months" and post-COVID-stability citation remain deferred as judgment items. Tier 2 -> resolved (mechanical fix).
 
 **Patch 5: update the threshold-block restatement of CAD pass-through**
 
@@ -300,7 +300,7 @@ The "1–2 pp" figure that appears in some earlier framings is on the high side 
 
 *Reason:* dp2015-91 page 7 puts the 2012-2015 cycle's actual assessed impact at 0.9–1.1 pp on total CPI; the "2 pp" upper bound has no source.
 *Source:* dp2015-91 page 7: *"Based on this multi-pronged analysis, we assess that ERPT is currently boosting CPIX inflation by 0.5 to 0.7 percentage points and total inflation by 0.9 to 1.1 percentage points."* Page 1: *"the depreciation of the Canadian dollar of about 26 per cent vis-à-vis the U.S. dollar since September 2012."*
-*Verification log change*: mark Claim 4 verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+*Verification log change*: **(PATCH APPLIED 2026-05-09)** "1-2 pp" upper bound replaced with dp2015-91's multi-pronged-assessment figures (0.9-1.1 pp total CPI, 0.5-0.7 pp CPIX, 26% depreciation). Tier 2 -> resolved (mechanical fix).
 
 ---
 
@@ -372,7 +372,7 @@ The Alberta Central "0.4 since 2005" averages roughly check out (2003–2014 sub
 
 *Reason:* Framework's "post-2016 statistically weak" conflates two distinct statistical findings. The Alberta Central regression-coefficient result is genuinely 2016-dated; the rolling-correlation collapse is post-2023 per project data. (Repatriation-shares claim deferred as judgment per known-defects-list — no separate source retrieved.)
 *Source:* Alberta Central, *"The Canadian dollar: A petro-currency no more"* (https://albertacentral.com/intelligence-centre/economic-news/the-canadian-dollar-a-petro-currency-no-more/): *"From 1997 to 2014, the coefficient associated with energy commodity prices is significant and of anticipated sign … from 2016 to 2024, the coefficient becomes non-significant."* Project data (`data/wti.csv`, `data/usdcad.csv`, weekly Friday-resampled, 52-week rolling correlation of weekly pct changes): 2016-2020 mean = -0.455; 2020-2023 mean = -0.381; 2023-2026 mean = -0.119.
-*Verification log change*: mark Claim 5 verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+*Verification log change*: **(PATCH APPLIED 2026-05-09)** CAD-oil correlation bullet rewritten to separate regression-coefficient finding (non-significant from 2016, Alberta Central) from rolling-correlation weakening (only post-2023 in project data). Repatriation-shares claim dropped (unsourced). Tier 2 -> resolved (mechanical fix).
 
 **Patch 8: update the petrocurrency threshold-block restatement**
 
@@ -462,7 +462,7 @@ The Alberta Central "0.4 since 2005" averages roughly check out (2003–2014 sub
 
 *Reason:* Specific quantitative decomposition (the 4.5% magnitude, the rate-differential share, the FX-risk-premium share) is in SAN 2025-2; the MPR In Focus carries only the qualitative version. The "~75%" figure is the analyst's residual inference from "a little more than one-quarter" + "most," not a quoted figure — it should be flagged as such. The structural recasting of "trade policy" from a separate channel into the FX-risk-premium-driver is deferred as judgment.
 *Source:* SAN 2025-2 (https://www.bankofcanada.ca/2025/02/staff-analytical-note-2025-2/): *"The Canadian dollar fell by 4.5% between August and the end of 2024."* … *"The widening gap between the model's expected interest rates in Canada and the United States explains a little more than one-quarter of this depreciation."* … *"variations in the [exchange rate risk] premium … played a larger role in 2024, accounting for most of [the year-end depreciation]."* MPR Jan 2025 In Focus, by contrast: *"The widening interest rate differential is estimated to account for a relatively modest share of the overall depreciation. … Most of the depreciation is explained by the foreign exchange rate risk premium"* — qualitative only.
-*Verification log change*: mark Claim 6 verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+*Verification log change*: **(PATCH APPLIED 2026-05-09)** what-drives-CAD bullet re-attributed to SAN 2025-2; MPR Jan 2025 In Focus retained as qualitative summary. "~75%" flagged as inferred residual. Tier 2 -> resolved (mechanical fix).
 
 **Patch 10: update the synthesis-paragraph attribution to SAN 2025-2's actual numbers**
 
@@ -480,7 +480,7 @@ When CAD and oil are moving in opposite directions, name the tension and identif
 
 *Reason:* Synthesis paragraph propagates the same attribution defect; must be updated in lockstep with Patch 9. Drops the unsourced "~75%" inference from the synthesis prose; re-attributes to SAN 2025-2.
 *Source:* Same as Patch 9.
-*Verification log change*: also mark Claim 11 verdict with "(synthesis attribution patch proposed 2026-05-09; awaiting user accept/reject)".
+*Verification log change*: **(PATCHES APPLIED 2026-05-09)** synthesis paragraph updated: SAN 2025-2 re-attribution applied (Patch 10); dp2015-91 pass-through point estimate applied (Patch 12). Gasoline impulse in synthesis (0.35 pp) remains deferred per Claim 1 judgment deferral. Tier 2 -> resolved (mechanical fixes only).
 
 ---
 
@@ -687,7 +687,7 @@ Lead with whether oil is adding to or subtracting from headline CPI pressure, wi
 
 *Reason:* Synthesis must mirror Patch 1's re-derivation of the headline-CPI impulse from realistic WTI-to-pump pass-through.
 *Source:* Same as Patch 1.
-*Verification log change*: mark Claim 11 verdict with "(synthesis-propagation patches proposed 2026-05-09; awaiting user accept/reject)".
+*Verification log change*: **(PATCHES APPLIED 2026-05-09)** synthesis paragraph updated. See Claim 11 entry above.
 
 **Patch 12: propagate the dp2015-91 point estimates into the synthesis paragraph**
 

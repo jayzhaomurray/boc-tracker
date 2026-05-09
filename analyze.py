@@ -1103,6 +1103,21 @@ Coverage gap: this framework tracks oil and bilateral USDCAD only. BoC also trac
 """
 
 
+def _classify_inventory_contrib(pp: float) -> str:
+    """Tier classification per markdown-files/distribution_conventions.md.
+    Tail axis: |inventory contribution to GDP growth| in pp AR, quarterly,
+    since 1961, N=259 (last computed 2026-05-09; source
+    analyses/gdp_distribution.py): P50=1.557pp, P80=3.548pp, P95=5.784pp,
+    P99=8.695pp. Descriptor pair: large / small.
+    """
+    a = abs(pp)
+    if a > 8.695:  return "extreme"
+    if a > 5.784:  return "rare"
+    if a > 3.548:  return "pronounced"
+    if a > 1.557:  return "uncommon"
+    return "typical"
+
+
 # ── GDP & Activity section ──────────────────────────────────────────────────
 
 def compute_gdp_values() -> dict:
@@ -1180,6 +1195,7 @@ def compute_gdp_values() -> dict:
         "contrib_imports":          imp,
         "contrib_net_trade":        net_trade,
         "contrib_inventories":      invn,
+        "contrib_inventories_tier": _classify_inventory_contrib(invn),
         "final_domestic_demand":    final_domestic_demand,
         "sum_components":           sum_components,
         "residual_ar":              residual_ar,
@@ -1208,7 +1224,7 @@ Contributions to last quarter's annualized growth (percentage points):
   Exports:                     {v['contrib_exports']:+.2f}pp
   Less: imports (sign-flip):   {v['contrib_imports']:+.2f}pp   (positive = imports fell)
   Net trade:                   {v['contrib_net_trade']:+.2f}pp
-  Inventories:                 {v['contrib_inventories']:+.2f}pp   (often noisy; reverses next quarter)
+  Inventories:                 {v['contrib_inventories']:+.2f}pp   tier: {v['contrib_inventories_tier']}  (typical |invn|<=1.56pp; uncommon to 3.55pp; pronounced to 5.78pp; rare to 8.69pp; extreme above; quarterly 1961+, P50/P80/P95/P99; descriptor: large / small)
 
 Synthesis:
   Final domestic demand:       {v['final_domestic_demand']:+.2f}pp   (consumption + investment + govt; the "underlying" read)

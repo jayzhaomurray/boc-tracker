@@ -227,7 +227,7 @@ Council methodology requires a "pronounced, persistent, and pervasive decline" a
 
 *Reason:* Both the criteria triple and the literal-quoted phrase are presented in framework prose as BCC terminology, but the BCC's canonical methodology page names the three dimensions as "amplitude, duration, and scope" and orders the adjectives as "pronounced, persistent, and pervasive." The framework's wording is an analyst paraphrase dressed as a primary-source citation.
 *Source:* https://cdhowe.org/publication/business-cycle-council-methodology/ — *"to identify a recession three dimensions need to be considered simultaneously: amplitude, duration, and scope"*. Word-order quote *"pronounced, persistent and pervasive"* from the March 2024 "So Far, So Good" communiqué (https://cdhowe.org/publication/so-far-so-good-cd-howe-institute-business-cycle-council-declares-recession/).
-*Verification log change*: mark verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+*Verification log change*: **(PATCH APPLIED 2026-05-09)** BCC criteria triple corrected to "amplitude, duration, and scope"; phrase order corrected to "pronounced, persistent, and pervasive". Tier 2 -> resolved (mechanical fix).
 
 ---
 
@@ -299,7 +299,7 @@ Council methodology requires a "pronounced, persistent, and pervasive decline" a
 
 *Reason:* Project CSV ground truth shows the 2008-09 trough hit 111.781k (April 2009), below the framework's 118k floor; the COVID April 2020 SAAR is 161.004k, not 165k. The framework's numbers don't reproduce the data the dashboard ships with.
 *Source:* `data/housing_starts.csv` — April 2009 = 111.781; April 2020 = 161.004. Range 2008-12 through 2009-07 spans roughly 112k–150k.
-*Verification log change*: mark verdict with "(patch proposed 2026-05-09; awaiting user accept/reject)".
+*Verification log change*: **(PATCH APPLIED 2026-05-09)** Housing trough updated to 112-150k (project CSV: April 2009 = 111.781k); COVID April 2020 updated to ~161k (project CSV: 161.004k). Tier 2 -> resolved (mechanical fix).
 
 ---
 
@@ -351,6 +351,10 @@ No BoC or StatsCan publication located that names ±3pp (or any numerical pp thr
    - Or rephrase to remove the appearance of a primary-source number.
 2. **No fabricated quote.**
 3. **No US-transferred heuristic** — the threshold is calibrated to Canadian data.
+
+### Convention applied
+
+**CONVENTION APPLIED 2026-05-09.** Threshold retuned to ±3.5pp (empirical P80=3.548pp, quarterly 1961+, N=259; P50=1.557pp, P95=5.784pp, P99=8.695pp; source `analyses/gdp_distribution.py`). Tail axis (|inventory contrib| in pp AR) and descriptor pair (large / small) added to framework prose. Explicitly marked as dashboard calibration, not a BoC-published threshold. Tier 2 -> convention applied (mechanical).
 
 ### Open questions for user review
 
