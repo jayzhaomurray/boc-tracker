@@ -12,12 +12,13 @@ Read these documents in order before doing anything substantive. They are the so
 4. **`markdown-files/analysis_framework.md`** — internal analytical brief for blurb generation. Per-section questions, signals, thresholds.
 5. **`markdown-files/reading_guide.md`** — short reader-facing dashboard orientation.
 
+**Escape hatch:** for genuinely trivial edits — typo fix, single comment edit, single color tweak, one-line text change — skip the canonical reading. Anything that touches logic, data, analytical framing, or chart structure still earns the full first-moves pass.
+
 **One-source-of-truth rule:** these docs reference each other rather than duplicate. If a fact lives in the style guide, HANDOFF should link to it not copy it. Drift between docs has been a real risk; treat it seriously.
 
 ## Workflow conventions
 
 - **Discuss → plan → implement** for any non-trivial design choice. Don't jump straight to code. The user often says "let's discuss first" — they use chat as where they push back on framing or correct my premises before I commit.
-- **Three surfaces, three uses.** When I have basis to recommend, write the analysis in prose, weigh candidates, name a recommendation; the user agrees or pushes back. When the user genuinely needs to choose between paths and proceeding the wrong way means rework, use AskUserQuestion so the decision is visible — not buried in prose. When it's a conversational follow-up ("want me to commit?", "move on?"), plain text is fine. Avoid menus when I could argue. Avoid burying action-blocking decisions in prose.
 - **Skip plan mode for genuinely small changes.** Adding one toggleable line to an existing chart doesn't need the 5-step planning workflow. Plan mode is for design decisions, not implementation steps.
 - **Concise commit messages.** 5–10 lines max for routine changes; long-form only for genuinely complex commits. (Past sessions have over-explained.)
 - **Never silently break a principle, never silently rewrite one.** chart_style_guide.md §8 has the exception/revision protocol. Surface the case, propose either revising the principle (if it'll recur) or documenting an exception.
@@ -32,10 +33,9 @@ Read these documents in order before doing anything substantive. They are the so
 
 ## Analytical bar
 
-This is a **practitioner-level** tool. Default to the rigorous version of any read, not "good enough for an overview."
-- When a metric is a proxy with known issues (e.g. 2Y yield embeds term premium when used as rate-expectations proxy), surface that and propose the cleaner alternative (OIS) — don't shrug it off.
-- Don't omit a category of analysis just because the data is harder to fetch. Flag the cost; include it in scope.
+Concrete project anchors (the practitioner-level expectation is in memory):
 - Use BoC's canonical numbers and framings (e.g. neutral rate band 2.25–3.25% from the Bank's annual r* update, not "the commonly cited ~2.5–3%").
+- When a metric is a proxy with known issues (e.g. 2Y yield embeds term premium when used as rate-expectations proxy), surface the cleaner alternative (OIS).
 
 ## Common operations
 
@@ -53,45 +53,17 @@ This is a **practitioner-level** tool. Default to the rigorous version of any re
 - Don't write probe scripts at the project root — gitignored as `probe_*.py`. New probes go in `analyses/`.
 - Don't write CSVs that aren't part of the pipeline into `data/`. That folder is the build's source of truth.
 
-## Model allocation — proactive subagent delegation
+## Model allocation — project-specific examples
 
-This project's main thread runs on Opus by default (design + analytical work needs it). To save the user wait time, **proactively delegate bounded mechanical tasks to faster subagents** rather than doing them on the main thread. Do this without asking when the criteria below are met.
+(Dispatch criteria and motivation are in global memory `workflow_dispatch_default.md`. This section just lists the project-specific shapes those criteria typically map to.)
 
-### Delegate when ALL of these are true
+**Dispatch on Haiku** for bounded one-shot tasks: BoC Valet / StatsCan vector ID lookups; "verify these vector IDs return SUCCESS"; specific file lookups; HTML verification ("confirm the new chart's traces are present and report counts").
 
-- The task has a clear input and clear output (you can describe it in 2 sentences)
-- The task does NOT need to integrate with the in-flight conversation as it runs
-- The task would take more than ~30 seconds of work on the main thread (multiple file reads, multi-step API queries, multi-file searches)
+**Dispatch on Sonnet** for context-handling tasks: multi-file searches with summary; reading several markdown docs and summarizing what each says about a topic; multi-step API exploration with intermediate decisions; mechanical code edits with some judgment ("add a new line to PAGES following the existing pattern"); HANDOFF.md refresh passes; the experiments harness was built by a Sonnet sub-agent.
 
-### Use Haiku (`model: "haiku"`) for bounded one-shot tasks
+**Keep on Opus main thread** for: blurb generation in `analyze.py`; `analysis_framework.md` / `chart_style_guide.md` / `dashboard_purpose.md` writing; judgment-heavy code review; design decisions; single Edit / Read / Grep where dispatch overhead exceeds the work itself.
 
-- Multi-step API queries: "Find the right BoC Valet series ID matching X criteria"
-- Sanity checks: "Run this Bash command and report whether the value is in range Y–Z"
-- Specific file lookups: "Read file X and report whether Y appears"
-- HTML verification: "Verify the new chart's traces are present in index.html and report counts"
-
-### Use Sonnet (`model: "sonnet"`) for tasks requiring some context-handling
-
-- Multi-file codebase searches with summary
-- Reading several markdown docs and summarizing what each says about a topic
-- Multi-step API exploration with intermediate decisions
-- Format / structural verification across a built artifact
-- Mechanical code edits with some judgment (e.g. "add a new line to PAGES following the existing pattern")
-
-### Keep on the main Opus thread
-
-Don't delegate when the overhead would be slower than just doing it inline:
-- Single Edit calls (faster on the main thread than spinning up a subagent)
-- Single Read of a file you'll continue to reference
-- Single Grep for a known pattern in known files
-- Git commit + push (sequential, fast, depends on just-completed work)
-- Anything that's part of an ongoing design discussion or analytical reasoning
-
-### Session-level model switch (manual)
-
-When entering a long pure-implementation phase where no design decisions remain (e.g. "design is locked; I'll implement these five steps"), suggest the user run `/model sonnet` for the whole session. The user runs the switch. Switch back to Opus before the next design discussion.
-
-**Opus stays on the main thread** for: blurb generation (analyze.py), framework / style-guide writing, judgment-heavy code review, design decisions. These are the places where Opus quality genuinely shows.
+**Session-level switch:** when entering a long pure-implementation phase with no design decisions remaining, suggest the user run `/model sonnet` for the whole session. Switch back to Opus before the next design discussion.
 
 ## Other context
 
