@@ -964,7 +964,10 @@ Coverage gap: this framework tracks oil and bilateral USDCAD only. BoC also trac
 def compute_gdp_values() -> dict:
     gdp_monthly  = load_series("gdp_monthly")
     gdp_q_level  = load_series("gdp_quarterly")
-    gdp_qq       = load_series("gdp_qq_growth")            # already pre-computed Q/Q % AR
+    # v79448580: published total contribution to annualized Q/Q growth — the canonical
+    # AR comparator for the contributions chart (replaces v1594571783, which was rounded
+    # and didn't match either Q/Q non-AR or Q/Q AR cleanly).
+    gdp_total_ar = load_series("gdp_total_contribution")
     contrib_cons = load_series("gdp_contrib_consumption")
     contrib_inv  = load_series("gdp_contrib_investment")
     contrib_govt = load_series("gdp_contrib_govt")
@@ -982,9 +985,9 @@ def compute_gdp_values() -> dict:
     monthly_yoy = float(asof(gdp_m_yoy, latest_m))
     monthly_mom = float(asof(gdp_m_mom, latest_m))
 
-    quarterly_qq_ar = float(gdp_qq.iloc[-1])
-    # Last 4 quarters of Q/Q AR for trend context
-    last_4q = gdp_qq.tail(4)
+    quarterly_qq_ar = float(gdp_total_ar.iloc[-1])
+    # Last 4 quarters of headline AR for trend context
+    last_4q = gdp_total_ar.tail(4)
     qq_4q_avg = float(last_4q.mean())
 
     # Contributions (latest quarter)
@@ -997,7 +1000,13 @@ def compute_gdp_values() -> dict:
 
     net_trade = exp + imp  # imports already sign-flipped per StatsCan convention
     final_domestic_demand = cons + inv + govt
-    total_check = cons + inv + govt + exp + imp + invn
+    sum_components = cons + inv + govt + exp + imp + invn
+
+    # Residual = published headline AR minus sum of six tracked components.
+    # By identity this equals non-profits' contribution + statistical discrepancy.
+    # Typically small (~0.05pp non-AR; ~0.2pp AR per recent BoC data); a sustained
+    # large residual is a signal that StatsCan revised something meaningful.
+    residual_ar = quarterly_qq_ar - sum_components
 
     # Identify dominant driver (largest absolute contribution)
     contribs = {
@@ -1028,7 +1037,8 @@ def compute_gdp_values() -> dict:
         "contrib_net_trade":        net_trade,
         "contrib_inventories":      invn,
         "final_domestic_demand":    final_domestic_demand,
-        "total_check":              total_check,
+        "sum_components":           sum_components,
+        "residual_ar":              residual_ar,
         "dominant_driver":          dominant_label,
         "dominant_driver_value":    dominant_value,
     }
@@ -1043,11 +1053,11 @@ Real GDP — monthly (as of {v['as_of_monthly']}, level in C$ trillions chained 
   M/M change:                  {v['monthly_gdp_mom']:+.2f}%
 
 Real GDP — quarterly (as of {v['as_of_quarterly']}):
-  Q/Q at annualized rate:      {v['quarterly_qq_ar']:+.2f}%   (headline number; >0 = expansion, <0 = contraction)
-  Last 4 quarters Q/Q AR:      {last_4q_str}
-  4-quarter average:           {v['quarterly_qq_ar_4q_avg']:+.2f}%
+  Headline GDP, Q/Q at annualized rate:  {v['quarterly_qq_ar']:+.2f}%   (StatsCan v79448580; >0 = expansion, <0 = contraction. Note: AR convention; the StatsCan daily release reports non-annualized Q/Q which is roughly AR/4.)
+  Last 4 quarters Q/Q AR:                {last_4q_str}
+  4-quarter average:                     {v['quarterly_qq_ar_4q_avg']:+.2f}%
 
-Contributions to last quarter's annualized growth (percentage points; sum to total):
+Contributions to last quarter's annualized growth (percentage points):
   Consumption:                 {v['contrib_consumption']:+.2f}pp
   Investment:                  {v['contrib_investment']:+.2f}pp
   Government:                  {v['contrib_government']:+.2f}pp
@@ -1058,10 +1068,11 @@ Contributions to last quarter's annualized growth (percentage points; sum to tot
 
 Synthesis:
   Final domestic demand:       {v['final_domestic_demand']:+.2f}pp   (consumption + investment + govt; the "underlying" read)
-  Sum of tracked components:   {v['total_check']:+.2f}pp   (will differ from Q/Q AR by the statistical discrepancy term, which StatsCan publishes separately and this framework does not currently track)
+  Sum of six tracked components: {v['sum_components']:+.2f}pp
+  Residual (headline minus sum): {v['residual_ar']:+.2f}pp   (= non-profits' contribution + statistical discrepancy; typically small. A sustained large residual signals StatsCan revised something meaningful.)
   Dominant driver:             {v['dominant_driver']} at {v['dominant_driver_value']:+.2f}pp
 
-Coverage gap: this framework tracks aggregate GDP and demand-side contributions only. It does not include output-gap estimates, capacity utilization, or productivity decomposition. Conclusions about how-far-from-potential are necessarily rough.
+Coverage gap: this framework tracks aggregate GDP, demand-side component contributions, and the residual (= non-profits + statistical discrepancy) as a quantified gap, but does not break the residual into its parts. It does not include output-gap estimates, capacity utilization, or productivity decomposition. Conclusions about how-far-from-potential are necessarily rough.
 """
 
 

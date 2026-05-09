@@ -62,8 +62,7 @@ STATSCAN_SERIES = {
     "gdp_industry_manufacturing":(65201263, 0.000001),  # Table 36-10-0434: Manufacturing, chained 2017 $, SAAR (C$ trillions)
     "gdp_industry_mining_oil":   (65201236, 0.000001),  # Table 36-10-0434: Mining, quarrying, and oil and gas extraction, chained 2017 $, SAAR (C$ trillions)
     "gdp_quarterly":             62305752,  # Table 36-10-0104: Quarterly real GDP, expenditure-based, chained 2017 $, SAAR
-    "gdp_qq_growth":           1594571783,  # Table 36-10-0104: Q/Q % change, pre-computed (kept: consumed by analyze.py compute_gdp_values; not the right comparator for the contributions chart — see HANDOFF)
-    "gdp_total_contribution":    79448580,  # Table 36-10-0104: TOTAL GDP at market prices, contribution to annualized Q/Q growth (pp). Overlay for the contributions chart; gap vs. component sum = NPISH + statistical discrepancy.
+    "gdp_total_contribution":    79448580,  # Table 36-10-0104: TOTAL GDP at market prices, contribution to annualized Q/Q growth (pp). Headline AR comparator for the contributions chart and for compute_gdp_values; replaces v1594571783 (rounded, dropped May 2026). Gap vs. six-component sum = non-profits + statistical discrepancy.
     "gdp_contrib_consumption":   79448555,  # Table 36-10-0104: Household final consumption, contribution to annualized Q/Q growth
     "gdp_contrib_govt":          79448562,  # Table 36-10-0104: Government final consumption, contribution to annualized Q/Q growth
     "gdp_contrib_investment":    79448563,  # Table 36-10-0104: Gross fixed capital formation, contribution to annualized Q/Q growth
