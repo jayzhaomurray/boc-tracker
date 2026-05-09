@@ -83,11 +83,21 @@ The "VERIFICATION STATUS: verified end-to-end (May 2026)" header in `analysis_fr
 - Did not extend `MultiLineSpec` for the Indeed dual-axis chart wiring. Architectural change with judgment on schema design.
 - Did not push to remote yet — pushing is on user discretion. (Five commits ready: `b34bebe`, `1219d80`, `165e7cc`, `33eb0cd`, `2a5fef7`, plus this one.)
 
+### Morning review workflow (use this for the 2026-05-10 review pass)
+
+The 44 mechanical patches in the verification logs are designed for accept/reject batching, not compose-from-scratch review. Recommended approach:
+
+1. **Mechanical batch first.** Open the cross-claim defect-class index above. For each CRITICAL / high-severity entry that has a "Proposed patches" subsection in its verification log, scan the proposed patch (`old_string` + `new_string` + source URL + direct quote) and accept or reject. Each takes ~30–60 seconds. Goal: clear all mechanical patches in one focused session.
+2. **Apply via Edit tool.** Patches are formatted to feed straight into Edit (`old_string` / `new_string`). For accepted patches, run Edit on `analysis_framework.md` (or `analyze.py` for the bocfed_spread code patch). Mark the verification log entry as Tier 3 with date.
+3. **Judgment items in a separate session.** Items flagged "Judgment item (no patch proposed)" — analyst-synthesised decoders, unsourced thresholds, indicator-naming-leak risk — need different cognitive mode. Do these in a dedicated review where you have headspace to weigh tradeoffs. Don't interleave with mechanical accept/reject — context-switching between mechanical and judgment work doubles the friction.
+4. **Defer Labour Claim 3 (V/U) to its own dedicated session.** It's already flagged for re-review with a specific user-skepticism question (whether 0.45–0.60 is genuine tightness or status-quo-bias employer baseline). Treat as a third batch.
+5. **After patches land, regen blurbs** for the four Tier 1 sections (Labour, Financial, GDP, Housing) using the corrected framework prose. The autonomous-draft blurbs in `data/blurbs.json` predate every framework change since they were generated.
+
 ### Resume entry points
 
 - **Start with the defect-class index above** — pick which CRITICAL items to address first.
 - **Read commits in order** if you want to see the night's logical progression: `git log --oneline b34bebe..HEAD`
-- **Per-section verification logs** at `markdown-files/verification/{labour,inflation,policy,gdp,housing,financial}.md` carry the page-level evidence chain.
+- **Per-section verification logs** at `markdown-files/verification/{labour,inflation,policy,gdp,housing,financial}.md` carry the page-level evidence chain. Each Tier 2 claim with mechanical defects has a "Proposed patches" subsection.
 - **`markdown-files/verification/_tiers.md`** is the canonical glossary for the three-tier framework.
 
 ---
@@ -653,7 +663,15 @@ All entries below are **tentative** — surfaced during the framework verificati
 
 ### 6. Multi-page split (eventually)
 
-When chart count grows further, split into themed pages (policy, inflation, labour, housing deep-dives). Infrastructure is ready; not urgent at 20 charts.
+When chart count grows further, split into themed pages (policy, inflation, labour, housing deep-dives). **Scaffolding landed 2026-05-09 (commit `ccf5244`)** — `policy.html`, `inflation.html`, `gdp.html`, `labour.html`, `housing.html`, `financial.html` exist as placeholder pages with shared cross-page nav. Real-chart migration into these pages is pending (each placeholder section names what would go there).
+
+### 6b. Skills worth packaging when triggered (not pre-emptively)
+
+These were considered 2026-05-09 against the project's actual failure modes (see `~/.claude/projects/...../memory/infrastructure_match_failure_mode.md`). Each is conditional on a specific evolution:
+
+- **`/add-chart`** — trigger: scaling deep-dive page real charts. The 6 placeholder deep-dive pages will need real charts; estimate 40+ total at full build-out. When that work begins, package a skill that scaffolds ChartSpec + PAGES entry + `_DERIVED_SERIES_SOURCES` registration following established patterns.
+- **`/audit-section`** — trigger: re-auditing on a cadence (annually as BoC publications update — new MPRs, SANs, FSRs). The Tier 2 audit prompt template was used 5× on 2026-05-09; if re-audit becomes recurring, packaging it pays back. Lower priority than `/add-chart` since cadence isn't established yet.
+- **Hooks: ~never become high-value** for this project (content-bound failure mode, not code-shape). One narrow exception: a data-shape validator on `fetch.py` to catch fetcher regressions like the JVWS stale-zero bug. Set up only if bitten again.
 
 ### 7. Charts still on the wishlist
 
