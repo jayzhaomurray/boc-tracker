@@ -766,3 +766,31 @@ The two CRITICAL defects (Claim 2 wrong report, Claim 10 wrong methodology + wro
 6. **Lines 232, 247 (Claim 8):** Reconcile the two pre-2015 norm ranges (0.30-0.40 vs 0.28-0.40); ideally use the data-anchored version "pre-2015 IQR was 0.30-0.33; the 0.40+ readings only fired briefly in late 2008."
 
 7. **Line 239 (Claim 1):** Either source the "since 1977" anchor or replace with "since 1990 (project data start)"; update recent 10-year average from ~245k to ~234k.
+
+---
+
+## Convention sweep -- 2026-05-09
+
+Distribution-convention sweep applied to Housing section. Per `markdown-files/distribution_conventions.md`:
+
+| Indicator | Tail axis | Descriptor | Thresholds | N | Source |
+|---|---|---|---|---|---|
+| `housing_starts_12mma` | `|starts 12mma - 197.865k|` in thousands SAAR | strong / weak | typical <=32.5k; uncommon to 52.8k; pronounced to 71.4k; rare to 86.3k; extreme >86.3k | 424 (monthly, 1990-present) | `analyses/housing_distribution.py` |
+| `nhpi_yoy` | `|NHPI Y/Y - 1.704%|` in pp | hot / soft | typical <=2.0pp; uncommon to 5.3pp; pronounced to 10.3pp; rare to 13.7pp; extreme >13.7pp | 531 (monthly, 1982-present) | `analyses/housing_distribution.py` |
+| `crea_hpi_yoy` | `|CREA Y/Y - 3.660%|` in pp | hot / soft | typical <=6.6pp; uncommon to 12.6pp; pronounced to 22.4pp; rare to 25.4pp; extreme >25.4pp | 134 SMALL-N (monthly, 2015-present) | `analyses/housing_distribution.py` |
+| `housing_affordability` | `|afford ratio - 0.3335|` | stressed / comfortable | typical <=0.028; uncommon to 0.059; pronounced to 0.174; rare to 0.206; extreme >0.206 | 104 SMALL-N (quarterly, 2000-present) | `analyses/housing_distribution.py` |
+
+Factual corrections applied (Tier 2 audit -- Tier 3 pending user review):
+
+- **Claim 1 (long-run starts anchor / 10-year average):** Framework updated -- "since 1977" replaced with "since 1990 (project data start)"; 10-year average corrected from ~245k to ~234k. Patch applied 2026-05-09.
+- **Claim 2 (CMHC citation conflation -- CRITICAL):** Framework updated -- June 2025 "Solving the Affordability Crisis" report (4.8M / 430,000-480,000/year / 2035) separated from 2023 Housing Shortages report (3.5M by 2030). Patch applied 2026-05-09.
+- **Claim 3 (permits-to-starts source):** Citation updated from "CMHC's Spring 2026 analysis" to "CMHC's April 17, 2026 Observer article 'Building permits are early indicators of housing market sentiment'." Numbers verified correct. Patch applied 2026-05-09.
+- **Claim 4 (SAN 2025-21 citation tag):** Threshold bullet citation corrected from "FSR 2025 quantification" to "BoC SAN 2025-21." Patch applied 2026-05-09.
+- **Claim 7 (cyclical anchors):** COVID April 2020 tilde removed (161k exact); March 2021 peak updated to ~320k; November 2021 to ~305k; 2021 annual peak to ~274k. Patch applied 2026-05-09.
+- **Claim 8 (affordability ratio bands):** Analyst-synthesis nature of 0.40/0.50 thresholds explicitly disclosed. Pre-2015 norm tightened to IQR 0.30-0.33. Historical range corrected to min 0.275, max 0.545. Patch applied 2026-05-09.
+- **Claim 9 (NHPI "contractor-reported"):** Corrected to "builder-reported" in framework prose and format string. Patch applied 2026-05-09.
+- **Claim 10 (CREA MLS HPI methodology + BoC anchoring -- CRITICAL):** "hedonic" corrected to "hybrid repeat-sales / hedonic constant-quality index"; BoC affordability indicator anchoring claim corrected (uses MLS average resale price, not CREA MLS HPI). Patch applied 2026-05-09.
+- **Claim 12 (NHPI 2021-22 episode peak):** Updated from "9-10%+" to "peaked at ~12% in August 2021, double-digit sustained for ~10 months." Patch applied 2026-05-09.
+
+Claims 5, 6, 11 had no blocking defects and were not patched in this sweep.
+All addressed claims are Tier 2 (autonomously verified, convention sweep applied). Tier 3 upgrade requires explicit user sign-off per claim.

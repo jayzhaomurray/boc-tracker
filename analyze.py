@@ -1281,6 +1281,67 @@ Coverage gap: this framework tracks aggregate GDP, demand-side component contrib
 """
 
 
+
+def _classify_housing_starts(starts_12mma: float) -> str:
+    """Tier classification per markdown-files/distribution_conventions.md.
+    Tail axis: |housing starts 12-month MA - long-run median (197.865k)| in
+    thousands SAAR, monthly, since 1990, N=424 (last computed 2026-05-09; source
+    analyses\\housing_distribution.py): P50=32.5k, P80=52.8k, P95=71.4k,
+    P99=86.3k. Descriptor pair: strong / weak.
+    """
+    a = abs(starts_12mma - 197.865)
+    if a > 86.328:  return "extreme"
+    if a > 71.439:  return "rare"
+    if a > 52.783:  return "pronounced"
+    if a > 32.482:  return "uncommon"
+    return "typical"
+
+
+def _classify_nhpi_yoy(yoy_pct: float) -> str:
+    """Tier classification per markdown-files/distribution_conventions.md.
+    Tail axis: |NHPI Y/Y - median (1.704%)| in pp, monthly, since 1982, N=531
+    (last computed 2026-05-09; source analyses\\housing_distribution.py):
+    P50=1.966pp, P80=5.329pp, P95=10.259pp, P99=13.712pp.
+    Descriptor pair: hot / soft.
+    """
+    a = abs(yoy_pct - 1.704)
+    if a > 13.712: return "extreme"
+    if a > 10.259: return "rare"
+    if a >  5.329: return "pronounced"
+    if a >  1.966: return "uncommon"
+    return "typical"
+
+
+def _classify_crea_hpi_yoy(yoy_pct: float) -> str:
+    """Tier classification per markdown-files/distribution_conventions.md.
+    Tail axis: |CREA MLS HPI Y/Y - median (3.660%)| in pp, monthly, since 2015,
+    N=134 SMALL-N (last computed 2026-05-09; source analyses\\housing_distribution.py):
+    P50=6.635pp, P80=12.574pp, P95=22.392pp, P99=25.422pp.
+    Descriptor pair: hot / soft. SMALL-N: N<200; extreme tier sparse.
+    """
+    a = abs(yoy_pct - 3.660)
+    if a > 25.422: return "extreme"
+    if a > 22.392: return "rare"
+    if a > 12.574: return "pronounced"
+    if a >  6.635: return "uncommon"
+    return "typical"
+
+
+def _classify_housing_affordability(ratio: float) -> str:
+    """Tier classification per markdown-files/distribution_conventions.md.
+    Tail axis: |affordability ratio - long-run median (0.3335)|, quarterly,
+    since 2000, N=104 SMALL-N (last computed 2026-05-09; source
+    analyses\\housing_distribution.py): P50=0.0285, P80=0.0593, P95=0.1739,
+    P99=0.2057. Descriptor pair: stressed / comfortable. SMALL-N: N<200.
+    """
+    a = abs(ratio - 0.3335)
+    if a > 0.2057: return "extreme"
+    if a > 0.1739: return "rare"
+    if a > 0.0593: return "pronounced"
+    if a > 0.0285: return "uncommon"
+    return "typical"
+
+
 # ── Housing section ─────────────────────────────────────────────────────────
 
 def compute_housing_values() -> dict:
@@ -1321,6 +1382,7 @@ def compute_housing_values() -> dict:
     starts_now_yoy = float(asof(starts_yoy, as_of_starts))
     starts_now_mom = float(asof(starts_mom, as_of_starts))
     starts_3mo_avg = float(starts.tail(3).mean())  # 3-month moving average to filter noise
+    starts_12mo_avg = float(starts.tail(12).mean())  # 12-month MA for convention tier classifier
 
     nhpi_now     = float(asof(nhpi, as_of_nhpi))
     nhpi_now_yoy = float(asof(nhpi_yoy, as_of_nhpi))
@@ -1410,6 +1472,13 @@ def compute_housing_values() -> dict:
         "affordability_hist_min":    afford_hist_min,
         "affordability_hist_max":    afford_hist_max,
         "affordability_hist_pct":    afford_hist_pct,
+
+        # Convention tier classifications (distribution_conventions.md, 2026-05-09)
+        "housing_starts_12mo_avg":   starts_12mo_avg,
+        "starts_12mma_tier":         _classify_housing_starts(starts_12mo_avg),
+        "nhpi_yoy_tier":             _classify_nhpi_yoy(nhpi_now_yoy),
+        "crea_hpi_yoy_tier":         _classify_crea_hpi_yoy(crea_now_yoy),
+        "affordability_tier":        _classify_housing_affordability(afford_now),
     }
 
 
@@ -1424,20 +1493,21 @@ Housing starts (SAAR; values are in thousands of units annualized — e.g. 251 m
   Y/Y change:                  {v['housing_starts_yoy']:+.1f}%
   M/M change:                  {v['housing_starts_mom']:+.1f}%
   Regime classification:       {v['housing_starts_regime']}   (thresholds: <180k subdued; 180-280k near trend; >280k elevated)
+  Convention tier (12mma):     {v['starts_12mma_tier']}  (typical |12mma-197.9k|<=32.5k; uncommon to 52.8k; pronounced to 71.4k; rare to 86.3k; extreme above; monthly 1990+, P50/P80/P95/P99; descriptor: strong / weak)
 
 New Housing Price Index (Dec 2016 = 100) — new-home prices only; excludes condo apartments and resale:
   Latest:                      {v['nhpi']:.1f}
-  Y/Y change:                  {v['nhpi_yoy']:+.1f}%   (>5% = meaningful price acceleration; <0% = price declines, rare)
+  Y/Y change:                  {v['nhpi_yoy']:+.1f}%   tier: {v['nhpi_yoy_tier']}  (typical |Y/Y-1.7%|<=2.0pp; uncommon to 5.3pp; pronounced to 10.3pp; rare to 13.7pp; extreme above; monthly 1982+, P50/P80/P95/P99; descriptor: hot / soft)
   M/M change:                  {v['nhpi_mom']:+.2f}%
 
 CREA MLS HPI (2019 = 100) — resale-dominant comparator to NHPI; BoC affordability index anchored to resale prices:
   Latest:                      {v['crea_hpi']:.1f}
-  Y/Y change:                  {v['crea_hpi_yoy']:+.1f}%
+  Y/Y change:                  {v['crea_hpi_yoy']:+.1f}%   tier: {v['crea_hpi_yoy_tier']}  (typical |Y/Y-3.7%|<=6.6pp; uncommon to 12.6pp; pronounced to 22.4pp; rare to 25.4pp; extreme above; monthly 2015+, N=134 SMALL-N, P50/P80/P95/P99; descriptor: hot / soft)
   M/M change:                  {v['crea_hpi_mom']:+.2f}%
   CREA vs NHPI direction agree: {agree_str}
     (At common date: CREA Y/Y = {v['crea_yoy_at_common_date']:+.1f}%, NHPI Y/Y = {v['nhpi_yoy_at_common_date']:+.1f}%)
   Note: NHPI tracks builder-reported prices for new single/semi/row homes across 27 CMAs.
-        CREA is hedonic on all MLS transactions (resale-dominant). When they diverge directionally,
+        CREA is a hybrid repeat-sales / hedonic index (MLS resale-dominant). When they diverge directionally,
         NHPI is typically the lagging series — builders are slow to cut asking prices on downturns.
 
 Residential building permits (value, SA, leading indicator ~9-15 months ahead of starts for multi-unit/high-rise):
@@ -1446,7 +1516,7 @@ Residential building permits (value, SA, leading indicator ~9-15 months ahead of
   M/M change:                  {v['residential_permits_mom']:+.1f}%
 
 Housing Affordability Index (BoC INDINF_AFFORD_Q) — ratio of mortgage payment to household income; higher = less affordable:
-  Latest:                      {v['affordability']:.3f}
+  Latest:                      {v['affordability']:.3f}   tier: {v['affordability_tier']}  (typical |afford-0.3335|<=0.028; uncommon to 0.059; pronounced to 0.174; rare to 0.206; extreme above; quarterly 2000+, N=104 SMALL-N, P50/P80/P95/P99; descriptor: stressed / comfortable)
   Y/Y change:                  {v['affordability_yoy']:+.1f}%   (negative = improving affordability)
   5-year range (2020-present): {v['affordability_5y_min']:.3f} - {v['affordability_5y_max']:.3f}  (current at {v['affordability_5y_pct']:.0f}th pct of 5Y range)
   Historical range (2000-now): {v['affordability_hist_min']:.3f} - {v['affordability_hist_max']:.3f}  (current at {v['affordability_hist_pct']:.0f}th pct of historical range)
