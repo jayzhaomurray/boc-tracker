@@ -17,6 +17,7 @@ Read these documents in order before doing anything substantive. They are the so
 
 ## Workflow conventions
 
+- **Provenance tiers.** Content in this project is tagged Tier 1 (generated, no verification), Tier 2 (autonomously verified — Claude/sub-agent ran a verification pass against sources but the user did NOT review), or Tier 3 (user-verified — claim-by-claim review with the user). See `markdown-files/verification/_tiers.md` for the full glossary, examples, and how to mark tier in different docs. Default any new content to Tier 1; upgrade to Tier 2 when a verification log entry exists; upgrade to Tier 3 only after explicit user sign-off. Don't write "verified" without specifying which tier.
 - **Discuss → plan → implement** for any non-trivial design choice. Don't jump straight to code. The user often says "let's discuss first" — they use chat as where they push back on framing or correct my premises before I commit.
 - **Skip plan mode for genuinely small changes.** Adding one toggleable line to an existing chart doesn't need the 5-step planning workflow. Plan mode is for design decisions, not implementation steps.
 - **Concise commit messages.** 5–10 lines max for routine changes; long-form only for genuinely complex commits. (Past sessions have over-explained.)

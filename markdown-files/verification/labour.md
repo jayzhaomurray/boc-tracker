@@ -1,10 +1,15 @@
 # Verification log: Labour Market section
 
-Per-claim source log for the Labour section of `analysis_framework.md`. Each claim in the framework should appear here with: (a) the framework prose verbatim, (b) the primary source(s) that back it, (c) a direct quote from the source where possible, (d) a verification verdict, and (e) any analyst notes.
+Per-claim source log for the Labour section of `analysis_framework.md`. Each claim in the framework should appear here with: (a) the framework prose verbatim, (b) the primary source(s) that back it, (c) a direct quote from the source where possible, (d) a verification verdict, (e) a provenance tier (see `_tiers.md`), and (f) any analyst notes.
 
 This file is **not** in CLAUDE.md's "First moves" auto-load list — it's a working log for claim-by-claim review, kept separate from the framework prose to avoid bloating session-init context. The framework itself carries inline citations; this log carries the page-level evidence chain.
 
-**Verification verdict glossary:**
+**Provenance tiers (see `_tiers.md` for full glossary):**
+- **Tier 1 — Generated.** Claude-written, no verification.
+- **Tier 2 — Autonomously verified.** Claude / sub-agent ran sources, the user did NOT review.
+- **Tier 3 — User-verified.** User pushed back on framings, accepted/rejected/revised per claim.
+
+**Verification verdict glossary (orthogonal to tier):**
 
 - **VERIFIED** — direct quote from a primary source supports the framework claim.
 - **PARTIALLY VERIFIED** — primary source supports the substance but the framework's specific framing or numbers extend beyond the source.
@@ -15,6 +20,10 @@ This file is **not** in CLAUDE.md's "First moves" auto-load list — it's a work
 ---
 
 ## Claim 1: Unemployment rate level and direction (estimated NAIRU ~6%)
+
+### Provenance tier
+
+**Tier 3 — user-verified 2026-05-09.** Original Tier-2 entry contained two fabricated BoC quotes that survived autonomous verification; user sign-off came only after sources were re-checked and the framework rewritten.
 
 ### Verification verdict
 
@@ -81,6 +90,10 @@ REVISED 2026-05-09. Original framework text contained two fabricated quotes attr
 
 ## Claim 2: Utilization — employment rate and participation rate together
 
+### Provenance tier
+
+**Tier 3 — user-verified 2026-05-09.** User flagged the rigid 2×2 decoder as combinatorially incomplete; the autonomous Tier-2 version had codified it as if it were a primary-source rule.
+
 ### Verification verdict
 
 REVISED 2026-05-09. Original framework prose codified a rigid four-quadrant decoder mapping joint employment+participation moves to four named states (*"falling employment with stable participation = layoffs absorbing slack; falling participation with stable employment = workers leaving the labour force; both falling = slack opening on both margins; both rising = the strongest tightening signal"*). The decoder had two structural problems that prompted revision:
@@ -116,6 +129,10 @@ The global "Verification, not speculation" rule near the top of `analysis_framew
 ---
 
 ## Claim 3: Tightness — job vacancy rate + V/U ratio + V/U threshold bands
+
+### Provenance tier
+
+**Tier 3 (provisional) — user-engaged 2026-05-09; flagged for re-review 2026-05-10.** User actively challenged the V/U > 1 = tight heuristic, the BoC's-preferred framing, and the 12M MA smoothing choice; the revised version went through user push-back. The Tier-3 stamp will be confirmed (or revised again) at the 2026-05-10 review pass — until then, the entry is "engaged but not finalized," structurally still Tier 3 but with an explicit reopening flag.
 
 ### Verification verdict
 
