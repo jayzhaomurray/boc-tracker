@@ -671,6 +671,18 @@ Labour Market and Financial Conditions blurbs were generated overnight May 8, 20
 
 Labour, Financial Conditions, GDP, and Housing blurbs are autonomous drafts generated May 8, 2026. All four compute functions have since been rewired (GDP: commit b51bef0; Labour: commit 945fa8f; Housing: May 2026 CREA/affordability wiring). The actual blocker is the framework defects surfaced in the 2026-05-09 audit -- the morning-review patches (bocfed_spread thresholds, CMHC citation conflation, USDCAD peaks, BCC wording) should land before regenerating so the blurbs don't bake stale anchors. Once framework patches are accepted, regenerate all four locally via `python analyze.py --section <id>` (CLI subscription path; no API key needed). This gives the user a clean starting point for the voice-iteration pass (item 2 above).
 
+### RBA two-sided labour methodology — replicate for Canada
+
+User raised 2026-05-09 after reviewing labour-tightness research. The intent is to ensure the Labour deep-dive covers BOTH demand-side AND supply-side labour-market signals as the RBA does ([RBA Bulletin April 2024 — "Assessing Full Employment in Australia"](https://www.rba.gov.au/publications/bulletin/2024/apr/assessing-full-employment-in-australia.html)), so the framework can detect tightness asymmetrically (demand-side complaint without supply-side bargaining power — the Canadian 2018-2019 / 2022 pattern). The RBA's specific signals: vacancies + employment intentions on the demand side; **job switching rates (ABS Labour Mobility), underemployment (R-indicators analog), hours worked** on the supply side. Canadian equivalents mostly identified but not all in dashboard. Substantive gap: **no Canadian economy-wide voluntary quit-rate series.** Closest path is reconstructing from LFS gross flows (Table 14-10-0125). Full mapping in memory at `~/.claude/projects/.../memory/project_rba_methodology.md`. User wants to search for closer Canadian comparables to ABS Labour Mobility later.
+
+### BOS labour-shortage indicators — candidate Valet pull
+
+Came up during the V/U fifth-pass discussion 2026-05-09. The dashboard currently does not pull BOS labour-shortage indicators; this is the central reason V/U band labels had to be retitled to purely empirical descriptors (we can't claim "employers are reporting shortages" when we don't observe it). Closing this epistemic gap via a Valet probe + fetch.py addition would let blurbs make stronger statements. Probe: search Valet series list for `BOS`, `LABOUR_SHORTAGE`, `BOS_*`. If found, add to fetch.py and integrate into Labour section as a complement to V/U.
+
+### Real-wage benchmark prose extension
+
+The Labour convention sweep (commit `90bdb5d`) added live real-wage computation across 4 measures (LFS-all, LFS-permanent, SEPH, LFS-Micro). Framework prose needs a small extension to make the cross-check rule explicit: any "tight" assertion in blurbs must be wage-pressure-confirmed (real wage Y/Y > 0 AND nominal wage Y/Y above productivity baseline). Currently the rule is in the V/U paragraph framing; pulling it into the Labour Thresholds block would make it more visible. Small edit, deferred from V/U fifth-pass to keep that patch focused.
+
 ### 5. Eventually: deep-dive Monetary Policy page
 
 A separate page for practitioner-grade detail that doesn't fit on the overview:

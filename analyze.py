@@ -835,7 +835,7 @@ def compute_labour_values() -> dict:
     # Tightness: vacancy rate (12M MA) and V/U ratio (BoC's preferred composite read).
     vac_rate_now    = float(asof(vac_rate_12m, as_of_vacancy))
     vac_rate_12m_ago = float(asof(vac_rate_12m, as_of_vacancy - pd.DateOffset(months=12)))
-    # V/U: vacancies per unemployed. >1 = more vacancies than unemployed (tight); <1 = slack.
+    # V/U: vacancies per unemployed. Evaluated against Canadian-calibrated empirical bands; see analysis_framework.md Labour section.
     # Use the smoothed vacancy level (NSA) divided by SA unemployment level at the same month.
     vu_date = min(as_of_vacancy, as_of_unemp)
     v_count = float(asof(vac_level_12m, vu_date))
@@ -982,7 +982,7 @@ Utilization (as of {v['as_of_utilization']}):
 Tightness (as of {v['as_of_vacancy']}):
   Job vacancy rate (12M MA):     {v['vacancy_rate_12m_avg']:.2f}%   (vacancies / (vacancies + payroll employees), 12M average over NSA monthly)
                                  12-month change: {v['vacancy_rate_12mo_change']:+.2f}pp
-  V/U ratio:                     {vu_str}   (vacancies per unemployed person; >1 = more vacancies than unemployed = tight; <1 = slack. BoC's preferred composite tightness read.)
+  V/U ratio:                     {vu_str}   (vacancies per unemployed person; Canadian bands: <0.30 = bottom-of-history V/U; 0.30-0.45 = low V/U; 0.45-0.60 = elevated V/U; 0.60-0.80 = high V/U; >0.80 = exceptionally high V/U. Cross-check against wage signal before asserting tightness.)
   Vacancy count vs unemployment count: {v['vacancy_count_12m_avg_m']:.2f}M vacancies vs {v['unemployment_count_m']:.2f}M unemployed.
 
 Wage growth (Y/Y, as of {v['as_of_wages']}):

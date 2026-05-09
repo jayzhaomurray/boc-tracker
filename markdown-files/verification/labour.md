@@ -132,11 +132,11 @@ The global "Verification, not speculation" rule near the top of `analysis_framew
 
 ### Provenance tier
 
-**Tier 3 (provisional) — user-engaged 2026-05-09; flagged for re-review 2026-05-10.** User actively challenged the V/U > 1 = tight heuristic, the BoC's-preferred framing, and the 12M MA smoothing choice; the revised version went through user push-back. The Tier-3 stamp will be confirmed (or revised again) at the 2026-05-10 review pass — until then, the entry is "engaged but not finalized," structurally still Tier 3 but with an explicit reopening flag. **DEFERRED (2026-05-09 convention sweep): user flagged for own re-review; thresholds not changed in this sweep.**
+**Tier 3 — resolved 2026-05-09 via user discussion (fifth-pass framing).** V/U band labels updated to purely empirical descriptors: bottom-of-history V/U / low V/U / elevated V/U / high V/U / exceptionally high V/U. Band cuts (0.30 / 0.45 / 0.60 / 0.80) unchanged. Historical anchors (Wilkins Jan 2019; Macklem Nov 2022) retained as calibration facts, not current-state claims. Wage Y/Y established as the hard cross-check for any tightness assertion. Evidence base in analyses/labour_tightness_research_2026-05-09.md.
 
 ### Verification verdict
 
-**REVISED 2026-05-09 — FLAGGED FOR USER RE-REVIEW 2026-05-10 BEFORE FINAL ACCEPTANCE.** The user explicitly wants to revisit this section tomorrow morning ("this is a crucial thing to get right"). The revision below is committed but provisional.
+**RESOLVED 2026-05-09 — fifth-pass framing accepted by user.** Band labels changed to empirical descriptors; wage cross-check rule formalized. See locked-in framing paragraph in analysis_framework.md Labour section (Tightness signal bullet).
 
 The original framework prose had three issues addressed in the revision:
 
@@ -851,7 +851,7 @@ newcomer and youth unemployment composition, and subnational variation.
 
 ### Provenance tier
 
-**Tier 2 — autonomously verified 2026-05-09. Not user-reviewed.** Ready for user verdict on 2026-05-10. **Contains a propagation defect from user-verified Claim 3 that needs immediate fix — see flag below.** **DEFERRED (2026-05-09 convention sweep): user explicitly requested deferral; V/U propagation logic not touched in this sweep.**
+**Tier 3 — resolved 2026-05-09 via Claim 3 resolution.** Propagation defect fixed: ‘What to surface’ V/U sentence updated in analysis_framework.md to use Canadian-calibrated bands and wage cross-check rule, replacing the US-transferred ‘V/U near or above 1 = tight’ heuristic. No further propagation drift found in other sections.
 
 ### Framework prose (verbatim)
 
@@ -859,7 +859,7 @@ newcomer and youth unemployment composition, and subnational variation.
 
 ### Verification verdict
 
-**CONTESTED — contains a known-defect line that user-verified Claim 3 explicitly rejected.** Most of the synthesis paragraph is consistent with verified Claims 1–8, but the V/U sentence (*"V/U well below 1 reinforces a slack read, V/U near or above 1 reinforces a tight read"*) re-asserts the US-transferred heuristic that Claim 3's user-verification eliminated.
+**RESOLVED — propagation defect fixed 2026-05-09.** The V/U sentence in the 'What to surface' paragraph has been updated to use the Canadian-calibrated bands (Claim 3 Tier 3 framing) and the wage cross-check rule. The rest of the synthesis paragraph was consistent with verified Claims 1–8 and required no changes.
 
 ### PROMINENT FLAG — V/U threshold contradiction (propagation defect)
 
