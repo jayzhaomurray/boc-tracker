@@ -1,6 +1,6 @@
 # BoC Tracker — Project Handoff
 
-This document captures the full state of the project, every architectural decision, and the next steps. Written so a fresh session can continue without any prior context.
+This document captures the current state of the project. Written so a fresh session can continue without any prior context.
 
 ---
 
@@ -15,7 +15,7 @@ A personal data dashboard that tracks the economic indicators the Bank of Canada
 **Tech stack:** Python → Plotly → static HTML → GitHub Pages
 **Data sources:** Statistics Canada WDS API, Bank of Canada Valet API, Federal Reserve (FRED) API, Alberta Economic Dashboard API
 
-**Long-term vision:** `vision.md` has been archived to `markdown-files/archive/` and is not a first-read doc for session startup. It covers capability trajectories beyond the current todo list — corpus-as-asset, forkable infrastructure for other central banks, dashboard as thinking partner, the rare public-good outcome of free plain-language sourced commentary, and the interactive query-mode layer.
+**Long-term vision:** `vision.md` has been archived to `markdown-files/archive/` and is not a first-read doc for session startup.
 
 ---
 
@@ -63,15 +63,17 @@ boc-tracker/
     ├── analysis_framework.md             ← internal analytical brief for blurb generation
     ├── chart_style_guide.md              ← formatting principles + workflow rules (first-read)
     ├── reading_guide.md                  ← human-readable interpretation guide per chart
-    ├── gdp_inventories_research.md       ← research note on GDP series; not yet archived
+    ├── dashboard_purpose.md              ← what the dashboard exists to answer (first-read)
+    ├── blurb_quality_log.md              ← May 2026 testing-session lessons + open questions
     └── archive/                          ← superseded / deprioritised planning docs
         ├── vision.md
+        ├── gdp_inventories_research.md
         ├── boc_mpr_charts_inventory.md
         ├── boc_mpr_tracking_priority.md
         └── boc_mpr_data_methodology.md
 ```
 
-The `analyses/` folder is for one-off research and reference data. Scripts there are run manually, never by `fetch.py` or `build.py`. Each analysis is a self-contained `.py` file that reads from `data/` and writes its own outputs (CSV/PNG) into `analyses/`. Any `probe_*.py` files at the project root were cleaned up — none remain there. The `.gitignore` still blocks `probe_*.py` at root; new probes should go in `analyses/` with descriptive names. Curl artifacts (`table-*.json`) are also gitignored.
+The `analyses/` folder is for one-off research and reference data. Scripts there are run manually, never by `fetch.py` or `build.py`. Each analysis is a self-contained `.py` file that reads from `data/` and writes its own outputs (CSV/PNG) into `analyses/`. Any `probe_*.py` files at the project root were cleaned up — none remain there. The `.gitignore` still blocks `probe_*.py` at root; new probes should go in `analyses/` with descriptive names.
 
 ---
 
@@ -199,6 +201,8 @@ No auth required. Returns ~700 records covering several oil grades. WCS is filte
 The DST problem: no single UTC time is 8:30 AM ET year-round. Two cron lines handle this — one fires early (harmless on the other season), one fires exactly right.
 
 Both StatsCan crons use `python fetch.py --wait`; the BoC cron uses `python fetch.py` (one-shot). `FRED_API_KEY` is passed from a configured GitHub Actions secret.
+
+The workflow has a "Generate section blurbs" step that loops over all six section IDs and calls `python analyze.py --section <id>`. It gates on `ANTHROPIC_API_KEY` being present in repo Secrets — if not set, emits a `::warning::` annotation and skips; CI stays green.
 
 ---
 
@@ -418,15 +422,11 @@ Build-time pre-computed Y_RANGES were removed because they baked the union of al
 - `_refreshYAxis(chartId)` re-runs `applyRange` for whatever date window is currently active. Called from every visibility-changing handler (`toggleTrace`, `mlToggle`, `cpiLineToggle`).
 - `DEFAULT_RANGES` still initializes each chart's window on `DOMContentLoaded`, which calls `applyRange` and so seeds the axis correctly.
 
-The build-time per-panel `dtick` and `tickformat` settings remain (set during chart construction), but they are overridden by the JS as soon as `applyRange` runs.
-
 ### Y-axis tick density and decimal consistency
-
-Earlier the project used `_ytick_format(vals)` (decimals based on data span) plus Plotly's automatic ticks. That produced charts with as few as three labels and decimal inconsistency between ticks (e.g. "1.3" next to "1.35" on the same axis).
 
 Current approach in `build.py`:
 
-- **`_nice_dtick(ymin, ymax, target=5)`** — round-DOWN nice tick interval (1, 2, 2.5, 5 × 10^k) sized so at least `target` ticks fit in the displayed range. Round-down guarantees ≥ target ticks; round-up was tried first and produced too few.
+- **`_nice_dtick(ymin, ymax, target=5)`** — round-DOWN nice tick interval (1, 2, 2.5, 5 × 10^k) sized so at least `target` ticks fit in the displayed range.
 - **`_dtick_format(dtick)`** — tickformat string whose precision matches the dtick value, so all ticks display the same number of decimal places.
 - For multi-series charts (MultiLineSpec, WageSpec, CoreInflation, CpiBreadth): dtick is computed from the **displayed range** (data + padding), not raw data. `tick0=0` anchors the tick grid to integer multiples.
 - For ChartSpec: no fixed dtick — uses `nticks=7` instead, because different transforms (Level vs M/M) have wildly different scales and a global dtick is wrong for at least one.
@@ -479,102 +479,45 @@ The About section lists all four data sources (StatsCan, BoC Valet, FRED, Albert
 
 ---
 
-## Analysis framework system (in progress)
+## Analysis framework and blurb pipeline
 
-The longer-term plan: when new data lands each month, Claude reads the data against an internal analytical brief, generates 4 short interpretive blurbs (one per dashboard section), and `build.py` injects them into the HTML before each section heading. Readers see prose like *"Wage growth is cooling but still running ahead of services CPI…"* — not a how-to-read-it explainer, just synthesis.
+The analytical framework (`markdown-files/analysis_framework.md`) is the internal brief for blurb generation — per-section questions, signals, thresholds. Blurbs are generated by `analyze.py`, which reads the framework + CSV data, calls `claude-opus-4-7`, and writes `data/blurbs.json`. `build.py` injects the section heading + blurb above the chart at the index named in `PageSpec.sections`.
 
-### Two layers
+All six sections (`policy`, `inflation`, `gdp`, `labour`, `housing`, `financial`) have:
+- A `compute_*_values` + `format_*_values` pair in `analyze.py`
+- A verified framework section in `analysis_framework.md` (explicit VERIFIED status flags with BoC primary-source citations)
+- A generated blurb in `data/blurbs.json`
 
-- **Internal (private):** `markdown-files/analysis_framework.md` — defines the question per section, the signals/relationships to evaluate, the thresholds, and what to surface in the output. This is Claude's brief, never seen by readers.
-- **External (on the page):** Natural prose blurbs, generated at fetch+build time. Not yet wired into `build.py`.
+**Verification status (May 2026):**
+- **Inflation:** verified end-to-end; trim/median signal removed, 0.17%/month threshold kept, four-state breadth classification, top-level decomposition rule all codified.
+- **Monetary Policy:** verified May 7, 2026. Neutral rate 2.25–3.25% (Staff Note 2025-16, MPR April 2026); QT timeline April 25, 2022 — January 29, 2025; $20–60B settlement-balance target (Gravelle March 2024). Spread thresholds anchored to empirical percentiles.
+- **Labour Market:** verified May 8, 2026. NAIRU replaced with BoC's multi-indicator benchmark approach (SAN 2025-17); ~3% wage threshold kept; LFS-Micro composition adjustment per SAN 2024-23; utilization, tightness, and ULC layers wired.
+- **Financial Conditions:** verified May 8, 2026. CAD pass-through corrected to 0.3–0.6 pp per 10% move (BoC DP 2015-91); petrocurrency relationship flagged as structurally weak post-2016; WCS-WTI spread bands established.
+- **GDP & Activity:** verified May 8, 2026. Potential growth range 1.2–1.5% (BoC April 2026 MPR, SAN 2025-14); recession definition corrected to C.D. Howe Business Cycle Council depth/duration/breadth criteria; StatsCan daily ÷4 AR convention made explicit.
+- **Housing:** verified May 8, 2026. CMHC SAAR thresholds anchored; NHPI vs CREA HPI methodology differences noted.
 
-### Sections and natural groupings
+**Blurb voice quality:** Inflation and Monetary Policy blurbs went through user iteration cycles and represent ground-truth voice. Labour Market, Financial Conditions, GDP, and Housing blurbs were generated autonomously (May 8, 2026) against verified frameworks — prose is unverified by user; expect revision at next review.
 
-1. **Inflation** — Core Inflation, CPI Breadth, CPI All Items
-2. **Policy Rates** — Policy Rates, 2-Year Yields
-3. **Labour Market** — Unemployment, Wage Growth
-4. **Financial Conditions** — Oil Prices, USD/CAD
-
-(Section was originally framed as "Global Inputs" / "External Conditions" centred on commodities and FX; renamed to "Financial Conditions" so it can grow to include equities and other market signals over time.)
-
-### Verification process
-
-Framework claims must be either sourced to a primary publication (BoC, StatsCan, academic literature) or empirically tested against the data we already have. One-off analyses go in `analyses/`. Items verified so far:
-
-- **Trim vs median directional signal** — REMOVED. No reputable analyst uses it; Cleveland Fed research contradicts the simple interpretation; empirical sign-agreement is 45–50% (coin flip). See `analyses/trim_vs_median_skewness.py`.
-- **CPIXFET vs CPI-trim as goods/services diagnostic** — REMOVED. CPIXFET is a legacy measure (BoC moved away from it in 2001 → CPIX → 2016 trim/median/common). No analyst usage; logical mapping is weak.
-- **0.17%/month threshold for 2% annualized** — KEPT. Mathematically (1.0017)^12 = 2.06%; precise figure is 0.165%. **Important methodological finding:** vector 41690914 was mislabelled "NSA" in `fetch.py` but is actually SA. Confirmed by inspecting M/M seasonal pattern. The threshold therefore applies cleanly to our existing chart data. NSA series added separately as `cpi_all_items_nsa` (vector 41690973) for legend-toggle comparison.
-
-### Verification status — Inflation section
-
-The Inflation section's framework is fully verified and the blurb pipeline runs end-to-end against it. Items completed:
-
-- **Trim vs median directional signal** — REMOVED. No reputable analyst uses it; Cleveland Fed research contradicts the simple interpretation; empirical sign-agreement is 45–50% (coin flip). See `analyses/trim_vs_median_skewness.py`.
-- **CPIXFET vs CPI-trim as goods/services diagnostic** — REMOVED. CPIXFET is a legacy measure; no analyst usage; logical mapping is weak.
-- **0.17%/month threshold for 2% annualized** — KEPT. Mathematically (1.0017)^12 = 2.06%; precise figure is 0.165%.
-- **Top-level decomposition for headline-vs-core gap** — IMPLEMENTED. Added `cpi_food`, `cpi_energy`, `cpi_goods` to `fetch.py`; framework now requires verifying which category drives any gap, instead of guessing. The "main-page blurbs use top-level aggregates only" rule is codified.
-- **Breadth synthesis** — IMPLEMENTED. Four-state classification (broad-based pressure / broad-based softening / clustered near target / polarized) using `tilt = above3-deviation − below1-deviation`. Output uses the state name, not the threshold-vs-historical four-direction comparison.
-- **Writing style and structure rules** — codified across all sections (plain verbs, semicolons, no codas, conventional shorthand, plain hedges, takeaway-first, no forecasts, no policy prescription, never speculate when verifiable).
-
-### Verification status — all four sections (as of May 8, 2026)
-
-All four framework sections now carry explicit verification flags at the top of each section in `analysis_framework.md`. Each is anchored to BoC primary sources and (where appropriate) empirical distributions from our own data.
-
-- **Inflation:** VERIFIED end-to-end. Trim/median, CPIXFET, 0.17%/month threshold, top-level decomposition rule, four-state breadth classification, writing style — all codified and documented above.
-- **Monetary Policy:** VERIFIED end-to-end (May 7, 2026). Neutral rate range 2.25–3.25% (Staff Note 2025-16, MPR April 2026); peak QE March 2021 not April 2022 ($575.4B verified from `boc_total_assets`); floor system permanent since April 2022 (not 2025); QT operational timeline (April 25, 2022 — January 29, 2025); $20–60B settlement balance steady-state target (Gravelle March 2024 speech). Tiered thresholds for `bocfed_spread` and `can2y_overnight_spread` anchored to empirical percentiles since 1996/2001. 2Y term premium magnitudes from BoC ACM literature.
-- **Labour Market:** VERIFIED (May 8, 2026). NAIRU framing replaced — BoC has moved away from a single point estimate to a multi-indicator benchmark approach (SAN 2025-17). Wage threshold ~3% kept as a soft anchor; productivity assumption ~1% verified against SAN 2025-14 with note that recent productivity is structurally weak. LFS-Micro composition adjustment verified (SAN 2024-23) with the empirical pattern noted: Canadian LFS-Micro typically runs *below* raw LFS. "Margin absorption" softened to BoC-validated framing of "leading indicator for services inflation persistence." Real wages = wage Y/Y − headline CPI Y/Y per BoC convention. Coverage gap explicitly flagged: framework lacks employment rate, vacancies, hours, ULC, newcomer/youth — all BoC-tracked.
-- **Financial Conditions:** VERIFIED (May 8, 2026). CAD pass-through corrected from "1–2 pp goods CPI per 10% move" to "0.3–0.6 pp" (BoC Discussion Paper 2015 dp2015-91; the older figure was for 25–30% depreciation episodes). Petrocurrency relationship flagged as structurally weak post-2016 (Alberta Central). Stress corridor expanded from 1.45–1.46 to 1.45–1.47 with three episodes (Jan 2016, Mar 2020, Dec 2024–Jan 2025). WTI Y/Y disinflationary impulse quantified (~0.35 pp per 10% via gasoline, 3.7% basket weight). BoC-Fed → CAD framing validated (rate diff explains ~25% of recent moves; FX risk premium ~75% per BoC SAN 2025-2 + MPR Jan 2025). WCS-WTI normal $10–15, >$20 constrained, <$12 post-TMX. Coverage gap explicitly flagged: framework lacks CEER, credit spreads, equity, explicit FX risk premium decomposition.
-
-### Pipeline status
-
-Built and runnable. End-to-end:
-
-- `analyze.py` reads `markdown-files/analysis_framework.md`, computes the section's values from CSVs, builds a prompt, calls `claude-opus-4-7`, writes the blurb to `data/blurbs.json`. Loads the prior blurb (if any) to pass as comparison context.
+**Pipeline notes:**
 - `data/blurbs.json` shape: `{section_id: {as_of, model, text}}`.
-- `build.py` reads `data/blurbs.json` and injects the section heading + blurb above the chart at the index named in `PageSpec.sections`.
-- **All four sections wired (compute + format + framework + blurb):** `inflation`, `policy`, `labour`, `financial`. Each has a `compute_*_values` + `format_*_values` pair in `analyze.py`, a verified framework section (status flags at the top of each section in `analysis_framework.md`), and a generated blurb in `data/blurbs.json`. The section heading `financial` is what `build.py` and `PageSpec.sections` use; internal Python function names use `external` for historical reasons (compute_external_values, format_external_values) — both names refer to the same domain.
-- **CI workflow generates blurbs end-to-end** when `ANTHROPIC_API_KEY` is present in repo Secrets. Step "Generate section blurbs" between Fetch and Build loops over all four section_ids and calls `python analyze.py --section <id>`. Each call generates a blurb, then runs a self-review pass (`review_blurb` in analyze.py) that checks for factual errors against the framework + computed values; flagged blurbs save with `review_flags` for the next user review rather than blocking. If the secret isn't set, the step emits a `::warning::` annotation and skips — CI stays green; blurbs hold at the last manually-saved values.
-- **Voice quality:** Inflation and Monetary Policy blurbs went through user iteration cycles and represent ground-truth voice. Labour Market and Financial Conditions blurbs were generated autonomously on May 8, 2026 against the verified frameworks; the prose is unverified by the user yet and may need revision when the user next reviews. Activating `ANTHROPIC_API_KEY` will regenerate all four nightly via the same self-reviewed pipeline.
-- **Policy section data architecture (built May 7, 2026).** Action-state classification ("on hold" / "cutting" / "hiking") needs meeting-resolution data, which the monthly `overnight_rate` series doesn't provide. Solution: a daily series (`overnight_rate_daily`, V39079, since 2009) feeds `compute_policy_values`; the BoC FAD calendar lives in two files (`data/fad_calendar.json` from the BoC iCal feed for upcoming + recent past; `data/fad_history.json` static historical bootstrap, committed). `_load_fad_calendar()` merges them. The chart still uses the monthly `overnight_rate` for its longer history; data sources serve different purposes.
-- **Blurb development workflow.** For each section: (1) verify every analytical claim in the framework's section against primary sources or our own data (parallel Sonnet subagents work well), (2) build `compute_*_values` and `format_*_values`, (3) run `--print-only` to inspect prompt + values, (4) generate blurb against the prompt, (5) iterate with the user on plain-language quality, (6) commit. Steps 1-5 were all done for inflation and policy; for labour and financial, steps 1-4 were done autonomously and step 5 is pending.
+- `analyze.py --print-only` previews prompt + values without calling the API.
+- `analyze.py --section <id>` selects a single section to regenerate.
+- After blurb generation, a self-review pass (`review_blurb()`) runs a factual-correctness checklist; flagged blurbs save with `review_flags` for user review rather than blocking.
+- **Policy section data architecture:** action-state classification uses a daily series (`overnight_rate_daily`, V39079, since 2009) + FAD calendar (`data/fad_calendar.json` from BoC iCal feed + `data/fad_history.json` static bootstrap). The chart still uses monthly `overnight_rate` for longer history.
+- **Internal naming note:** `compute_external_values` / `format_external_values` in `analyze.py` and `financial` in `PageSpec.sections` refer to the same domain (Financial Conditions); the `external` name is a historical artifact.
 
 ---
 
-## What has been implemented
+## What is not yet implemented
 
-- [x] `fetch.py` — pulls StatsCan, BoC Valet, FRED, Alberta Economic Dashboard
-- [x] `analyze.py` — reads framework + data, calls Claude Opus, writes `data/blurbs.json`
-- [x] `build.py` — config-driven, builds 20-chart `index.html` with section blurb injection across 6 sections
-- [x] Full transformation system for all frequencies
-- [x] Spec dataclasses (Chart, MultiLine, StackedBar, CoreInflation, CpiBreadth, Wage, Cpi, Page); `PageSpec.sections` for blurb placement
-- [x] GitHub Pages deployment + GitHub Actions cron (3 schedules + dispatch)
-- [x] StatsCan retry/poll logic via `--wait`
-- [x] **All 20 charts implemented across 6 sections** (Monetary Policy: Policy Rates, 2Y Yields, Balance Sheet · Inflation: Core Inflation, CPI Components, CPI Breadth, Inflation Expectations, Business Inflation Expectations Distribution · GDP & Activity: Real GDP monthly with industry overlays, GDP Contributions stacked bar · Labour Market: Unemployment, Wage Growth, Labour Utilization, Job Vacancy Rate, Unit Labour Costs · Housing: Starts, Housing Prices, Permits, Housing Affordability · Financial Conditions: Oil Prices, USD/CAD)
-- [x] **Housing section redesign (May 2026)** — Housing Starts converted to MultiLineSpec with three legend-as-toggle lines (Level off, 3M Avg on, 12M Avg on); growth-rate transforms removed because mainstream housing analysis (CMHC, BoC MPR, FRED) reports starts as smoothed levels, not growth rates. Housing Prices MultiLineSpec carries NHPI + CREA MLS HPI (BoC Valet `FVI_CREA_MLS_HPI_CANADA`) with a Y/Y ↔ Index button-bar toggle; in Index view both series are rebased to Jan 2020 = 100 via build-time-derived `nhpi_rebased` and `crea_mls_hpi_rebased` (source CSVs unmodified). Permits unit changed from C$ thousands to C$ billions via build-time-derived `residential_permits_b` and default range changed to Max (series only starts Jan 2018). Housing Affordability ChartSpec added (BoC Valet `INDINF_AFFORD_Q`, quarterly, 2000–present). Architectural additions: `MultiLineSpec` gained an `alt_lines` toggle path (button-bar above chart, flips visibility group + y-axis units globally; mutually exclusive with `smooth_window`); `mlXformClick` JS extended with optional `unitLabel` arg; ChartSpec branch of the data loader now accepts derived series names. Chart-design conventions captured in `chart_style_guide.md` §7.
-- [x] **Industry overlays on Real GDP (monthly)** — `OverlayConfig` + `overlays` field on `ChartSpec` (May 2026). Four sub-aggregates from Table 36-10-0434 (Goods-producing V65201211, Services-producing V65201212, Manufacturing V65201263, Mining/oil/gas V65201236) are off by default and respect all four monthly transforms. JS: `xformClickOverlay` + `toggleOverlayTrace` (added to `_JS_TEMPLATE`).
-- [x] **Live y-axis computation** — `_computeYRange` + `_niceDtick` + `_dtickFormat` + `_refreshYAxis` adjust the y-axis to currently visible traces in the current x-window; `Y_FLOORS` carries chart-level floors.
-- [x] **Section heading + blurb injection** — All 6 sections appear with blurbs from the verified analytical framework.
-- [x] About section + AI-generated-content disclaimer
-- [x] `analyses/` folder convention; `probe_*.py` and `table-*.json` gitignored
-- [x] **Analysis framework verified end-to-end across all 6 sections** — Inflation, Monetary Policy, Labour Market, Financial Conditions (all May 2026); GDP & Activity, Housing (May 8, 2026 autonomous verification). Each section carries an explicit VERIFIED status flag with citations to BoC primary sources, BoC SANs, CMHC research, and empirical-distribution anchors.
-- [x] **All 6 `compute_*_values` + `format_*_values` pairs in `analyze.py`** — inflation, policy, gdp, labour, housing, financial — all registered in SECTIONS dict; blurbs in `data/blurbs.json` for all 6 sections.
-- [x] **Inflation expectations integrated into Inflation section** — CSCE consumer 1y/5y, BOS firms expecting > 3%, all from BoC Valet persistent keys. Surfaces "are expectations anchored at 2%?" as a tracked signal in the framework + blurb.
-- [x] **CI workflow wired for blurb regeneration** — `.github/workflows/update.yml` loops over all 6 section IDs; gates on `ANTHROPIC_API_KEY` secret presence (skips with a warning if not set, CI stays green either way).
-- [x] **Self-review pass in analyze.py** — second LLM call after blurb generation runs a focused factual-correctness checklist; flagged blurbs save with `review_flags` for user iteration rather than blocking.
-- [x] **README.md** — describes the project, architecture, framework methodology, data sources, and how it was built (acknowledging Claude collaboration). Portfolio-relevant.
-
-## What has NOT been implemented
-
-- [ ] **`ANTHROPIC_API_KEY` secret set in repo Settings** — workflow code is in place; flipping the switch requires the user to add the secret at https://github.com/jayzhaomurray/boc-tracker/settings/secrets/actions. Until set, blurbs stay at the last manually-seeded values; CI runs are still green and everything else works.
-- [ ] **GDP, Housing, Labour, Financial Conditions blurbs are autonomous-draft as of May 8, 2026** — verified frameworks + computed values, but prose itself was generated overnight without user iteration. Quality unverified; expect revision against plain-language principles when the user next reviews. Inflation and Monetary Policy blurbs went through user iteration cycles and are ground-truth voice.
-- [ ] **Output gap as a separate live indicator** — the BoC publishes a live output gap range each MPR (currently -1.5% to -0.5%); the GDP section references it but doesn't fetch and surface it directly. Could be added as a manual quarterly input or via fetch from BoC Valet if the series is exposed.
-- [ ] **Regenerate GDP blurb against the rewired framework** — `compute_gdp_values` now anchors on `gdp_total_contribution` (v79448580) for the headline AR; `gdp_qq_growth` (v1594571783) was dropped from `STATSCAN_SERIES`. The framework's GDP section was updated to reference v79448580 explicitly, surface the AR convention, and treat the residual (= non-profits + statistical discrepancy) as a quantified gap rather than an untracked term. Blurb regeneration is blocked on `ANTHROPIC_API_KEY` (or the Claude Code subscription workaround); the saved blurb in `data/blurbs.json` predates the rewiring.
-- [ ] **Wire new housing indicators into `compute_housing_values` + framework What-this-doesn't-track section update** — CREA MLS HPI and housing affordability are now on the dashboard but `analyze.py`'s `compute_housing_values` still only pulls `housing_starts`, `new_housing_price_index`, and `residential_permits`. The housing blurb does not yet reflect CREA HPI or affordability. Pending user review.
-- [ ] **Regenerate labour blurb against the rewired framework** — `compute_labour_values` and `format_labour_values` now read employment rate, participation rate, job vacancy rate (12M MA over monthly NSA), V/U ratio, and unit labour costs (Y/Y, with implied productivity = LFS-Micro − ULC); the framework's Labour section incorporates utilization, tightness, and cost-pressure layers; the "what this framework doesn't track" coverage gap was updated (now lists average hours, involuntary PT, newcomer/youth composition, regional decompositions). Blurb regeneration is blocked on `ANTHROPIC_API_KEY` (or the Claude Code subscription workaround); the saved blurb in `data/blurbs.json` predates the rewiring and does not yet surface utilization, V/U, or ULC.
-- [ ] **Average hours worked + involuntary part-time rate — deferred (low priority).** Both flagged as gaps in the labour framework but skipped on the May 2026 add-pass due to data-quality issues: avg hours (V3411411, table 14-10-0036) is NSA-only monthly so it would need a 12M MA to denoise; involuntary PT rate (table 14-10-0029) is annual-only at the Canada level. Open question: take NSA hours with 12M MA + skip PT, or skip both. User to decide when next reviewing labour scope.
-- [ ] **Mortgage rate spreads / mortgage debt-service ratio** — flagged in the Housing framework's coverage gaps; tracked by BoC FSR but not loaded here.
-- [ ] **Multiple pages** — PAGES list has one entry; infrastructure is ready
-- [ ] **Navigation bar** — only relevant after multi-page split
+- [ ] **`ANTHROPIC_API_KEY` secret not set in repo Settings** — workflow code is in place; requires the user to add the secret at https://github.com/jayzhaomurray/boc-tracker/settings/secrets/actions. Until set, blurbs stay at the last manually-seeded values; CI runs green.
+- [ ] **GDP blurb predates `compute_gdp_values` rewiring** — `compute_gdp_values` was rewired to `gdp_total_contribution` (v79448580) in commit `b51bef0`; the saved blurb in `data/blurbs.json` predates this. Regeneration blocked on `ANTHROPIC_API_KEY`.
+- [ ] **Labour blurb predates `compute_labour_values` rewiring** — `compute_labour_values` was rewired in commit `945fa8f` to surface utilization, V/U ratio, and ULC; the saved blurb predates this. Regeneration blocked on `ANTHROPIC_API_KEY`.
+- [ ] **`compute_housing_values` doesn't yet include CREA MLS HPI or housing affordability** — both are on the dashboard and in the framework, but `analyze.py` still only pulls `housing_starts`, `new_housing_price_index`, and `residential_permits`. Housing blurb does not yet reflect these indicators.
+- [ ] **Average hours worked + involuntary part-time rate** — flagged as coverage gaps in the labour framework but deferred. Avg hours (V3411411) is NSA-only monthly (would need 12M MA); involuntary PT (table 14-10-0029) is annual-only. Decision pending on whether to add either.
+- [ ] **Output gap as a live indicator** — BoC publishes a live range each MPR (currently -1.5% to -0.5%); GDP section references it but doesn't fetch it.
+- [ ] **Mortgage rate spreads / mortgage debt-service ratio** — flagged in the housing framework's coverage gaps; tracked by BoC FSR but not loaded.
+- [ ] **Multiple pages / navigation bar** — infrastructure ready; only relevant after chart count grows further.
 - [ ] **Custom domain**
 
 ---
@@ -583,49 +526,35 @@ Built and runnable. End-to-end:
 
 ### 1. Set `ANTHROPIC_API_KEY` in repo Secrets to activate full automation
 
-This is the single switch that turns the dashboard from "data-and-charts auto-update; blurbs hold at last manual seed" into "everything auto-updates nightly." Workflow code is in place (`.github/workflows/update.yml` already loops over all four sections through `python analyze.py`); the secret just needs to be added at https://github.com/jayzhaomurray/boc-tracker/settings/secrets/actions. Until set, the workflow gracefully skips with a `::warning::` annotation and CI stays green.
+The single switch that turns the dashboard from "data-and-charts auto-update; blurbs hold at last manual seed" into "everything auto-updates nightly." Add the secret at https://github.com/jayzhaomurray/boc-tracker/settings/secrets/actions. After setting it, manually dispatch the workflow once to confirm blurbs regenerate.
 
-After setting the secret, manually dispatch the workflow once to confirm: blurbs in `data/blurbs.json` should regenerate with new `model` and possibly `review_flags` fields. The self-review pass (added May 8) catches factual errors before save.
+### 2. User iteration on autonomous-draft blurbs (Labour, Financial, GDP, Housing)
 
-### 2. User iteration on the autonomous-draft Labour Market and Financial Conditions blurbs
+Labour Market and Financial Conditions blurbs were generated overnight May 8, 2026; GDP and Housing verified May 8 but also autonomous-draft. Monetary Policy and Inflation went through user iteration and are ground-truth voice. The other four need the same treatment — iterate against the framework writing principles (plain language, semantic preservation, action-state verbs, no journey phrasing, takeaway-first). Before iterating GDP and Labour, wire their blurbs against the rewired compute functions (items above).
 
-These were generated overnight (May 8, 2026) against the verified frameworks but did not go through user-iteration on plain-language quality. The Monetary Policy and Inflation blurbs went through that cycle and are ground-truth voice; Labour and Financial Conditions need the same treatment. Iterate against the framework writing principles — plain language, semantic preservation, action-state verbs, no journey phrasing. Once the user is satisfied with both blurbs' voice, save them as the new ground truth.
+### 3. Wire CREA MLS HPI and housing affordability into `compute_housing_values`
 
-### 3. Inflation expectations data for the Inflation section
-
-BoC publishes Business Outlook Survey (BOS) and Survey of Consumer Expectations (CSCE) quarterly. Data is available as CSV downloads from the BoC publications page (more manual than Valet). Once fetched, adds an inflation-expectations line/chart to the Inflation section answering "are expectations anchored at 2%."
-
-User noted this is more manual than other data fetching, so it's deferred but still valuable.
+Both indicators are on the dashboard (charts 15 and 17) and have verified framework treatments but are absent from `analyze.py`'s compute function. Extend `compute_housing_values` to pull `crea_mls_hpi` and `housing_affordability`, then regenerate the housing blurb.
 
 ### 4. Eventually: deep-dive Monetary Policy page
 
-A separate page (or page section) for the practitioner-grade detail that doesn't fit on the overview:
+A separate page for practitioner-grade detail that doesn't fit on the overview:
 - Yield curve term structure (5Y, 10Y, 30Y; 2Y vs 10Y spread for recession indicator)
 - Real rates (nominal yields minus inflation expectations)
-- CORRA tracking target (operating implementation read)
+- CORRA tracking target
 - Forward guidance / MPR forecast comparison
-- Balance sheet decomposition (maturity composition, BoC holdings as % of total GoC debt outstanding, weekly flow data)
-- Cross-central-bank balance sheet comparison (BoC vs Fed vs ECB)
-
-User has explicitly framed this as deep-dive territory; not for the overview.
+- Balance sheet decomposition (maturity, BoC holdings as % of total GoC debt outstanding)
+- Cross-central-bank balance sheet comparison
 
 ### 5. Multi-page split (eventually)
 
-When chart count grows past ~12, consider splitting into themed pages. Planned (this is illustrative, not committed):
-- `index.html` — overview (current page)
-- `monetary-policy.html` — deep dive (item 7)
-- `inflation.html` — deep dive (CPI components, sub-aggregates, etc.)
-- `labour.html` — deep dive (hours, participation, sectoral, regional)
+When chart count grows further, split into themed pages (policy, inflation, labour, housing deep-dives). Infrastructure is ready; not urgent at 20 charts.
 
 ### 6. Charts still on the wishlist
-
-The original A-tier roadmap items not yet built:
 
 | Chart | Data |
 |---|---|
 | Headline CPI + CPI ex-indirect-taxes overlay | StatsCan / BoC Valet |
-| Inflation expectations: BOS, BLP, CSCE | BoC publications page (CSVs) |
-| GDP growth contributions | StatsCan Table 36-10-0104; quarterly |
 | Employment by sector reliant on US exports | StatsCan LFS Table 14-10-0023 + IO tables |
 | Goods exports excluding gold | StatsCan Table 12-10-0011 |
 | BOS hiring intentions / pass-through | BoC quarterly BOS publication |
@@ -642,15 +571,13 @@ The original A-tier roadmap items not yet built:
 
 **Why it's blocked:**
 - BoC Valet has no OIS / swap / forward-rate series.
-- TMX CRA (3-Month CORRA) futures are the right instrument — ~12 quarterly contracts, ~3 years forward — but no public API exists. The m-x.ca quotes page is under TMX Datalinx redistribution restrictions; scraping it for a public dashboard would violate terms.
-- Yahoo Finance carries CME ZQ (Fed funds) and SR3 (SOFR) — fine for the US — but does NOT carry CRA. US-only forward path is the wrong centerpiece for a BoC tracker.
-- CME DataMine, FedWatch API, paid aggregators are all out of scope for a free personal dashboard. FRED has no implied-forward data.
+- TMX CRA (3-Month CORRA) futures are the right instrument but no public API exists; scraping m-x.ca would violate TMX Datalinx redistribution restrictions.
+- Yahoo Finance carries CME ZQ / SR3 but not CRA. US-only forward path is the wrong centerpiece.
+- CME DataMine, paid aggregators out of scope for a free personal dashboard.
 
-**What was incorporated instead:** The 2Y term-premium literature from this investigation sharpened the framework. `analysis_framework.md` Monetary Policy now codifies (a) BoC ACM-model term-premium magnitudes (0–40 bp normal regimes, 20–60 bp post-2023), (b) regime distortions (QE/QT, flight-to-quality, fiscal supply, inflation uncertainty), (c) defensible vs. non-defensible reads of `can2y_overnight_spread`. The 2-Year Yields chart footnote carries the short version with a link to the BoC's [Financial Stability Indicators](https://www.bankofcanada.ca/rates/indicators/financial-stability-indicators/) page.
+**What was incorporated instead:** The 2Y term-premium literature from this investigation sharpened the framework. `analysis_framework.md` Monetary Policy now codifies BoC ACM-model term-premium magnitudes and regime distortions. The 2-Year Yields chart footnote carries the short version.
 
-**Unblocks the chart:** acceptance of a paid feed (Bloomberg / Refinitiv / TMX Datalinx); BoC publishing a CORRA-OIS or implied-policy-path series via Valet; or a free aggregator emerging.
-
-**Possible smaller upgrade in the meantime:** if the BoC FSI 2Y term-premium series turns out to be queryable via Valet (not yet investigated), a "term-premium-adjusted 2Y" toggle on the existing 2-Year Yields chart would be a defensible single-point estimate at the 2Y horizon — not a forward path, but BoC-blessed. Modest lift; not currently prioritized.
+**Unblocks the chart:** a paid feed (Bloomberg / Refinitiv / TMX Datalinx); BoC publishing a CORRA-OIS series via Valet; or a free aggregator emerging. A possible smaller upgrade: if the BoC FSI 2Y term-premium series is queryable via Valet, a term-premium-adjusted 2Y toggle on the existing chart would be a modest single-point estimate.
 
 ---
 
@@ -660,34 +587,16 @@ The original A-tier roadmap items not yet built:
 
 2. **Hover format for level series** — `_hover_template()` infers suffix from transform. Unemployment level shows "6.70" with no `%`. Add a `hover_format` field to ChartSpec if a chart looks wrong.
 
-3. **Build-time dtick + tickformat are overwritten by JS** — each panel function still calls `fig.update_yaxes(dtick=..., tickformat=...)` at build time, but `applyRange` recomputes both via `_niceDtick` and `_dtickFormat` as soon as it runs (which is on `DOMContentLoaded` for any chart in `DEFAULT_RANGES`). The build-time settings now serve as initial values until JS fires. Could be cleaned up.
+3. **Build-time dtick + tickformat are overwritten by JS** — panel functions still call `fig.update_yaxes(dtick=..., tickformat=...)` at build time, but `applyRange` recomputes both on `DOMContentLoaded`. Build-time settings serve as initial values until JS fires. Could be cleaned up.
 
-4. **CPI breadth basket weights** — 2024-vintage hardcoded in `data/cpi_breadth_mapping.json`. When StatsCan publishes a new basket (~every 2 years), regenerate. The original probe is gitignored; write a fresh one in `analyses/` next time.
+4. **CPI breadth basket weights** — 2024-vintage hardcoded in `data/cpi_breadth_mapping.json`. When StatsCan publishes a new basket (~every 2 years), regenerate. Write a fresh probe in `analyses/` next time.
 
-5. **BoC breadth reference** — `analyses/boc_speech_breadth_reference.csv` is from an Oct 2025 BoC speech (Mendes); useful for one-time validation that our breadth methodology matches the BoC's. Re-download from `https://www.bankofcanada.ca/?p=248443` if needed.
+5. **`DFEDTAR` unavailable** — FRED's daily single fed-funds target series returns HTTP 500. Pre-2009 history uses monthly `FEDFUNDS` (effective rate) instead.
 
-6. **`DFEDTAR` unavailable** — FRED's daily single fed-funds target series returns HTTP 500. Pre-2009 history uses monthly `FEDFUNDS` (effective rate) instead.
+6. **CPI chart NSA toggle in Y/Y view** — Headline (SA) and Headline (NSA) Y/Y are essentially identical in Y/Y view. Default has NSA off; the toggle is useful in M/M view where SA matters.
 
-7. **CPI chart NSA toggle in Y/Y view** — Headline (SA) and Headline (NSA) Y/Y are essentially identical. Showing both in the legend at Y/Y is harmless but uninformative. Default has NSA off; user can turn it on if they want to compare in M/M view (which is where SA matters).
+7. **`ANTHROPIC_API_KEY` required for `analyze.py`** — without it, `analyze.py` prints computed values + a clear error and exits with code 1. CI skips blurb regeneration with a `::warning::` annotation; the last committed `data/blurbs.json` holds current blurbs.
 
-8. **fetch.py table-number comments** — the comment for `cpi_services` was historically wrong (claimed 18-10-0006-01, actually 18-10-0004-01); same kind of error existed for `cpi_all_items` (claimed NSA, actually SA). Both fixed. **Verify any new vector ID against the cube metadata before adding it.**
+8. **Author display name** — `AUTHOR_DISPLAY_NAME = "jayzhaomurray"` in `build.py`.
 
-9. **`ANTHROPIC_API_KEY` required for `analyze.py`** — without it, `analyze.py` prints the computed values + a clear error and exits with code 1. The secret has not yet been added to repo Secrets; until it is, the CI workflow skips blurb regeneration with a `::warning::` annotation and CI stays green. The last committed `data/blurbs.json` holds the current blurbs.
-
-10. **GitHub Actions runs `analyze.py` when `ANTHROPIC_API_KEY` is set** — `.github/workflows/update.yml` now has a "Generate section blurbs" step that loops over all six section IDs and calls `python analyze.py --section <id>`. It gates on `ANTHROPIC_API_KEY` being present in repo Secrets. Until the secret is added, blurbs stay frozen at whatever was last committed to `data/blurbs.json`.
-
-11. **Author display name** — `AUTHOR_DISPLAY_NAME = "jayzhaomurray"` in `build.py`.
-
----
-
-## Deferred quality fixes
-
-Original list identified during a code-quality review (May 2026). All five items were applied during an autonomous overnight session on May 8, 2026:
-
-1. ~~`analyze.py:105` latent KeyError on partial CPI release~~ — **DONE.** `latest_breadth = above3.index[above3.index <= latest].max()` snaps the lookup to the most recent breadth-valid date.
-2. ~~JS `nT = 4` hardcoded~~ — **DONE.** Templated from Python via `.replace("{n_cpi_transforms}", str(len(_CPI_TRANSFORMS)))`.
-3. ~~`_nice_dtick` unreachable `else: nice = 0.5` branch~~ — **DONE.** Removed in both Python and JS copies; final branch is now `else: nice = 1.0` with an inline comment about why.
-4. ~~Bare `except Exception:` in analyze.py blurbs.json handler and fetch.py `_latest_saved_date`~~ — **DONE.** analyze.py write-time corruption handler now narrows to `JSONDecodeError`, logs the line/col, AND backs up the corrupt file with a timestamp before overwriting (so prior sections' blurbs aren't silently lost). fetch.py narrowed to expected pandas/parser exceptions; OSError-class issues now surface.
-5. ~~Self-review pass for blurb generation~~ — **DONE.** `review_blurb()` in analyze.py runs after blurb generation; focused factual-correctness checklist; failures save with `review_flags` rather than block. Activated in CI when `ANTHROPIC_API_KEY` is set.
-
-(No new deferred items as of May 8, 2026.)
+9. **Vector ID label drift** — the `cpi_services` comment was historically wrong (claimed table 18-10-0006-01, actually 18-10-0004-01); `cpi_all_items` was mislabelled NSA but is actually SA. Both fixed. **Verify any new vector ID against cube metadata (`getSeriesInfoFromVector`) before adding it.**
