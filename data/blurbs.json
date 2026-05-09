@@ -1,12 +1,12 @@
 {
   "inflation": {
     "as_of": "March 2026",
-    "model": "claude-opus-4-7 (manual seed pending API key)",
-    "text": "Inflation is roughly on target with expectations re-anchoring, even as recent monthly momentum has turned against the disinflationary trend. Headline CPI was 2.3% y/y in March; core measures sit in a tight band of 2.0% to 2.6%; breadth points to broad-based softening. Expectations are cooling on the business side—the share of firms expecting inflation above 3% has fallen to 11% (from 50%+ in late 2023)—and the consumer 5-year-ahead reading is down 0.4pp over the past year to 3.0%. The complication is March's +0.48% m/m print, well above the pace consistent with 2% annualized; the 3-month annualized rate is at 2.9%."
+    "model": "claude-opus-4-7",
+    "text": "Inflation is at target on the BoC's preferred core measures, with breadth skewing soft even as monthly momentum runs hot. Headline CPI was 2.32% y/y in March; CPI-trim and CPI-median came in at 2.20% and 2.30%, leaving the headline-core gap effectively zero. Components running well below target outnumber those running well above—a softening read in the uncommon tier—and the 5-year consumer expectation has eased to 3.02%, down 0.37pp over four quarters though still just above the BoC's 1–3% range. The complication is March's +0.48% m/m print—uncommonly hot relative to the 0.17%/month pace consistent with 2% annualized—which pushed the 3-month annualized rate to 2.92%."
   },
   "policy": {
     "as_of": "May 2026",
-    "model": "claude-opus-4-7 (manual seed pending API key)",
+    "model": "claude-opus-4-7",
     "text": "The BoC has held rates at 2.25% for four meetings after a 275bp cutting cycle, and bond markets are starting to price the next move as more likely a hike than another cut. At 2.25%, the policy rate is right at the bottom of the BoC's 2.25-3.25% neutral range and 138 bps below where the Fed sits—an unusually wide gap, since the BoC cut more aggressively after both central banks peaked in July 2023. Canadian 2-year yields have risen over the past quarter and now trade 66 bps above the policy rate. The BoC finished QT in January 2025; total assets stand at $229B, and banks keep $71B in cash at the BoC overnight—slightly above the $20-60B steady-state target."
   },
   "gdp": {

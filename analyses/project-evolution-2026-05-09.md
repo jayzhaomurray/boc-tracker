@@ -183,19 +183,29 @@ The day's work brought the analytical framework to a state that is materially mo
 
 **HANDOFF auth-path drift corrected.** An earlier doc inconsistency between the CI path (API key) and the local path (Claude Code subscription) was resolved in commit `7d76cba`.
 
+**Late-afternoon analytical milestones.** Three threads after the convention sweep materially deepened the framework's analytical position.
+
+*V/U fifth-pass — empirical relabelling with wage cross-check.* The V/U tightness bands were redesigned through a five-pass discussion, rejecting in sequence cosmetic retitling, soft cross-check, and a hard two-tier requiring wage confirmation, before landing on a purely empirical labelling scheme (bottom-of-history / low / elevated / high / exceptionally high V/U). A research subagent cross-validated the framework against Canadian academic literature and international benchmarks; three findings drove the design: the Wilkins 2019 anchor speech contains its own refutation (Wilkins acknowledged wages were "shy of what one would expect" in a tight market); real wages were negative in 2022 at V/U ≈ 0.99; and the immigration-policy feedback loop was confirmed by IRCC's 2023 Parliamentary testimony citing JVWS vacancy counts with no worker-side wage evidence. Calibration anchors now live in methodology prose as historical fact about past BoC characterizations rather than current claims. The deeper move: the dashboard now distinguishes the **BoC-likely synthesis** (what a central bank focused on V/U and employer surveys would conclude) from the **wage-confirmed synthesis** (whether workers are capturing tightness in the price of labour), and flags the gap explicitly.
+
+*Policy Claim 10 dropped — third rigid n×n decoder.* The 3×2 conditional grid for `can2y_overnight_spread × action_state` was dropped — the third rigid categorical decoder identified in today's audit, consistent with the prior resolutions of the Labour 2×2 utilization decoder and the Inflation four-state breadth typology. Interpretive logic is preserved as paragraph framing.
+
+*Epistemic rule generalized.* The `analysis_framework.md` "Verification, not speculation" section was extended with one sentence applying the principle across all sections: when a framework signal references something the dashboard doesn't directly pull (employer surveys, BoC reaction-function reads), state only the historical correlation as background, not the unobservable signal as a current claim. This formalizes what emerged from the V/U discussion — the dashboard does not pull BOS labour-shortage indicators, so asserting "employers are reporting shortages" is out of scope for blurb prose.
+
+**Memory and reference/ folder.** Load-bearing design decisions were saved to memory per the "preserve sparingly" rule: distribution conventions design rationale, V/U band decision rationale, RBA two-sided methodology thread, CPI-common deprecation framing, and PDF versioning preference. The `reference/` folder was created at the project root for gitignored private material (PDFs, Word docs) the user reads but doesn't version-control.
+
 ### What is still outstanding
 
 The convention sweep and verification patches did not resolve everything. The remaining open items fall into three batches, which the HANDOFF morning-review workflow now structures explicitly:
 
-**Mechanical patches still pending.** Several mechanical corrections from the audit remain unapplied: the Claim 7 citation update (Macklem April 2023 -> MPR July 2024 In Focus, which landed in the Labour sweep), the verification header downgrades in GDP / Housing / Financial sections (still marked "verified end-to-end" despite known defects), and assorted minor framing corrections across the six logs. The HANDOFF morning-review recommendation is to batch these as accept/reject passes through the pre-written `old_string` / `new_string` pairs rather than composing corrections from scratch.
-
-**Judgment items deferred.** The Policy section's 3×2 conditional grid for `can2y_overnight_spread × action_state`; the Labour V/U 0.45–0.60 "approaching balance" band anchor narrative (whether this threshold reflects genuine data or status-quo-bias); the outstanding Claim 3 (V/U tightness) re-review where the user's challenge about the band calibration remains open.
+**Verification header downgrades.** GDP, Housing, and Financial framework sections still carry "VERIFICATION STATUS: verified end-to-end (May 2026)" headers that are empirically wrong — the audit found defects in all three. The underlying claims were corrected during the convention sweep; the headers themselves were not downgraded. Minor in terms of framework correctness; misleading as status markers.
 
 **Code changes not yet wired.** The Indeed Hiring Lab postings index is fetched and in `data/` but not charted — blocked on a secondary y-axis extension to `MultiLineSpec`. The `compute_labour_values` function in `analyze.py` still uses a 12-month MA for the job vacancy rate; the framework was updated to a 3-month MA (to avoid the 7-month lag at cyclical turns) but the code has not been updated to match.
 
-**Blurb regeneration pending.** The four autonomous-draft blurbs (Labour, GDP, Housing, Financial) predate the convention sweep and all factual corrections. They should be regenerated after the remaining mechanical patches land. The Inflation and Monetary Policy blurbs are Tier 3 and do not need regeneration.
+**Blurb regeneration pending — now unblocked.** Framework patches all landed across all six sections. The four autonomous-draft blurbs (Labour, GDP, Housing, Financial) can now be regenerated against corrected frameworks (`python analyze.py --section <id>`). The Inflation and Monetary Policy blurbs are Tier 3 and do not need regeneration.
 
 ### What is queued next
+
+**Blurb regeneration — immediate next action.** Run `python analyze.py --section <id>` for Labour, Financial, GDP, and Housing (CLI subscription path; no API key needed). This gives a clean starting point for the voice-iteration pass — the same cycle Inflation and Monetary Policy went through.
 
 **Deep-dive page real content.** A full design for all eight deep-dive pages was produced on 2026-05-09 and is committed at `analyses/deep-dive-design-2026-05-09.md`. The design covers 43 proposed charts across the six existing sections plus two new pages (Trade and Demographics), with per-chart data series, spec types, tradeoffs, and cross-page data-fetch dependencies. Nine judgment calls were documented and resolved within the design session rather than being left open, reducing the next implementation session's front-loaded decision cost. Key resolved calls: output gap series confirmed via BoC Valet key `INDINF_OUTGAPMPR_Q` (discovered during data-source probes); CPI ex-indirect-taxes confirmed via BoC Valet key `MPR_2025M04_CPI_TAX_S1`; CORRA confirmed at `CORRA_WEIGHTED_MEAN_RATE` (not `AVG.INTWO` as previously hypothesized); Canadian IG credit spread not available in Valet, fallback is US ICE BofA IG spread `BAMLC0A0CM` on FRED; TSX Composite confirmed only via `yfinance` / `^GSPTSE` (Valet key `SAN_LEBM180118_CHART2D_A_TSX` is an impulse-response artifact, not index data; FRED `SPTSXINL` returns 404). Data-source probe results are in `analyses/data-source-probe-2026-05-09.md`.
 
@@ -227,4 +237,4 @@ The convention sweep and verification patches did not resolve everything. The re
 
 **GitHub repository:** https://github.com/jayzhaomurray/boc-tracker
 
-**Commit range covered by this document:** `34e70a2` (initial commit, 2026-05-06) through `90bdb5d` (distribution conventions applied to Labour Market section, completing the full six-section sweep, 2026-05-09).
+**Commit range covered by this document:** `34e70a2` (initial commit, 2026-05-06) through `242ec83` (HANDOFF Next Steps cleanup, 2026-05-09 evening).
