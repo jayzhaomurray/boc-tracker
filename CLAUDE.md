@@ -10,6 +10,7 @@ Read these documents in order before doing anything substantive. They are the so
 2. **`markdown-files/HANDOFF.md`** — current state, file structure, ordered next-steps. Orient here.
 3. **`markdown-files/chart_style_guide.md`** — formatting principles + workflow rules (§8 governs how to break or revise a principle).
 4. **`markdown-files/analysis_framework.md`** — internal analytical brief for blurb generation. Per-section questions, signals, thresholds.
+5. **`markdown-files/distribution_conventions.md`** — how to label indicator readings on the typical / uncommon / pronounced / rare / extreme ladder. Tail-axis and descriptor metadata per indicator; BoC-band binary frame.
 
 **Escape hatch:** for genuinely trivial edits — typo fix, single comment edit, single color tweak, one-line text change — skip the canonical reading. Anything that touches logic, data, analytical framing, or chart structure still earns the full first-moves pass.
 
@@ -20,6 +21,7 @@ Read these documents in order before doing anything substantive. They are the so
 - **Provenance tiers.** Content in this project is tagged Tier 1 (generated, no verification), Tier 2 (autonomously verified — Claude/sub-agent ran a verification pass against sources but the user did NOT review), or Tier 3 (user-verified — claim-by-claim review with the user). See `markdown-files/verification/_tiers.md` for the full glossary, examples, and how to mark tier in different docs. Default any new content to Tier 1; upgrade to Tier 2 when a verification log entry exists; upgrade to Tier 3 only after explicit user sign-off. Don't write "verified" without specifying which tier.
 - **Discuss → plan → implement** for any non-trivial design choice. Don't jump straight to code. The user often says "let's discuss first" — they use chat as where they push back on framing or correct my premises before I commit.
 - **Skip plan mode for genuinely small changes.** Adding one toggleable line to an existing chart doesn't need the 5-step planning workflow. Plan mode is for design decisions, not implementation steps.
+- **Preserve design rationale sparingly.** When a decision is *multi-axial* (multiple defensible alternatives considered), *durable* (affects work for months/years, not one PR), and *non-obvious from the rule* (a smart reader couldn't infer it from reading the rule alone), record ~150 words of "Why these choices" in the canonical doc plus optionally a memory file. For routine choices, just write the rule. **Default off — turn on for load-bearing decisions only.** Token cost is negligible; the real cost is doc bloat and drift risk.
 - **Concise commit messages.** 5–10 lines max for routine changes; long-form only for genuinely complex commits. (Past sessions have over-explained.)
 - **Never silently break a principle, never silently rewrite one.** chart_style_guide.md §8 has the exception/revision protocol. Surface the case, propose either revising the principle (if it'll recur) or documenting an exception.
 - **Keep HANDOFF.md current as part of the same commit that changes reality.** Don't let the doc drift. Triggers:

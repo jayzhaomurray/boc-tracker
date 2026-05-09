@@ -1,0 +1,131 @@
+# Distribution conventions
+
+How to label readings of indicators on the analytical framework's tier ladder. Designed to: (a) prevent the silent methodology drift the 2026-05-09 audit surfaced (e.g. bocfed_spread thresholds calibrated against daily data but labelled "since 1996"); (b) give blurb writers consistent vocabulary across sections; (c) keep the BoC's published bands authoritative where they apply.
+
+## Tier ladder
+
+Picture the data sorted from "most common" near the median to "most extreme" out in the tails. Tiers carve up the distribution like this:
+
+| Tier | Share of all observations |
+|---|---|
+| **Typical** | middle 50% |
+| **Uncommon** | next 30% out |
+| **Pronounced** | next 15% out |
+| **Rare** | next 4% out |
+| **Extreme** | the most extreme 1% |
+
+(50 + 30 + 15 + 4 + 1 = 100. Each tier is a strictly outer ring than the one before it.)
+
+**For symmetric distributions** (e.g. height, signed spread) each tier's share splits evenly across the two sides. **For skewed distributions** (e.g. weight, `|spread|`) the same population shares apply, but the absolute ranges differ between sides — that's the correct behaviour for asymmetric data.
+
+**Why these boundaries.** P95 and P99 are well-anchored statistical conventions (≈ 2σ-equivalent and 3σ-equivalent for a normal distribution). Calibrated-language research — Mosteller-Youtz survey of probability words, IPCC likelihood scale, EU pharmacovigilance frequency categories — converges on a tighter-at-extremes ladder of similar shape. Equal-sized buckets (quartiles, quintiles) would fight the labels, since "rare" and "extreme" carry inherent low-frequency content in everyday English.
+
+## Per-indicator metadata
+
+Every indicator the framework tiers must specify two pieces of metadata at its definition in `analysis_framework.md`:
+
+### 1. Tail axis — what's being percentile-ranked
+
+| Indicator type | Tail axis |
+|---|---|
+| Two-tailed (signed value, sign matters) | signed value relative to median; tier by central-share band |
+| Absolute envelope (already non-negative) | the value itself; tier by P50/P80/P95/P99 of `x` |
+| One-tailed (e.g. high is bad) | `x − median` (one side only) |
+| Target-anchored | `x − target`; tier by central-share around target |
+
+### 2. Descriptor pair — the natural directional words at the pronounced tier and above
+
+| Indicator type | Descriptor pair |
+|---|---|
+| Spreads, signed | high / low |
+| Inflation | hot / soft |
+| Labour-market tightness | tight / slack |
+| Volume / flow | strong / weak |
+| Magnitude envelope (no direction) | wide / narrow, large / small |
+
+These are guidance, not a lookup table — pick the natural English pair at the indicator's definition. New indicators name their descriptor pair in the framework section that introduces them.
+
+## BoC-band indicators: dual classification
+
+For indicators where the BoC publishes an authoritative band, range, or target:
+
+- **BoC frame: binary.** In-band or outside-band. Use BoC's published edges. Don't manufacture sub-thresholds for "far outside."
+- **Empirical frame: 5-tier ladder** (above) of the indicator's tail axis.
+
+Both classifications are computed and available in framework metadata; **prose surfaces what's analytically salient** — usually one frame suffices, both are surfaced when they tell complementary stories. Inside-band readings often need only the BoC frame; far-outside readings often need only the empirical (the band breach is implied).
+
+Common BoC-band indicators:
+
+| Indicator | BoC band |
+|---|---|
+| Inflation (headline / core) | 1–3 % control range, 2 % target |
+| Policy rate vs. neutral | 2.25–3.25 % range, 2.75 % midpoint |
+| Output gap | BoC's published range each MPR |
+
+For indicators without a published BoC band (BoC–Fed spread, can2y_overnight_spread, housing starts, etc.), only the empirical frame applies.
+
+The band edge is conventionally inclusive — at exactly 3.0 % inflation the reading is in-band; the breach starts above 3.0 %.
+
+## Methodology rules
+
+### Always state window, resolution, tail axis, and N when citing a tier
+
+In framework prose: `(median |spread| 62.5 bp, monthly month-start, since 1996, N=364)`. This catches silent methodology drift — you can't cite a number without revealing what it's measuring.
+
+### Recompute thresholds annually, ideally pre-MPR
+
+Empirical percentiles drift as data extends. The BoC updates its own estimates around MPR releases (~four times a year); riding that calendar is natural. Document the recompute date in framework prose so staleness is visible.
+
+### Borderline readings: ±2 percentile points = fuzzy
+
+A reading at P79 vs P81 is mechanically across a tier boundary but practically indistinguishable. Pick the side that better matches analytical context (recent trajectory, BoC framing, broader regime). Cite the percentile so the call is auditable.
+
+### Small-N caveat: state N, downgrade confidence at N<200
+
+For series with N < 200, the extreme tier (top 1%) is sparsely populated — single new outliers can swing the threshold. Don't collapse tiers (keep the ladder uniform across series). State N alongside the percentile and downgrade confidence in prose.
+
+## Synonymic latitude within tier
+
+Formal tier names (typical / uncommon / pronounced / rare / extreme) are for **classification**. Prose can use any natural synonym that reads as the right tier. Examples per tier:
+
+| Tier | Anchor (signed) | Natural variants |
+|---|---|---|
+| Typical | typical | typical, normal, near-typical, around average |
+| Uncommon | slightly high / low | slightly elevated, somewhat high, modestly above |
+| Pronounced | high / low | high, hot, tight, materially elevated, clearly above |
+| Rare | very high / very low | very high, exceptionally elevated, well above |
+| Extreme | extremely high / very low | extremely high, runaway, crisis-level, cycle-defining |
+
+**Constraint:** pick a synonym that clearly belongs to the right tier. Don't bleed across tiers. The percentile cited alongside is the auditable backstop.
+
+## Phrasing template
+
+In framework prose (where the percentile is cited):
+
+> "[Indicator] is currently [value] — [tier or natural synonym] reading ([percentile or BoC frame]; [window + resolution + N])."
+
+In blurbs (the percentile may be dropped if the synonym is unambiguous):
+
+> "[Indicator] is [synonym]" — optionally with the rare / extreme tier or BoC frame appended when it materially adds to the message.
+
+## Design notes
+
+Non-obvious calls behind the rules above — preserved because the convention will affect every blurb across all six sections going forward.
+
+- **Labels: "uncommon → pronounced," not "modest" or "notable / unusual."** "Modest" overlaps with "typical" in everyday English. "Notable" and "unusual" aren't distinguishably escalating in prose without the percentile cited alongside. "Uncommon → pronounced" has formal precedent (EU pharmacovigilance) and clear monotonic escalation.
+- **Boundaries P50 / P80 / P95 / P99: tighter-at-extremes, not equal-sized.** Mosteller-Youtz, IPCC, and EU pharma all converge on a tighter-at-extremes ladder. Equal-sized buckets (quartiles, quintiles) would fight the labels — "rare" carries low-frequency content that contradicts a top-25% threshold.
+- **Binary BoC frame, not three-state.** BoC publishes the band edge (e.g., 1–3 % inflation) but no formal "far-outside" threshold. Three-state (in / outside / far-outside) would invent a calibration the BoC didn't publish.
+- **Central-X% framing for skewed distributions.** `\|x − median\|` over-flags the thin side of asymmetric data (e.g., a 75 lb adult man would be only "extreme" under symmetric framing, despite being medically near-impossible). Central-X% handles symmetric and skewed uniformly via empirical percentiles.
+- **English labels, not numeric tiers.** Three independent calibrated-language frameworks settle on labelled tiers; numeric tiers (Tier 1 / Tier 2 …) lose readability. The dashboard's audience expects natural prose.
+- **Synonymic latitude within tier, not strict label enforcement.** Strict enforcement makes blurbs mechanical and identical-sounding. The percentile cited alongside is the auditable backstop, so within-tier synonyms ("slightly elevated," "uncommon," "somewhat high") are safe.
+- **Validation:** sanity-checked against intuition tests on US adult height, weight, and Texas hold'em probabilities. Bocfed_spread methodology drift documented in `analyses/bocfed_spread_38bp_test.md` (the worked example that surfaced the need for this convention).
+
+## Reference catalog
+
+Live record of indicators that have had the convention applied. Each entry: tail axis, descriptor pair, BoC frame (if any), tier thresholds, last computed.
+
+| Indicator | Tail axis | Descriptor | BoC frame | Thresholds | Last computed | Source |
+|---|---|---|---|---|---|---|
+| `bocfed_spread` | `\|spread\|` in bp, monthly month-start, since 1996, N=364 | high / low | none | typical ≤62.5; uncommon to 100; pronounced to 187; rare to 231; extreme >231 | 2026-05-09 | `analyses/bocfed_spread_distribution.py` |
+
+(Other indicators added as the convention is applied.)
