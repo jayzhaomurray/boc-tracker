@@ -5,3 +5,5 @@ probe_*.py
 table-*.json
 experiments/results/*
 !experiments/results/.gitkeep
+compare-*/
+compare.*.md
