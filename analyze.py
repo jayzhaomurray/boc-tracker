@@ -1859,7 +1859,7 @@ def main() -> None:
     prior = None
     if OUT.exists():
         try:
-            prior_data = json.loads(OUT.read_text())
+            prior_data = json.loads(OUT.read_text(encoding='utf-8'))
             prior = prior_data.get(section_id, {}).get("text")
         except json.JSONDecodeError as e:
             print(f"  Warning: blurbs.json could not be parsed (line {e.lineno}, col {e.colno}); proceeding without prior-blurb context.", file=sys.stderr)
@@ -1889,7 +1889,7 @@ def main() -> None:
     out: dict = {}
     if OUT.exists():
         try:
-            out = json.loads(OUT.read_text())
+            out = json.loads(OUT.read_text(encoding='utf-8'))
         except json.JSONDecodeError as e:
             # Don't silently overwrite — back up the corrupt file so we don't lose other sections' blurbs.
             from datetime import datetime
@@ -1908,7 +1908,7 @@ def main() -> None:
         entry["review_flags"] = review
         print("\nWARNING: self-review flagged issues. Blurb saved with review_flags; iterate when you next review the dashboard.", file=sys.stderr)
     out[section_id] = entry
-    OUT.write_text(json.dumps(out, indent=2))
+    OUT.write_text(json.dumps(out, indent=2, ensure_ascii=False), encoding='utf-8')
     print(f"\nWrote: {OUT}")
 
 

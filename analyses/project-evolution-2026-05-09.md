@@ -195,13 +195,9 @@ The day's work brought the analytical framework to a state that is materially mo
 
 ### What is still outstanding
 
-The convention sweep and verification patches did not resolve everything. The remaining open items fall into three batches, which the HANDOFF morning-review workflow now structures explicitly:
-
 **Verification header downgrades.** GDP, Housing, and Financial framework sections still carry "VERIFICATION STATUS: verified end-to-end (May 2026)" headers that are empirically wrong — the audit found defects in all three. The underlying claims were corrected during the convention sweep; the headers themselves were not downgraded. Minor in terms of framework correctness; misleading as status markers.
 
 **Code changes not yet wired.** The Indeed Hiring Lab postings index is fetched and in `data/` but not charted — blocked on a secondary y-axis extension to `MultiLineSpec`. The `compute_labour_values` function in `analyze.py` still uses a 12-month MA for the job vacancy rate; the framework was updated to a 3-month MA (to avoid the 7-month lag at cyclical turns) but the code has not been updated to match.
-
-**Blurb regeneration pending — now unblocked.** Framework patches all landed across all six sections. The four autonomous-draft blurbs (Labour, GDP, Housing, Financial) can now be regenerated against corrected frameworks (`python analyze.py --section <id>`). The Inflation and Monetary Policy blurbs are Tier 3 and do not need regeneration.
 
 ### What is queued next
 
