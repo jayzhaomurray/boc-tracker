@@ -607,6 +607,7 @@ Balance sheet (C$B, as of {v['as_of_balance_sheet']}; operating phase: {v['qt_ph
 # ── Labour Market section ────────────────────────────────────────────────────
 
 def compute_labour_values() -> dict:
+    # Existing series
     unemployment = load_series("unemployment_rate")
     wages_all    = load_series("lfs_wages_all")        # level, SA
     wages_perm   = load_series("lfs_wages_permanent")  # level, SA
@@ -615,6 +616,15 @@ def compute_labour_values() -> dict:
     cpi_services = load_series("cpi_services")         # NSA level
     cpi_all      = load_series("cpi_all_items")        # SA level
 
+    # New series (May 2026 expansion — wired alongside the chart additions for utilization,
+    # tightness, and cost-pressure layers per BoC SAN 2025-17 multi-indicator benchmarks).
+    employment_rate    = load_series("employment_rate")     # monthly SA, level %
+    participation_rate = load_series("participation_rate")  # monthly SA, level %
+    vac_rate_raw       = load_series("job_vacancy_rate")    # monthly NSA, %
+    ulc_index          = load_series("unit_labour_cost")    # quarterly SA, index (2017=100)
+    unemp_level        = load_series("unemployment_level")  # monthly SA, millions of persons
+    vac_level          = load_series("job_vacancy_level")   # monthly NSA, millions of persons
+
     # Y/Y wage and price measures
     wages_all_yoy  = (wages_all.pct_change(12)  * 100).dropna()
     wages_perm_yoy = (wages_perm.pct_change(12) * 100).dropna()
@@ -622,28 +632,66 @@ def compute_labour_values() -> dict:
     services_yoy   = (cpi_services.pct_change(12) * 100).dropna()
     headline_yoy   = (cpi_all.pct_change(12)    * 100).dropna()
 
-    # Earliest of all latest dates so every value is available
-    latest = min(s.index[-1] for s in [
-        unemployment, wages_all_yoy, wages_perm_yoy, seph_yoy, lfs_micro, services_yoy, headline_yoy
-    ])
+    # 12-month MA on NSA vacancy series (denoises Sep-peak/Dec-trough seasonality;
+    # mirrors the derived line on the dashboard chart).
+    vac_rate_12m  = vac_rate_raw.rolling(12, min_periods=6).mean().dropna()
+    vac_level_12m = vac_level.rolling(12, min_periods=6).mean().dropna()
 
-    u_now = float(asof(unemployment, latest))
-    u_3m  = float(asof(unemployment, latest - pd.DateOffset(months=3)))
-    u_6m  = float(asof(unemployment, latest - pd.DateOffset(months=6)))
-    u_12m = float(asof(unemployment, latest - pd.DateOffset(months=12)))
+    # ULC Y/Y — the canonical inflation-pressure read since ULC ≈ wage growth − productivity
+    # and 2% inflation target ≈ ULC growth at trend productivity.
+    ulc_yoy = (ulc_index.pct_change(4) * 100).dropna()
 
-    cutoff_5y = latest - pd.DateOffset(years=5)
-    u_window = unemployment[(unemployment.index >= cutoff_5y) & (unemployment.index <= latest)]
+    # Per-metric as-of dates. Cadences differ:
+    #   monthly SA  (LFS first Friday): unemployment, wages, employment rate, participation rate
+    #   monthly NSA (JVWS):              vacancy rate, vacancy count
+    #   quarterly:                       ULC
+    # Headline `latest_date` is the max across all so the date-changed regen gate fires
+    # whenever any feed has new data.
+    as_of_unemp   = unemployment.index[-1]
+    as_of_wages   = min(wages_all_yoy.index[-1], wages_perm_yoy.index[-1],
+                        seph_yoy.index[-1], lfs_micro.index[-1])
+    as_of_util    = min(employment_rate.index[-1], participation_rate.index[-1])
+    as_of_vacancy = vac_rate_12m.index[-1]
+    as_of_ulc     = ulc_yoy.index[-1]
+    latest        = max(as_of_unemp, as_of_wages, as_of_util, as_of_vacancy, as_of_ulc)
+
+    u_now = float(asof(unemployment, as_of_unemp))
+    u_3m  = float(asof(unemployment, as_of_unemp - pd.DateOffset(months=3)))
+    u_6m  = float(asof(unemployment, as_of_unemp - pd.DateOffset(months=6)))
+    u_12m = float(asof(unemployment, as_of_unemp - pd.DateOffset(months=12)))
+
+    cutoff_5y = as_of_unemp - pd.DateOffset(years=5)
+    u_window = unemployment[(unemployment.index >= cutoff_5y) & (unemployment.index <= as_of_unemp)]
     u_5y_min = float(u_window.min())
     u_5y_max = float(u_window.max())
     u_5y_pct = float((u_window <= u_now).mean() * 100)
 
-    wages_all_now  = float(asof(wages_all_yoy, latest))
-    wages_perm_now = float(asof(wages_perm_yoy, latest))
-    seph_now       = float(asof(seph_yoy, latest))
-    lfs_micro_now  = float(asof(lfs_micro, latest))
-    services_now   = float(asof(services_yoy, latest))
-    headline_now   = float(asof(headline_yoy, latest))
+    # Utilization: employment rate + participation rate. Reading these together separates
+    # labour-supply moves (participation) from labour-demand moves (employment).
+    emp_now  = float(asof(employment_rate, as_of_util))
+    emp_3m   = float(asof(employment_rate, as_of_util - pd.DateOffset(months=3)))
+    emp_12m  = float(asof(employment_rate, as_of_util - pd.DateOffset(months=12)))
+    part_now = float(asof(participation_rate, as_of_util))
+    part_3m  = float(asof(participation_rate, as_of_util - pd.DateOffset(months=3)))
+    part_12m = float(asof(participation_rate, as_of_util - pd.DateOffset(months=12)))
+
+    # Tightness: vacancy rate (12M MA) and V/U ratio (BoC's preferred composite read).
+    vac_rate_now    = float(asof(vac_rate_12m, as_of_vacancy))
+    vac_rate_12m_ago = float(asof(vac_rate_12m, as_of_vacancy - pd.DateOffset(months=12)))
+    # V/U: vacancies per unemployed. >1 = more vacancies than unemployed (tight); <1 = slack.
+    # Use the smoothed vacancy level (NSA) divided by SA unemployment level at the same month.
+    vu_date = min(as_of_vacancy, as_of_unemp)
+    v_count = float(asof(vac_level_12m, vu_date))
+    u_count = float(asof(unemp_level, vu_date))
+    vu_ratio = v_count / u_count if u_count > 0 else None
+
+    # Wages
+    wages_all_now  = float(asof(wages_all_yoy, as_of_wages))
+    wages_perm_now = float(asof(wages_perm_yoy, as_of_wages))
+    seph_now       = float(asof(seph_yoy, as_of_wages))
+    lfs_micro_now  = float(asof(lfs_micro, as_of_wages))
+    services_now   = float(asof(services_yoy, as_of_wages))
+    headline_now   = float(asof(headline_yoy, as_of_wages))
 
     wage_measures = {
         "lfs_all":       wages_all_now,
@@ -668,10 +716,18 @@ def compute_labour_values() -> dict:
     wage_minus_services  = wages_all_now - services_now
     micro_minus_services = lfs_micro_now - services_now
 
+    # Cost pressure: ULC Y/Y is the consolidated wage-minus-productivity inflation-pressure read.
+    # Implied productivity = wage growth − ULC growth (using LFS-Micro as the cleaner wage measure).
+    ulc_now              = float(asof(ulc_yoy, as_of_ulc))
+    productivity_implied = lfs_micro_now - ulc_now
+
     return {
         "latest_date":               latest.strftime("%B %Y"),
-        "as_of_unemployment":        latest.strftime("%B %Y"),
-        "as_of_wages":               latest.strftime("%B %Y"),
+        "as_of_unemployment":        as_of_unemp.strftime("%B %Y"),
+        "as_of_wages":               as_of_wages.strftime("%B %Y"),
+        "as_of_utilization":         as_of_util.strftime("%B %Y"),
+        "as_of_vacancy":             as_of_vacancy.strftime("%B %Y"),
+        "as_of_ulc":                 as_of_ulc.strftime("%B %Y"),
 
         "unemployment":              u_now,
         "unemployment_3mo_change":   u_now - u_3m,
@@ -680,6 +736,19 @@ def compute_labour_values() -> dict:
         "unemployment_5y_min":       u_5y_min,
         "unemployment_5y_max":       u_5y_max,
         "unemployment_5y_percentile": u_5y_pct,
+
+        "employment_rate":            emp_now,
+        "employment_rate_3mo_change": emp_now - emp_3m,
+        "employment_rate_12mo_change": emp_now - emp_12m,
+        "participation_rate":            part_now,
+        "participation_rate_3mo_change": part_now - part_3m,
+        "participation_rate_12mo_change": part_now - part_12m,
+
+        "vacancy_rate_12m_avg":       vac_rate_now,
+        "vacancy_rate_12mo_change":   vac_rate_now - vac_rate_12m_ago,
+        "vu_ratio":                   vu_ratio,
+        "unemployment_count_m":       u_count,
+        "vacancy_count_12m_avg_m":    v_count,
 
         "wages_lfs_all":             wages_all_now,
         "wages_lfs_permanent":       wages_perm_now,
@@ -700,10 +769,14 @@ def compute_labour_values() -> dict:
         "real_wage_lfs_micro":       real_wage_lfs_micro,
         "wage_minus_services":       wage_minus_services,
         "micro_minus_services":      micro_minus_services,
+
+        "ulc_yoy":                   ulc_now,
+        "productivity_implied":      productivity_implied,
     }
 
 
 def format_labour_values(v: dict) -> str:
+    vu_str = f"{v['vu_ratio']:.2f}" if v['vu_ratio'] is not None else "n/a"
     return f"""== Latest data ==
 
 Labour market state (as of {v['as_of_unemployment']}):
@@ -711,6 +784,19 @@ Labour market state (as of {v['as_of_unemployment']}):
                                  3-month change: {v['unemployment_3mo_change']:+.2f}pp; 12-month change: {v['unemployment_12mo_change']:+.2f}pp
                                  Last 5y range: {v['unemployment_5y_min']:.2f}% to {v['unemployment_5y_max']:.2f}%; current at {v['unemployment_5y_percentile']:.0f}th percentile
   BoC framing reference:         No fixed NAIRU; the Bank uses qualitative reads ("modest excess supply" / "tight") relative to multi-indicator benchmarks (SAN 2025-17). Don't anchor to a single number.
+
+Utilization (as of {v['as_of_utilization']}):
+  Employment rate:               {v['employment_rate']:.1f}%   (employed / working-age pop, monthly SA)
+                                 3-month change: {v['employment_rate_3mo_change']:+.2f}pp; 12-month change: {v['employment_rate_12mo_change']:+.2f}pp
+  Participation rate:            {v['participation_rate']:.1f}%   (labour force / working-age pop, monthly SA)
+                                 3-month change: {v['participation_rate_3mo_change']:+.2f}pp; 12-month change: {v['participation_rate_12mo_change']:+.2f}pp
+  Reading these together:        Falling employment + stable participation = layoffs; falling participation + stable employment = workers leaving the labour force; both together = slack opening on both margins.
+
+Tightness (as of {v['as_of_vacancy']}):
+  Job vacancy rate (12M MA):     {v['vacancy_rate_12m_avg']:.2f}%   (vacancies / (vacancies + payroll employees), 12M average over NSA monthly)
+                                 12-month change: {v['vacancy_rate_12mo_change']:+.2f}pp
+  V/U ratio:                     {vu_str}   (vacancies per unemployed person; >1 = more vacancies than unemployed = tight; <1 = slack. BoC's preferred composite tightness read.)
+  Vacancy count vs unemployment count: {v['vacancy_count_12m_avg_m']:.2f}M vacancies vs {v['unemployment_count_m']:.2f}M unemployed.
 
 Wage growth (Y/Y, as of {v['as_of_wages']}):
   LFS, all employees:            {v['wages_lfs_all']:+.2f}%
@@ -723,6 +809,10 @@ Wage growth (Y/Y, as of {v['as_of_wages']}):
 
   LFS-Micro minus raw LFS:       {v['lfs_micro_minus_raw_lfs']:+.2f}pp   (negative = composition flattering raw average; this is the dominant Canadian pattern)
 
+Cost pressure (as of {v['as_of_ulc']}):
+  Unit labour costs (Y/Y):       {v['ulc_yoy']:+.2f}%   (ULC ~ wage growth minus productivity; consistent with 2% inflation target when ULC growth is roughly 2% at trend productivity)
+  Productivity implied:          {v['productivity_implied']:+.2f}pp   (LFS-Micro Y/Y minus ULC Y/Y; positive = productivity is contributing; negative or near-zero = wage gains not matched by output gains)
+
 Pass-through and real wages:
   Headline CPI Y/Y:              {v['headline_cpi_yoy']:+.2f}%   (deflator for real wages, BoC convention)
   Services CPI Y/Y:              {v['services_cpi_yoy']:+.2f}%
@@ -731,7 +821,7 @@ Pass-through and real wages:
   LFS wages minus services CPI:  {v['wage_minus_services']:+.2f}pp   (positive = wage pressure not yet fully passed through to services prices)
   LFS-Micro minus services CPI:  {v['micro_minus_services']:+.2f}pp
 
-Coverage gap: this framework tracks unemployment + wage measures + the wage-vs-services-CPI relationship. BoC also explicitly tracks employment rate, involuntary part-time, average hours, job vacancies, newcomer/youth unemployment composition, and unit labour costs (ULC). The view is partial; flag conclusions accordingly when the partial read might mislead.
+Coverage gap: this framework now covers unemployment, employment rate, participation rate, vacancies (rate + V/U), wages, ULC, and the wage-vs-services-CPI relationship. Still not tracked: average hours worked, involuntary part-time rate, newcomer/youth unemployment composition, regional decompositions. Flag conclusions accordingly when those would change the read.
 """
 
 
