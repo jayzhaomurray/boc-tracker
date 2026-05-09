@@ -27,6 +27,6 @@
   "financial": {
     "as_of": "May 2026",
     "model": "claude-opus-4-7",
-    "text": "Oil keeps doing all the inflation work; WTI is up 73.9% Y/Y to $105/bbl—a rare-tier move historically—mechanically adding about 2.7pp to headline CPI through gasoline. CAD provides essentially no offset; USDCAD at 1.3575 sits in the typical part of its long-run distribution and is roughly 2% firmer over the year, implying only a small disinflationary pass-through of ~0.1pp on goods CPI. The petrocurrency link looks dormant—daily WTI–CAD correlation is +0.10 over the past year—leaving rate differentials and the FX risk premium as the likely CAD drivers per BoC's recent decompositions. WCS flipped to a roughly $9 premium over WTI as of March, an unusual reading that signals loose pipeline takeaway post-TMX."
+    "text": "Oil is doing essentially all the inflation work; WTI is up 73.9% Y/Y to $105/bbl—a rare-tier move historically—mechanically adding about 2.7pp to headline CPI through gasoline. CAD provides essentially no offset; USDCAD at 1.3575 sits in the typical part of its long-run distribution and is roughly 2% firmer over the past year, implying only a ~0.1pp disinflationary pass-through on goods CPI. The petrocurrency link looks dormant—daily WTI–CAD correlation is +0.10 over the past year—leaving rate differentials and the FX risk premium as the likely CAD drivers per BoC's recent decompositions."
   }
 }
