@@ -263,14 +263,487 @@ The original framework prose had three issues addressed in the revision:
 
 ---
 
-## Subsequent claims
+## Claim 4: Cost pressure — Unit Labour Costs (Y/Y)
 
-To be added as we work through the framework:
-- Claim 4: Cost pressure (ULC Y/Y; LFS-Micro + ULC pairing; implied productivity ≈ 1% rule)
-- Claim 5: Wage growth across measures (LFS-Micro vs raw LFS pattern)
-- Claim 6: Wage growth vs ~3% soft threshold
-- Claim 7: Wage growth vs services CPI (BoC framing vs older "margin absorption" shorthand)
-- Claim 8: Real wages = wage Y/Y minus headline CPI Y/Y
-- Claim 9: What this framework doesn't track (avg hours, involuntary PT, demographic decomposition, regional)
+### Provenance tier
 
-Plus the seven threshold bullets and the "What to surface" synthesis paragraph.
+**Tier 2 — autonomously verified 2026-05-09. Not user-reviewed.** Ready for user verdict on 2026-05-10 review pass.
+
+### Framework prose (verbatim from analysis_framework.md)
+
+> **Cost pressure: unit labour costs (Y/Y).** ULC = wage growth minus productivity growth, by definition. It is the consolidated inflation-pressure read since 2% inflation is consistent with ULC growth around 2% at trend productivity. Compare ULC growth to the 2% target and to the wage measures: implied productivity = wage Y/Y minus ULC Y/Y. When implied productivity matches BoC's ~1% trend assumption (SAN 2025-14), wage growth and ULC are telling the same story; when implied productivity is well below 1%, wage gains are not being matched by output gains and ULC is the binding pressure on prices even when wages look moderate. Use LFS-Micro (composition-adjusted) as the cleaner wage input for this comparison.
+
+Threshold bullets:
+
+> **ULC Y/Y ≈ 2%** = consistent with the 2% inflation target at trend productivity; **ULC Y/Y > 3%** = labour-cost pressure inconsistent with target absent a productivity boom; **implied productivity (LFS-Micro Y/Y − ULC Y/Y) ≈ 1%** = aligned with BoC's trend assumption (SAN 2025-14), well below 1% = wage gains outrunning output.
+
+### Verification verdict
+
+**PARTIALLY VERIFIED — mix per sub-claim.** The ULC = wages-net-of-productivity framing is anchored in BoC publications. The "~1% trend productivity" is an inexact characterisation of SAN 2025-14, which puts trend labour productivity at **1.2% in Scenario 1 (baseline)** with a Scenario 2 (tariff-shock) downside of 0.2–0.8%. The 3% ULC threshold is **UNSOURCED** — analyst synthesis. The "LFS-Micro = cleaner wage input" claim is supported in substance but the BoC's own wording is "smoother" / "reduced volatility," not "cleaner."
+
+### Source 1 — BoC Wages and costs: Definitions, graphs and data
+
+**URL:** https://www.bankofcanada.ca/rates/indicators/capacity-and-inflation-pressures/wages-costs-definitions/
+
+**Direct quote (ULC):** *"Unit labour cost is the labour cost per unit of output. It is calculated as the ratio of labour compensation to real value added."*
+**Alternative framing on same page:** *"It is also the equivalent of the ratio of labour compensation per hour worked to labour productivity."*
+**Direct quote (LFS-Micro):** *"The LFS-Micro is a measure of underlying wage growth derived from the Labour Force Survey (LFS) microdata. It removes the composition effects from the average hourly earnings in the LFS, yielding a wage measure with reduced volatility and a better relationship with labour market fundamentals."*
+
+**Verdict:** VERIFIED — supports the identity (the BoC's ratio framing is mathematically equivalent to "wage growth minus productivity growth" in Y/Y log terms) and supports the LFS-Micro composition-adjustment claim. Does **not** explicitly link ULC to the 2% target on this page.
+
+### Source 2 — SAN 2025-14, "Potential output in Canada: 2025 assessment"
+
+**URL:** https://www.bankofcanada.ca/2025/06/staff-analytical-note-2025-14/
+
+**Direct quotes (TLP figures):**
+- Scenario 1 (baseline): 1.2% for each of 2025, 2026, 2027 (with prior April 2024 vintage in parentheses: 0.8, 0.9, 1.0).
+- Scenario 2 (tariff shock): 2025 = 0.5%, 2026 = 0.2%, 2027 = 0.8%.
+- *"TLP growth picks up in 2025 and remains relatively stable over the scenario horizon."*
+
+**Verdict:** PARTIALLY VERIFIED — confirms SAN 2025-14 is the right citation, but the framework's "~1%" understates Scenario 1 (1.2%) and Scenario 2 is *tariff-shock-specific*, not a generic "structurally weak productivity" baseline. The note also makes **no statement** linking TLP to the 2% inflation target — that linkage is the analyst's, not SAN 2025-14's.
+
+### Source 3 — SAN 2024-23, "Beyond the averages: Measuring underlying wage growth using Labour Force Survey microdata"
+
+**URL:** https://www.bankofcanada.ca/2024/10/staff-analytical-note-2024-23/
+
+**Direct quotes:**
+- *"we introduce a new measure of underlying wage growth that we call LFS-Micro. This measure works within the limitations of the publicly available microdata from the LFS to calculate a measure of underlying wage growth that is separate from shifts in the composition of the Canadian workforce."*
+- *"Compared with other measures, LFS-Micro provides a much smoother estimate of wage growth that is more representative of underlying wage pressures."*
+- *"Wage growth is a key indicator that central banks monitor because labour costs are an important component of production costs and inflation."*
+
+**Methodology note:** Uses Oaxaca-Blinder decomposition; composition-adjusted wage growth was 3.9% Jan–Aug 2024 vs. 5.1% headline raw LFS.
+
+**Verdict:** VERIFIED for the composition-adjustment / underlying-wage-pressure claim. **The framework's word "cleaner" is not BoC vocabulary** — the SAN says "smoother" and "more representative of underlying wage pressures." The note **does not** describe LFS-Micro as the BoC's "preferred" measure; it presents it as a new staff tool.
+
+### Source 4 — Macklem, "Toward a virtuous circle for productivity" speech, Nov 19, 2025
+
+**URL:** https://www.bankofcanada.ca/2025/11/toward-a-virtuous-circle-for-productivity/
+
+**Direct quotes:**
+- *"The most important labour cost for a business isn't the hourly wage that it pays its workers. What matters more is what we refer to as unit labour costs—that is, how much it costs in wages to produce a single unit of output."*
+- *"when wage growth is accompanied by an increase in productivity, it has less of an impact on unit labour costs, so it is less inflationary."*
+- *"when productivity is strong, businesses can keep their prices stable even if they raise wages."*
+
+**Verdict:** VERIFIED for the qualitative ULC = wages-net-of-productivity framing as BoC-stated. Does **not** quantify a wage-or-ULC threshold consistent with 2% inflation in this speech.
+
+### Source 5 — Macklem MPR press conference opening statement, April 12, 2023
+
+**URL:** https://www.bankofcanada.ca/2023/04/opening-statement-2023-04-12/
+
+**Reported quote (widely cited via secondary sources, retrieved 2026-05-09):** *"Wage growth has been running at four to five per cent and unless there's a surprising acceleration in productivity, that's not consistent with two per cent inflation."*
+
+**Methodology note:** Sub-agent retrieved this quote via web search of secondary sources; did not independently fetch the BoC opening-statement page to confirm the exact wording. **User should re-verify against the primary URL before quoting.**
+
+**Verdict:** PROVISIONALLY VERIFIED — supports the qualitative claim that wage growth materially above trend productivity is "not consistent with" 2% inflation. The framework prose does not currently use this quote, but it is the strongest single primary-source anchor for the 2%-target linkage and could be added.
+
+### Defects flagged
+
+1. **Defect 3 (unsourced threshold) — `ULC Y/Y > 3%` bullet.** No BoC publication located states that ULC growth above 3% is the line for "labour-cost pressure inconsistent with target." Analyst synthesis dressed as canonical.
+2. **"~1% trend productivity" understates SAN 2025-14.** Actual Scenario 1 is 1.2%; Scenario 2 dips to 0.2–0.8% under tariff shock. Recommend rewording to "~1.2% trend assumption (SAN 2025-14, Scenario 1; downside scenarios materially lower)."
+3. **"Cleaner wage input" wording not in source.** SAN 2024-23 says "smoother" / "more representative." Minor vocabulary alignment.
+4. **Implicit threshold "ULC ≈ 2% = consistent with 2% target" depends on assumed productivity.** With BoC's 1.2% TLP, an inflation-consistent wage path is ~3.2% and an inflation-consistent ULC is ~2% — so the identity holds, but the framework should make explicit that the "2% ULC = 2% inflation" framing already assumes the productivity number it later describes. Currently reads circularly.
+5. **No fabricated quotes** in the prose itself.
+6. **No US-transferred heuristic.** ULC = wage − productivity is a universal accounting identity.
+
+### Open questions for user review
+
+1. Soften "~1%" to "~1.2% (scenario-dependent)"? Or specify "Scenario 1 = 1.2%, downside scenarios as low as 0.2–0.8%"?
+2. Drop the `ULC Y/Y > 3%` bullet, or anchor it. Either find a BoC source for that threshold or rewrite as analyst judgment.
+3. Add the April 2023 Macklem opening-statement quote as the explicit anchor for the 2%-target linkage? It would close the gap that no primary source currently quantifies the wage-target relationship in the way the framework asserts.
+
+---
+
+## Claim 5: Wage growth across measures
+
+### Provenance tier
+
+**Tier 2 — autonomously verified 2026-05-09. Not user-reviewed.** Ready for user verdict on 2026-05-10.
+
+### Framework prose (verbatim)
+
+> **Wage growth across measures (LFS all, LFS permanent, SEPH, LFS-Micro).** Look at dispersion: when measures cluster, the signal is consistent; when they diverge, the choice of measure matters. LFS-Micro typically runs *below* raw LFS in Canada because workforce composition has been shifting toward higher-paid workers (SAN 2024-23 reports composition-adjusted wage growth at 3.9% vs. raw LFS at 5.1% in early 2024). When LFS-Micro < raw LFS — the dominant Canadian pattern — the read is "composition is flattering the headline wage number," and the underlying wage dynamic is softer than raw averages suggest. The reverse case (LFS-Micro > raw LFS, indicating composition dragging the average down while underlying wages rise) is theoretically valid but historically rare for Canada.
+
+Threshold bullet:
+
+> **LFS-Micro typically below raw LFS in Canada** — when this holds, raw LFS overstates underlying wage pressure; when LFS-Micro is unexpectedly close to or above raw LFS, that itself is a signal worth flagging.
+
+### Verification verdict
+
+**PARTIALLY VERIFIED.** The SAN 2024-23 numbers, the directional claim, and the multi-year framing are directly supported. **However, the framework's enumeration of "the four measures" (LFS all, LFS permanent, SEPH, LFS-Micro) does NOT match the BoC's own Wages-and-costs page**, which lists LFS-AHE, SEPH-AHE, **National Accounts hourly wages**, and LFS-Micro — i.e., no separate "LFS permanent" line, and a National Accounts measure the framework omits. The "January–August 2024" window is loosely glossed as "early 2024." The composition shift is more narrowly attributable to *occupational mix* (rising share in high-wage occupations), not generic "higher-paid workers."
+
+### Source 1 — SAN 2024-23 (Bounajm, Devakos, Galassi, October 2024)
+
+**URL:** https://www.bankofcanada.ca/2024/10/staff-analytical-note-2024-23/
+**Title:** "Beyond the averages: Measuring underlying wage growth using Labour Force Survey microdata"
+
+**Direct quotes (retrieved 2026-05-09):**
+- *"We find that composition-adjusted wage growth averaged 3.9% between January and August 2024…significantly below the average wage growth of 5.1%"*
+- *"Most upward pressure in average wage growth…comes from changes in the occupational makeup of the labour market…increasing share working in high-wage occupations."*
+- *"In general, LFS-Micro wage growth is lower than the LFS average wage growth measure over the full sample period."*
+- *"This suggests that compositional changes in the labour market over the past few decades have generally contributed positively to wage growth."*
+
+**Verdict:** VERIFIED for (a) the 3.9% / 5.1% pair, (b) the directional claim, (c) the composition framing — though the SAN's actual attribution is *occupational* composition, narrower than "workforce composition."
+
+### Source 2 — BoC "Wages and costs: Definitions, graphs and data"
+
+**URL:** https://www.bankofcanada.ca/rates/indicators/capacity-and-inflation-pressures/wages-costs-definitions/
+
+**Measures listed verbatim:**
+1. LFS-Micro
+2. Labour Force Survey – Average Hourly Earnings ("Usual wages or salary of employees at their main job before taxes")
+3. Survey of Employment, Payrolls and Hours – Average Hourly Earnings
+4. National Accounts – Hourly Wages and Salaries
+
+**Verdict:** **Contradicts the framework's enumeration.** The BoC's own canonical list does not contain a separate "LFS permanent employees" line, and it *does* contain a National Accounts hourly wages measure that the framework omits. SEPH is still listed — it has not been retired. The framework's "four measures" list appears to be analyst synthesis.
+
+### Defects flagged
+
+- **Defect 5 (rigid n-tuple decoder) / Defect 4 (mis-listed indicator):** The framework's "four measures" list reads as canonical but doesn't match the BoC's published taxonomy. "LFS permanent" is not a separate BoC headline measure; National Accounts hourly wages is, but the framework omits it.
+- **No fabricated quotes** — 3.9% / 5.1% pair and directional language reproduce SAN 2024-23 accurately.
+- **No US heuristic transfer.**
+- **No unsourced threshold.**
+
+### Open questions for user review
+
+1. Reconcile the four-measure list with the BoC Wages-and-costs page: drop "LFS permanent," add "National Accounts hourly wages"? Or keep "LFS permanent" because the dashboard fetches it explicitly (project-state-driven rather than BoC-canonical)?
+2. Tighten the composition framing to *"occupational composition has been shifting toward high-wage occupations"*?
+3. Use the precise "January–August 2024" window instead of "early 2024"?
+
+---
+
+## Claim 6: Wage growth vs. ~3% soft threshold
+
+### Provenance tier
+
+**Tier 2 — autonomously verified 2026-05-09. Not user-reviewed.** Ready for user verdict on 2026-05-10.
+
+### Framework prose (verbatim)
+
+> **Wage growth vs. ~3% soft threshold.** The identity is target inflation = wage growth − productivity. With BoC trend productivity assumed at roughly 1% (SAN 2025-14 places it at ~1.2% in baseline scenarios but acknowledges Canada's structurally weak productivity, with downside scenarios at ~0.5%), wage growth above ~3% is broadly inconsistent with the 2% inflation target. The Bank does not publish a fixed 3% threshold but articulates the identity in MPRs ([October 2024 In Focus](https://www.bankofcanada.ca/publications/mpr/mpr-2024-10-23/in-focus-1/): "Nominal wage growth in Canada is around 4%, above the level of productivity growth plus 2% inflation"). Treat 3% as a soft anchor, not a hard line; recent productivity weakness pushes the implied threshold lower.
+
+Threshold bullet:
+
+> **Wage growth ≈ 3%** = soft threshold for consistency with the 2% inflation target, assuming ~1% trend productivity (BoC scenarios bracket 0.5–1.2% depending on environment). Recent productivity weakness pushes the implied threshold below 3%.
+
+### Verification verdict
+
+**VERIFIED with caveat.** Both numerical anchors (1.2% baseline, 0.5% downside in SAN 2025-14) and the MPR Oct 2024 In Focus quote are confirmed verbatim. The "3% soft threshold" is analyst synthesis derived from the identity, but the framework explicitly tells the reader the BoC doesn't publish 3% — honest synthesis.
+
+### Source 1 — SAN 2025-14 (Abraham, Brouillette, Chernoff, Hajzler, Houle, Kim, Taskin, June 2025)
+
+**URL:** https://www.bankofcanada.ca/2025/06/staff-analytical-note-2025-14/
+**Title:** "Potential output in Canada: 2025 assessment"
+
+**Direct content:** Table A-1 reports trend labour productivity growth at 1.2% (Scenario 1, baseline, 2025) and 0.5% (Scenario 2, downside, 2025); the previous April 2024 assessment carried 0.8%. Scenario 2 reflects "broad-based tariffs that reduce trade and create resource misallocation inefficiencies."
+
+**Verdict:** Both numbers confirmed. **Caveat:** Scenario 2's downside is specifically a *tariff* scenario, not a generic "structurally weak productivity" baseline as the framework prose loosely implies.
+
+### Source 2 — MPR October 2024, In Focus
+
+**URL:** https://www.bankofcanada.ca/publications/mpr/mpr-2024-10-23/in-focus-1/
+**Title:** "The factors behind the rise in unemployment"
+
+**Direct quote (verbatim):** *"Nominal wage growth in Canada is around 4%, above the level of productivity growth plus 2% inflation."*
+
+**Verdict:** Quote confirmed verbatim. **Minor framing caveat:** the framework labels this "October 2024 In Focus" generically; the In Focus is actually titled "The factors behind the rise in unemployment," and the wage-productivity sentence is in its "Wage growth is expected to ease" subsection.
+
+### Source 3 — Cross-check (BoC Wages-and-costs page; Macklem May 2023 speech)
+
+**URLs:**
+- https://www.bankofcanada.ca/rates/indicators/capacity-and-inflation-pressures/wages-costs-definitions/
+- https://www.bankofcanada.ca/2023/05/staying-course-price-stability/
+
+**Findings:** Wages-and-costs page does not name 3% as a threshold. Macklem May 2023 speech: *"persistent wage growth in the 4% to 5% range would make it difficult to achieve the 2% inflation target"* — supports the qualitative claim, doesn't anchor 3%.
+
+**Verdict:** Supports the framework's negative claim ("BoC doesn't publish a 3% threshold").
+
+### Defects flagged
+
+- **Threshold sourcing — handled honestly.** The framework's "3% soft threshold" is analyst synthesis derived from the identity, but the framework tells the reader the BoC doesn't publish 3%. Not a defect; this is the right way to handle it.
+- **Minor framing risk:** Citing SAN 2025-14's 0.5% as "Canada's structurally weak productivity" is loose — the 0.5% is the tariff-scenario downside. Tighten to "downside scenarios (e.g. broad-based tariffs) at ~0.5%."
+- **Minor framing risk:** Hyperlink anchor "October 2024 In Focus" is generic; consider naming the In Focus title.
+- **No fabricated quote.** MPR Oct 2024 quote is verbatim.
+- **No US heuristic transfer.**
+
+### Open questions for user review
+
+1. Specify that the 0.5% downside is the tariff-scenario number, not a generic structural-weakness estimate?
+2. Re-label the In Focus link with its actual title ("The factors behind the rise in unemployment")?
+3. The "recent productivity weakness pushes the implied threshold lower" line is analyst inference. Add explicit "(analyst inference from the identity)" tag, or is the surrounding "treat 3% as a soft anchor, not a hard line" wording sufficient?
+
+---
+
+## Claim 7: Wage growth vs. services CPI
+
+### Provenance tier
+
+**Tier 2 — autonomously verified 2026-05-09. Not user-reviewed.** Ready for user verdict on 2026-05-10.
+
+### Framework prose (verbatim)
+
+> **Wage growth vs. services CPI.** The BoC tracks wage growth as a leading indicator for services inflation persistence (Macklem April 2023; SAN 2024-23). When wage growth persistently exceeds services CPI, this indicates labour cost pressures are not yet fully reflected in prices — consistent with incomplete pass-through, lagged price adjustment, or margin compression. Note that "margin absorption" is *our* shorthand; the BoC's framing is the more nuanced one above. The composition-adjusted LFS-Micro shows the strongest correlation with services-ex-shelter (SAN 2024-23).
+
+Threshold bullet:
+
+> **Wage growth > services CPI** = leading indicator that labour-cost pressures are not yet fully passing through to services prices.
+
+### Verification verdict
+
+**PARTIALLY VERIFIED, with citation drift and synthesised mechanisms.** The LFS-Micro / services-ex-shelter correlation claim from SAN 2024-23 is verified verbatim. **The "Macklem April 2023" attribution for the leading-indicator framing is weak** — neither the April 12 MPR opening statement nor the April 18 House of Commons opening statement explicitly describes wages as a "leading indicator" for services inflation. The cleanest BoC source for that framing is **MPR July 2024 In Focus on drivers of core inflation**, which the framework should cite instead. The mechanisms list ("incomplete pass-through, lagged price adjustment, margin compression") is framework synthesis — none of these phrases appear in either SAN 2024-23 or April 2023 Macklem statements.
+
+### Source 1 — SAN 2024-23 (LFS-Micro / services-ex-shelter)
+
+**URL:** https://www.bankofcanada.ca/2024/10/staff-analytical-note-2024-23/
+
+**Direct quote:** *"Theoretically, changes in wage growth should be closely related to changes in inflation because labour is a key production input. LFS-Micro has a substantially strong correlation with measures of inflation. In particular, it shows the strongest correlation with services excluding shelter, which is a component of the consumer price index (CPI) basket of goods and services that is usually labour intensive."*
+
+**Verdict:** VERIFIED for the correlation claim. Note: the SAN frames this descriptively (correlation observed in historical data); it does **not** claim a leading/predictive relationship and contains no language about "leading indicator," pass-through, margin compression, or persistence. The framework's leading-indicator gloss is an extrapolation.
+
+### Source 2 — Macklem MPR press conference opening statement, April 12, 2023
+
+**URL:** https://www.bankofcanada.ca/2023/04/opening-statement-2023-04-12/
+
+**Direct quotes:**
+- *"Continued strong demand for services and the still-tight labour market are putting upward pressure on many services prices."*
+- *"Services price inflation and wage growth need to moderate."*
+
+**Verdict:** PARTIALLY SUPPORTS, does not say "leading indicator." Concurrent-pressure framing.
+
+### Source 3 — Macklem House of Commons opening statement, April 18, 2023
+
+**URL:** https://www.bankofcanada.ca/2023/04/opening-statement-180423/
+
+**Direct quotes:** *"wages continue to grow in the 4% to 5% range"*; *"Continued strong demand and the tight labour market are putting upward pressure on many services prices"*; *"services price inflation and wage growth need to moderate"*
+
+**Verdict:** Same as Source 2 — concurrent-pressure framing, no explicit leading-indicator framing.
+
+### Source 4 — MPR July 2024, "Drivers of inflation in core goods and services" (the actually-supportive citation the framework should be using)
+
+**URL:** https://www.bankofcanada.ca/publications/mpr/mpr-2024-07/in-focus-1/
+
+**Direct quotes:**
+- *"While this measure of wage growth has been volatile, it has fallen from its peak. This suggests that inflation in services excluding shelter will moderate if wage growth continues to ease."*
+- *"Microdata from the Labour Force Survey (LFS) also suggest that elevated growth in labour costs may have been putting upward pressure on inflation."*
+
+**Verdict:** **This IS leading-indicator framing** ("if wages ease, services-ex-shelter will moderate"). It is the cleanest BoC source for the framework's claim. **Recommend swapping the citation.**
+
+### Defects flagged
+
+- **Defect type 4 (mis-attributed source):** The "Macklem April 2023" attribution does not contain the specific leading-indicator framing the prose implies. Reasonable inference from "wages need to moderate" but not what the speech actually says.
+- **Defect type 5 (analyst synthesis presented as canonical):** "Incomplete pass-through, lagged price adjustment, or margin compression" is framework-synthesised. The framework already hedges "margin absorption" but does not similarly hedge the three-mechanism list itself.
+- **No fabricated quotes** — the framework paraphrases rather than placing words in Macklem's mouth.
+- **No US heuristic transfer.**
+
+### Open questions for user review
+
+1. Swap the "Macklem April 2023" citation for **MPR July 2024 In Focus on core inflation drivers**, which contains explicit leading-indicator language?
+2. Hedge the three-mechanism list as analyst synthesis, like "margin absorption" already is?
+3. SAN 2024-23's correlation is **contemporaneous, not leading**. Keep the leading-indicator framing or shift to a correlation framing for the SAN-citation half?
+
+---
+
+## Claim 8: Real wages = wage Y/Y minus headline CPI Y/Y
+
+### Provenance tier
+
+**Tier 2 — autonomously verified 2026-05-09. Not user-reviewed.** Ready for user verdict on 2026-05-10. **Contains a likely-fabricated quote — see defects below.**
+
+### Framework prose (verbatim)
+
+> **Real wages: wage Y/Y minus headline CPI Y/Y.** Standard BoC framing (MPR October 2024: "1.6% annual real wage gains since 2023"). Headline CPI is the standard deflator; positive real wages = workers gaining purchasing power; negative = falling behind inflation.
+
+Threshold bullet:
+
+> **Real wage > 0** = workers gaining purchasing power; **real wage < 0** = losing it.
+
+### Verification verdict
+
+**UNSOURCED, with one likely-fabricated quote.** The bare arithmetic definition is uncontroversial, but the specific MPR Oct 2024 quote does not appear in the document, and the "standard BoC framing" / "headline CPI is the standard deflator" assertions are overstated.
+
+### Source 1 — MPR October 2024 (overview / Canadian conditions / outlook chapters)
+
+**URLs:**
+- https://www.bankofcanada.ca/publications/mpr/mpr-2024-10-23/
+- https://www.bankofcanada.ca/publications/mpr/mpr-2024-10-23/canadian-conditions/
+- https://www.bankofcanada.ca/publications/mpr/mpr-2024-10-23/canadian-outlook/
+
+**Sub-agent search:** the exact phrase *"1.6% annual real wage gains since 2023"* and any "1.6%" figure attached to real wages.
+
+**Found:** the only "1.6%" in the October 2024 MPR HTML chapters retrieved is **headline CPI inflation in September 2024**: *"Inflation declined to 1.6% in September."* The MPR's actual real-wage framing compares real wages to **productivity**, not to a 2023 baseline: *"real wage growth — an important factor in the costs of producing many of these services — remains elevated when compared with growth in productivity."*
+
+**Verdict:** **The framework's quoted "1.6% annual real wage gains since 2023" attributed to MPR October 2024 was not found in the HTML chapters.** Sub-agent could not text-extract the PDF; cannot 100% rule out a chart caption / footnote. Most likely the figure conflates the September 2024 headline-CPI figure (1.6%) with real wages.
+
+### Source 2 — BoC "Wages and costs: Definitions" indicator page
+
+**URL:** https://www.bankofcanada.ca/rates/indicators/capacity-and-inflation-pressures/wages-costs-definitions/
+
+**Finding:** Defines nominal wage measures (LFS-Micro, LFS AHE, SEPH AHE, National Accounts hourly wages, ULC). Contains **no definition of "real wages"** and **does not specify a deflator** — neither headline nor core CPI is named as the standard.
+
+**Verdict:** Does not support the framework's "headline CPI is the standard deflator" claim.
+
+### Source 3 — MPR October 2024 framing of real wages
+
+**URL:** https://www.bankofcanada.ca/publications/mpr/mpr-2024-10-23/canadian-conditions/
+
+**Direct quote:** *"real wage growth — an important factor in the costs of producing many of these services — remains elevated when compared with growth in productivity."*
+
+**Verdict:** When the BoC discusses real wages in Oct 2024, the comparator is **productivity**, not a 2023 baseline. The framework's claim is not the BoC's framing in this report.
+
+### Defects flagged
+
+1. **CRITICAL: Defect type 1 (fabricated quote).** *"1.6% annual real wage gains since 2023"* attributed to MPR October 2024 was not found in any HTML chapter retrieved. High suspicion of fabrication or conflation with the September 2024 headline-CPI figure. **This is the most serious defect identified across Claims 4–10.** User to confirm against the PDF before any decision.
+2. **Defect type 3 (unsourced threshold / convention):** "Headline CPI is the standard deflator" is not supported by the BoC's wages-and-costs page, which doesn't specify a deflator. The BoC's published real-wage discussions compare to productivity, not a single CPI-deflated number.
+3. **Defect type 5 (analyst synthesis presented as canonical):** "Standard BoC framing" overstates the case.
+4. **No US heuristic transfer.**
+
+### Open questions for user review
+
+1. **Critical:** confirm the MPR October 2024 quote *"1.6% annual real wage gains since 2023"* exists somewhere (PDF chart caption / footnote), or remove it as fabricated.
+2. Soften "headline CPI is the standard deflator" to "headline CPI is one common deflator; the BoC also discusses real wages relative to productivity"?
+3. Keep the bare "real wage > 0 = gaining purchasing power" framing, or add the productivity-comparator framing the BoC actually uses in MPRs?
+
+---
+
+## Claim 9: Coverage gaps (what the framework doesn't track but BoC does)
+
+### Provenance tier
+
+**Tier 2 — autonomously verified 2026-05-09. Not user-reviewed.** Ready for user verdict on 2026-05-10.
+
+### Framework prose (verbatim)
+
+> **What this framework doesn't track but BoC explicitly does.** Average hours worked (NSA-only monthly; flagged for the next labour scope review), involuntary part-time rate (annual cadence too coarse for this dashboard), newcomer and youth unemployment composition, and regional decompositions (Toronto/Vancouver vs. rest of Canada). Each is part of how BoC reads the labour market. The remaining omissions are narrower than they used to be — utilization (employment rate, participation rate), tightness (vacancies, V/U), and cost pressure (ULC) are now wired in — but conclusions touching demographic composition or regional dispersion should still be flagged as partial.
+
+### Verification verdict
+
+**PARTIALLY VERIFIED.** Three of four named gaps (avg hours, involuntary PT, newcomer/youth) are clearly tracked by BoC — verified against SAN 2024-8 (predecessor benchmark paper) and the June 2024 Macklem speech. **The "Toronto/Vancouver vs. rest of Canada" framing is NOT verified as BoC-canonical** — see defect below. The "now wired in" claim is verified against `data/`. SAN 2025-17's actual demographic decomposition is broader than the framework's pairing suggests.
+
+### Source 1 — SAN 2024-8, "Benchmarks for assessing labour market health: 2024 update" (Apr 30, 2024)
+
+**URL:** https://www.bankofcanada.ca/2024/04/staff-analytical-note-2024-8/
+
+**Finding:** Table 1 lists average hours worked (total impact 0.17 pp on inflation) and involuntary part-time rate (0.37 pp), described as *"a signal that people want to work more hours but there is insufficient demand."*
+
+**Verdict:** VERIFIED — both indicators are explicit benchmark-dashboard members in the predecessor of SAN 2025-17.
+
+### Source 2 — SAN 2025-17, "Benchmarks for assessing labour market health: 2025 update"
+
+**URL:** https://www.bankofcanada.ca/2025/06/staff-analytical-note-2025-17/
+
+**Finding:** Average hours worked and involuntary PT appear as *anticipated trade-impact channels* (*"A reduction in average hours worked is likely"*; *"This will likely increase the number of workers involuntarily working part-time"*) rather than in the headline benchmark charts. Demographic decomposition tracked: youth (15–24, by gender), prime-age (25–54, by gender), older (55+, by gender), public vs. private, low/mid/high-wage. Newcomers not separately analysed in this update; **no province/CMA breakdown.**
+
+**Verdict:** PARTIAL — confirms BoC continues to use these as channels, but the 2025 note de-emphasises them relative to SAN 2024-8.
+
+### Source 3 — Macklem, "Making the labour market work for everyone" (Jun 2024)
+
+**URL:** https://www.bankofcanada.ca/2024/06/making-labour-market-work-everyone/
+
+**Direct quotes:** *"the unemployment rate for newcomers to Canada is rising much faster than the overall rate"*; *"the unemployment rate for youth is almost 2 percentage points higher than it was in 2019"*.
+
+**Regional finding:** This speech contains **no** regional decomposition — no Toronto, Vancouver, province, or CMA references beyond the speech location.
+
+**Verdict:** VERIFIED for newcomer + youth as BoC-tracked channels.
+
+### Source 4 — BoC Labour Market Definitions page
+
+**URL:** https://www.bankofcanada.ca/rates/indicators/capacity-and-inflation-pressures/labour-market-definitions/
+
+**Finding:** The BoC's headline indicators page lists unemployment rate, LMI composite, participation, employment growth, BOS labour shortage, BOS intensity of shortages. Average hours, involuntary PT, newcomer/youth, and regional breakdowns are NOT on this canonical page.
+
+**Verdict:** Mixed — confirms these are second-tier indicators in BoC's published apparatus, which softens "BoC explicitly does" but does not contradict it.
+
+### Source 5 — Project state check (`data/`)
+
+**Verdict on "now wired in" claim:** VERIFIED. `data/` contains `employment_rate.csv`, `participation_rate.csv`, `job_vacancy_rate.csv`, `job_vacancy_level.csv`, `unit_labour_cost.csv`. V/U computed from `job_vacancy_level.csv` and `unemployment_level.csv`.
+
+### Defects flagged
+
+1. **Toronto/Vancouver vs. rest of Canada is NOT BoC-canonical.** Across SAN 2025-17, SAN 2024-8, the Macklem June 2024 speech, and the Labour Market Definitions page, no BoC labour-market regional decomposition along Toronto / Vancouver lines was found. BoC tends to decompose by age × gender × education × wage tier × sector, not geographically. **Likely analyst synthesis** (or accidentally imported from CMHC's Toronto/Vancouver supply-gap framing in the Housing section, where it is canonical). Same defect class as Claim 3's V/U > 1 = tight — heuristic asserted as canonical when the source is silent.
+2. **"Average hours worked... NSA-only monthly" parenthetical may be inaccurate.** Worth a primary-source check before keeping.
+3. **Indicator-naming-leak risk (per Claim 2 protocol):** Claim 9's prose names "average hours worked" and "involuntary part-time rate" while explicitly stating they are NOT tracked. Two readings: (a) safe because the prose is in framework not in a blurb prompt context, the model reads "doesn't track but BoC does" as a list to avoid claiming; (b) re-introduces the risk if any future blurb-prompt-injection forwards this section without disclaimer. **User's call.** Recommend the safer demotion (move named list to verification log only) unless user wants to keep the named list visible at framework level.
+4. **"Each is part of how BoC reads the labour market" overstates headline-tier status.** The Labour Market Definitions page does not list these. They appear in SANs and speeches — real BoC content but not the headline indicator suite. Soften.
+5. **No fabricated quotes** — the Macklem June 2024 quotes are verbatim.
+6. **No US heuristic transfer.**
+
+### Open questions for user review
+
+1. Toronto/Vancouver framing — pasted-in placeholder from Housing section, or intended Labour-side citation? If the latter, primary source needed; if the former, replace with the actual BoC framing (no specific city pair, or the BOS regional-breakdown if it can be cited).
+2. Demote the named "avg hours / involuntary PT" list to verification log only, per the Claim 2 indicator-naming-leak precedent? (Recommended.)
+3. Specify SAN 2025-17 decomposition (gender × age × education × wage tier × public/private) instead of generic "demographic composition"?
+
+---
+
+## Claim 10: What to surface (synthesis paragraph)
+
+### Provenance tier
+
+**Tier 2 — autonomously verified 2026-05-09. Not user-reviewed.** Ready for user verdict on 2026-05-10. **Contains a propagation defect from user-verified Claim 3 that needs immediate fix — see flag below.**
+
+### Framework prose (verbatim)
+
+> **What to surface:** Lead with what the labour market is *doing* — tightening, loosening, holding — anchored on the unemployment rate level + direction, framed against BoC's qualitative characterizations rather than a fixed NAIRU. Use the utilization pair (employment + participation) to distinguish layoff dynamics from labour-force-exit dynamics when their moves diverge. Surface tightness via the V/U ratio when it's clearly off balance — V/U well below 1 reinforces a slack read, V/U near or above 1 reinforces a tight read. Characterize wage growth: dispersion across measures, whether the central tendency is above or below the ~3% soft threshold, and whether LFS-Micro is meaningfully below raw LFS (the dominant Canadian pattern). Use ULC as the consolidated cost-pressure read when wages and productivity are telling different stories — implied productivity at or near 1% means wages and prices are roughly aligned with target; implied productivity well below 1% means ULC is the binding inflation pressure even when wages look moderate. Surface the wage-vs-services-CPI relationship as a leading indicator for services inflation persistence — the BoC-validated framing, not the older "margin absorption" shorthand. Note real wages when the gap is large in either direction. When demographic or regional decomposition would change the read, flag that the framework's view is partial.
+
+### Verification verdict
+
+**CONTESTED — contains a known-defect line that user-verified Claim 3 explicitly rejected.** Most of the synthesis paragraph is consistent with verified Claims 1–8, but the V/U sentence (*"V/U well below 1 reinforces a slack read, V/U near or above 1 reinforces a tight read"*) re-asserts the US-transferred heuristic that Claim 3's user-verification eliminated.
+
+### PROMINENT FLAG — V/U threshold contradiction (propagation defect)
+
+The synthesis paragraph contradicts user-verified Claim 3.
+
+- **Synthesis says:** *"V/U well below 1 reinforces a slack read, V/U near or above 1 reinforces a tight read."*
+- **User-verified Claim 3 (post-revision, Tier 3 provisional):** *"V/U < 0.30 = slack; 0.30–0.45 = below balance; 0.45–0.60 = approaching balance / starting to be tight; 0.60–0.80 = tight; > 0.80 = exceptionally tight."*
+
+The "near or above 1 = tight" line in the synthesis paragraph is the **exact US-transferred heuristic** Claim 3 explicitly identified, sourced (US JOLTS 2022 peak ≈ 2.0 vs. Canadian 2022 peak ≈ 0.99), and rejected. The synthesis paragraph likely pre-dates the Claim 3 revision (or the revision didn't propagate). **Recommend immediate edit before any blurb regen.** Replacement options:
+
+> *"Surface tightness via the V/U ratio against its Canadian-calibrated bands — V/U below 0.30 reinforces a slack read; 0.45–0.60 marks the BoC-tightening-cycle band; above 0.80 marks 2022-style exceptional tightness."*
+
+Or, more compact:
+
+> *"Surface tightness via the V/U ratio against its Canadian-calibrated bands (Claim 3 thresholds) — directionally informative, with the standing caveat that the Beveridge curve's position has shifted post-COVID."*
+
+### Per-item mapping to verified claims
+
+| Synthesis guidance | Verified claim anchor | Verdict |
+|---|---|---|
+| "Lead with what labour market is *doing*" | stylistic | OK |
+| "Anchored on unemployment rate level + direction" | Claim 1 | VERIFIED |
+| "Framed against BoC's qualitative characterizations rather than a fixed NAIRU" | Claim 1 | VERIFIED with subtle issue: synthesis under-uses the IMF 6% soft anchor that Claim 1 keeps active |
+| "Use utilization pair to distinguish layoff vs. labour-force-exit when moves diverge" | Claim 2 | VERIFIED |
+| **"V/U well below 1 = slack; near or above 1 = tight"** | Claim 3 | **CONTESTED — propagation defect** |
+| "Wage dispersion, ~3% soft threshold, LFS-Micro below raw LFS" | Claims 4–6 | provisional OK; consistent with framework prose |
+| "ULC as cost-pressure read, implied productivity ~1%" | Claim 4 | provisional OK |
+| "Wage-vs-services-CPI as leading indicator, not 'margin absorption' shorthand" | Claim 7 | provisional OK |
+| "Real wages when gap is large in either direction" | Claim 8 | provisional OK |
+| "Demographic / regional decomposition flag as partial" | Claim 9 | VERIFIED with regional-framing caveat |
+
+### Defects flagged
+
+1. **PRIMARY: V/U "near or above 1 = tight" propagation defect.** US-transferred heuristic re-asserted. **Must fix before next blurb regen.**
+2. **Subtle: "rather than a fixed NAIRU" reads as if NAIRU is dropped entirely.** Claim 1 keeps the IMF 6% as a soft anchor and instructs the model to use it. Suggest: *"...framed against BoC's qualitative characterizations alongside the IMF ~6% soft reference, neither used as a hard threshold."*
+3. **No fabricated quotes** in the synthesis paragraph itself.
+4. **No un-fetched indicators named.** All indicators referenced are in `data/`.
+5. **No rigid n×n decoder** — Claim 2's revision to "starting hypotheses" is preserved as "when their moves diverge."
+
+### Open questions for user review
+
+1. **Approve V/U-line replacement wording.** Two options proposed above; user picks (or rewrites). **Blocking item for tomorrow's review.**
+2. Soften "rather than a fixed NAIRU" to preserve the IMF 6% soft anchor as an active signal?
+3. After fix, this can move to Tier 3.
+
+---
+
+## Cross-claim defects index (Tier 2 audit, Claims 4–10)
+
+| Defect class | Where found | Severity |
+|---|---|---|
+| Fabricated quote | Claim 8: *"1.6% annual real wage gains since 2023"* attributed to MPR Oct 2024, not located in HTML chapters | **CRITICAL** |
+| US heuristic transferred to Canada | Claim 10: *"V/U near or above 1 reinforces a tight read"* — propagation from pre-Claim-3-revision wording | **CRITICAL — must fix before next blurb regen** |
+| Threshold without primary source | Claim 4: ULC > 3% bullet | high |
+| Mis-attributed source | Claim 7: "Macklem April 2023" should be MPR July 2024 In Focus | high |
+| Mis-listed indicator (canonical taxonomy mismatch) | Claim 5: framework's four-measure list omits National Accounts hourly wages, includes "LFS permanent" not in BoC's published list | medium |
+| Analyst synthesis presented as canonical | Claim 7: three-mechanism list ("incomplete pass-through, lagged price adjustment, margin compression"); Claim 9: "Toronto/Vancouver vs. rest of Canada" regional framing | medium |
+| Number understatement | Claim 4 / Claim 6: "~1%" vs SAN 2025-14 Scenario 1 = 1.2%; downside is tariff-scenario-specific not generic | medium |
+| Indicator-naming-leak risk | Claim 9: names avg hours / involuntary PT in framework prose while saying not tracked | low (judgment call) |
+
+The two CRITICAL defects (Claim 8 fabricated quote, Claim 10 V/U propagation) are blocking items for the 2026-05-10 review pass.
