@@ -19,6 +19,77 @@ A personal data dashboard that tracks the economic indicators the Bank of Canada
 
 ---
 
+## Overnight checkpoint (2026-05-09 → 10)
+
+User went to sleep around 04:00 with the prompt "do work overnight that requires the least input and judgment from me." Five phases landed; each independently committed so any phase's work can be reviewed in isolation. **The biggest finding is that Tier 2 verification of the four non-Labour-non-Inflation-non-Policy sections surfaced concrete defects that don't match project data — the "verified end-to-end (May 2026)" status flags in framework prose are now empirically wrong for at least three sections.**
+
+### Phase commits (oldest first)
+
+| Phase | Commit | What landed | Where to look |
+|---|---|---|---|
+| 0 | `b34bebe` | Three-tier provenance framework codified (Tier 1 generated / Tier 2 autonomous / Tier 3 user-verified). Existing claims retagged. | `markdown-files/verification/_tiers.md`; CLAUDE.md Workflow conventions block |
+| 1 | `1219d80` | Labour Claims 4–10 Tier 2 entries in verification log. Two CRITICAL defects: Claim 8 fabricated MPR-Oct-2024 quote; Claim 10 propagation of US-transferred V/U heuristic Claim 3 rejected. | `markdown-files/verification/labour.md` |
+| 2 | `165e7cc` | StatsCan zero-audit script + report. **No stale-zero bugs anywhere outside JVWS** — the COVID-gap defect was unique. 12 benign leading-NaN-padding mismatches; user picks resolution. | `analyses/statscan_zero_audit.py`, `analyses/statscan_zero_audit.md` |
+| 3 | `33eb0cd` | Indeed Hiring Lab Canada fetcher wired into `fetch.py`. Daily + monthly-mean CSVs in `data/`. NOT chart-wired (deferred to 2026-05-10 design pass; needs MultiLineSpec secondary y-axis extension). | `fetch.py` `fetch_indeed_canada()`, `data/indeed_postings_ca.csv`, `data/indeed_postings_ca_monthly.csv` |
+| 4 | `2a5fef7` | Tier 2 verification audits: Inflation, Policy, GDP, Housing, Financial. Each section gets a per-claim log file. **All five sections have defects.** Three sections have claims demonstrably wrong vs project data. | `markdown-files/verification/{inflation,policy,gdp,housing,financial}.md` |
+| 5 | this commit | End-of-night status note + per-section verification log links wired into HANDOFF status block. | This file |
+
+### Highest-priority items for the morning review
+
+The cross-section findings reveal a **defect-class pattern**: the same Tier-2-verified framework that the user is currently auditing claim-by-claim for Labour has analogous defects in every other section. The user's choice to introduce the three-tier framework was prescient — Tier 2 is real but not equivalent to Tier 3.
+
+**Immediate-fix candidates** (defects where the framework prose is demonstrably wrong against project data; can be corrected without research):
+
+1. **Policy** — `bocfed_spread` thresholds in framework + `analyze.py` line ~581 disagree with project data. Median is **62.5bp**, not 38bp; ±100bp marks top 18%, not top 10%; ±150bp marks top 10%, not top 5%. Same defective thresholds appear in two places (framework prose + analyze.py code) — code and prose agree with each other but disagree with the data. (`verification/policy.md` Claim 3.)
+2. **Housing** — Citation conflation. Framework's *"2023 CMHC Housing Shortages report estimated Canada needs ~430-500k starts/year through 2030 to close the 4.8M-unit affordability gap"* mixes two reports: 2023 report says 3.5M units by 2030; 4.8M / 430-480k figures come from June 2025 "Solving the Affordability Crisis" report targeting 2035. (`verification/housing.md` Claim 2.)
+3. **Financial** — USDCAD stress-corridor peaks don't match project data: framework says "March 2020 (1.466)" but actual `data/usdcad.csv` peak was 1.4539. (`verification/financial.md` Claim 2.)
+4. **GDP** — C.D. Howe BCC criteria mis-named: framework says *"depth, duration, breadth"* with literal quote *"pronounced, pervasive, and persistent decline"*; canonical wording is *"amplitude, duration, scope"* with *"pronounced, persistent, and pervasive"*. (`verification/gdp.md` Claim 4.)
+5. **Labour** — Claim 8: *"1.6% annual real wage gains since 2023"* attributed to MPR October 2024 was not located in any HTML chapter retrieved. Likely fabrication or conflation with the September 2024 headline-CPI figure (1.6%). User to confirm against the PDF or remove. (`verification/labour.md` Claim 8.) Plus Claim 10 V/U-line propagation defect.
+
+**Deeper analytical items** (defects where the right answer needs user judgment):
+
+- **Labour Claim 3 V/U thresholds** — flagged for user re-review per Tuesday's "save the revision but i still want to go over it again tomorrow morning."
+- **Inflation Claim 3** — four-state breadth classification (broad-based pressure / softening / clustered / polarized) is analyst synthesis presented as canonical (same defect class as Labour Claim 2's 2×2 utilization decoder). Cover only 4 of 9 logical breadth-deviation states. Propagates into Inflation Claim 10 ("What to surface").
+- **Policy** — 3×2 conditional grid for `can2y_overnight_spread` × `action_state` is analyst synthesis. Same construct class as Labour Claim 2's rejected 2×2 decoder.
+- **Housing** — CREA MLS HPI methodology mis-described as "hedonic" (actually hybrid repeat-sales + hedonic); BoC affordability indicator's anchor mis-stated.
+
+**Queued (deferred from earlier commits, still valid):**
+
+- 12M→3M code change in `compute_labour_values` + chart spec + `_DERIVED_SERIES_SOURCES`. Framework has been updated; code is not.
+- `MultiLineSpec` secondary y-axis extension to wire the Indeed line into the Unemployment & Job Vacancies chart.
+- Re-fetch other StatsCan series and accept the leading-NaN rows (audit Option A) or tighten `fetch_statscan` to strip leading NaN only (Option B).
+
+### Defect-class index across all six sections
+
+| Defect class | Sections affected | Severity |
+|---|---|---|
+| Fabricated quote / number | Labour (Claim 1, Claim 8) | CRITICAL — must fix before any blurb regen |
+| Threshold values that disagree with project data | Policy (bocfed_spread), GDP (housing-trough anchors), Financial (USDCAD peaks), Housing (cyclical anchors) | CRITICAL |
+| Citation conflation (right facts, wrong source) | Housing (2023 vs 2025 CMHC reports), Financial (MPR Jan 2025 vs SAN 2025-2), GDP (C.D. Howe BCC wording), Labour Claim 7 (Macklem Apr 2023 vs MPR July 2024 In Focus) | high |
+| Threshold values asserted without primary-source backing | Inflation (3 thresholds), Labour Claim 4 (ULC > 3%), GDP (inventories ±3pp) | medium |
+| Rigid n×n decoder presented as canonical | Labour Claim 2 (resolved Tier 3); Inflation Claim 3 (open); Policy 3×2 grid (open) | medium |
+| US heuristic transferred to Canada | Labour Claim 3 (resolved Tier 3); Labour Claim 10 (propagation, open) | high |
+| Indicator-naming-leak risk | Labour Claim 9, Financial Claim 10 | low (judgment call) |
+
+The "VERIFICATION STATUS: verified end-to-end (May 2026)" header in `analysis_framework.md` is now empirically wrong for at least Policy, GDP, Financial, and Housing. **Recommend the user decide tomorrow whether to (a) downgrade those headers to "Tier 2 audit identified defects; see verification/<section>.md" before any further blurb regen, or (b) leave them as-is and rely on the per-section audit logs for ground truth.** I left framework prose untouched overnight — the headers reflect the May 8 status, not the post-audit state.
+
+### What I deliberately did NOT do overnight
+
+- Did not edit `markdown-files/analysis_framework.md` framework prose. The audits surfaced defects but the user's original "save and revisit tomorrow" framing for Labour Claim 3 implied the prose-level decisions are user-only.
+- Did not regen any blurbs. `data/blurbs.json` for the four autonomous-draft sections (Labour, Financial, GDP, Housing) is still Tier 1; tomorrow's framework decisions should land before any regen.
+- Did not run `python fetch.py` to re-pull the StatsCan CSVs (would have surfaced the leading-NaN issue from the audit). Held for user resolution choice.
+- Did not extend `MultiLineSpec` for the Indeed dual-axis chart wiring. Architectural change with judgment on schema design.
+- Did not push to remote yet — pushing is on user discretion. (Five commits ready: `b34bebe`, `1219d80`, `165e7cc`, `33eb0cd`, `2a5fef7`, plus this one.)
+
+### Resume entry points
+
+- **Start with the defect-class index above** — pick which CRITICAL items to address first.
+- **Read commits in order** if you want to see the night's logical progression: `git log --oneline b34bebe..HEAD`
+- **Per-section verification logs** at `markdown-files/verification/{labour,inflation,policy,gdp,housing,financial}.md` carry the page-level evidence chain.
+- **`markdown-files/verification/_tiers.md`** is the canonical glossary for the three-tier framework.
+
+---
+
 ## File structure
 
 ```
@@ -490,15 +561,16 @@ All six sections (`policy`, `inflation`, `gdp`, `labour`, `housing`, `financial`
 - A verified framework section in `analysis_framework.md` (explicit VERIFIED status flags with BoC primary-source citations)
 - A generated blurb in `data/blurbs.json`
 
-**Verification status (May 2026; see `markdown-files/verification/_tiers.md` for tier definitions):**
-- **Inflation:** Tier 2 (autonomous) framework verification May 2026 — trim/median signal removed, 0.17%/month threshold kept, four-state breadth classification, top-level decomposition rule codified. Blurb is Tier 3 (user-iterated).
-- **Monetary Policy:** Tier 2 (autonomous) framework verification May 7, 2026. Neutral rate 2.25–3.25% (Staff Note 2025-16, MPR April 2026); QT timeline April 25, 2022 — January 29, 2025; $20–60B settlement-balance target (Gravelle March 2024). Spread thresholds anchored to empirical percentiles. Blurb is Tier 3 (user-iterated).
-- **Labour Market:** **Tier 3 (user-verified 2026-05-09) for Claims 1–3 only** — see `markdown-files/verification/labour.md`. Claims 4–9 + thresholds + What-to-surface are still Tier 2 (autonomous research) pending claim-by-claim user review. NAIRU replaced with peer-institution anchor (IMF 6%); LFS-Micro composition adjustment per SAN 2024-23; utilization decoder softened; V/U thresholds Canadian-empirical-calibrated (Claim 3 carries a re-review flag for 2026-05-10). Blurb is Tier 1 (autonomous draft).
-- **Financial Conditions:** Tier 2 (autonomous) framework verification May 8, 2026. CAD pass-through corrected to 0.3–0.6 pp per 10% move (BoC DP 2015-91); petrocurrency relationship flagged as structurally weak post-2016; WCS-WTI spread bands established. **Not user-reviewed claim-by-claim** — expect potential issues similar to Labour's Tier-2-to-Tier-3 transition. Blurb is Tier 1 (autonomous draft).
-- **GDP & Activity:** Tier 2 (autonomous) framework verification May 8, 2026. Potential growth range 1.2–1.5% (BoC April 2026 MPR, SAN 2025-14); recession definition corrected to C.D. Howe Business Cycle Council depth/duration/breadth criteria; StatsCan daily ÷4 AR convention made explicit. **Not user-reviewed claim-by-claim.** Blurb is Tier 1 (autonomous draft).
-- **Housing:** Tier 2 (autonomous) framework verification May 8, 2026. CMHC SAAR thresholds anchored; NHPI vs CREA HPI methodology differences noted. `compute_housing_values` rewired May 2026 to add CREA MLS HPI and housing affordability (per-metric as-of dates; CREA-vs-NHPI directional-agreement signal; affordability 5-year and historical range position). **Not user-reviewed claim-by-claim.** Blurb is Tier 1 (autonomous draft).
+**Verification status (updated 2026-05-09 04:00; see `markdown-files/verification/_tiers.md` for tier definitions and per-section logs for findings):**
 
-**Tier 2 → Tier 3 risk.** Labour's Tier-2-to-Tier-3 review surfaced fabricated BoC quotes, US-transferred V/U heuristics, and rigid analytical decoders that didn't survive user scrutiny. The other four sections' Tier 2 verifications were performed by the same process and are likely to surface similar issues when reviewed claim-by-claim. The "verified May 8" framing on the live `index.html` blurbs and on the framework prose should not be treated as final-confidence until each section reaches Tier 3.
+- **Inflation** — see `markdown-files/verification/inflation.md`. Tier 2 audit identified defects: four-state breadth classification is analyst synthesis presented as canonical (same defect class as Labour Claim 2's 2×2 decoder); three unsourced calibration thresholds (M/M acceleration / deceleration bands; tight-band 0.5pp; headline-core gap 0.3pp). No fabricated quotes. Blurb is Tier 3 (user-iterated).
+- **Monetary Policy** — see `markdown-files/verification/policy.md`. Tier 2 audit identified critical defects: `bocfed_spread` thresholds in framework + analyze.py disagree with project data (median 62.5bp not 38bp; ±100bp marks top 18% not 10%); 2Y term-premium "0–40 bp / 20–60 bp" magnitudes have no surfaced primary-source backing; 3×2 conditional decoder for `can2y_overnight_spread` × `action_state` is analyst synthesis. No fabricated quotes. Blurb is Tier 3 (user-iterated).
+- **Labour Market** — see `markdown-files/verification/labour.md`. **Tier 3 for Claims 1–2; Tier 3 (provisional, re-review 2026-05-10) for Claim 3; Tier 2 for Claims 4–10.** Two CRITICAL defects in Tier 2 entries: Claim 8 fabricated MPR-Oct-2024 quote (*"1.6% annual real wage gains since 2023"* not located); Claim 10 propagation of US-transferred V/U heuristic that user-verified Claim 3 explicitly rejected. Blurb is Tier 1 (autonomous draft).
+- **Financial Conditions** — see `markdown-files/verification/financial.md`. Tier 2 audit identified critical defects: USDCAD stress-corridor peaks don't match project data (March 2020 peak claimed 1.466; actual 1.4539); CAD pass-through ranges mis-paired vs dp2015-91 point estimates; MPR Jan 2025 vs SAN 2025-2 source mis-attribution; algebraic inconsistency in 0.35pp/10% WTI claim. Blurb is Tier 1 (autonomous draft).
+- **GDP & Activity** — see `markdown-files/verification/gdp.md`. Tier 2 audit identified defects: C.D. Howe BCC criteria mis-named (framework says "depth, duration, breadth"; canonical wording is "amplitude, duration, scope"); housing-trough anchors don't match project data (claim 118-149k; actual April 2009 low 111.8k); ±3pp inventories threshold unsourced. No fabricated quotes; no US-heuristic transfers. Blurb is Tier 1 (autonomous draft).
+- **Housing** — see `markdown-files/verification/housing.md`. Tier 2 audit identified critical defects: 2023 vs 2025 CMHC report citation conflation (4.8M-unit gap and 430-500k/yr through 2030 — actually the 2030 target is 3.5M from the 2023 report; the 4.8M / 430-480k / 2035 numbers are the June 2025 report); CREA MLS HPI mis-described as "hedonic" (actually hybrid repeat-sales + hedonic); BoC affordability anchor mis-stated; cyclical anchors off vs project data. Blurb is Tier 1 (autonomous draft).
+
+**Tier 2 → Tier 3 risk (now empirically confirmed).** The 2026-05-09 audit pass found Tier 2 defects in every section, including claims demonstrably wrong against project data in three sections (Policy, GDP, Financial) and in Housing's 2023-vs-2025 CMHC report conflation. The "VERIFICATION STATUS: verified end-to-end (May 2026)" header in `analysis_framework.md` is empirically wrong for at least Policy, GDP, Financial, and Housing. Each per-section verification log carries the full evidence chain and a cross-claim defects index for prioritized morning review.
 
 **Blurb voice quality:** Inflation and Monetary Policy blurbs went through user iteration cycles and represent ground-truth voice (Tier 3). Labour Market, Financial Conditions, GDP, and Housing blurbs were generated autonomously May 8, 2026 against Tier-2-verified frameworks — Tier 1 prose; expect revision at next review.
 
