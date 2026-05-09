@@ -17,7 +17,6 @@ import argparse
 import re
 import subprocess
 import sys
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -37,35 +36,22 @@ VALID_SECTIONS = ["labour", "gdp", "inflation", "policy", "housing", "financial"
 
 def call_claude_cli(prompt: str) -> str:
     """
-    Call `claude --print <prompt>` via subprocess.
+    Call `claude --print` via subprocess, passing the prompt on stdin.
 
-    Uses a temp file to pass the prompt so very long prompts (with em dashes
-    and other Unicode) don't run into Windows shell quoting limits.
+    Stdin is used (not argv) because long prompts exceed Windows' ~32KB
+    CreateProcess argv limit — a real labour-section prompt is ~50KB+ once
+    the full framework prose is included. Stdin has no length limit.
 
     Returns the stripped stdout. Raises RuntimeError on non-zero exit.
     """
-    # Write prompt to a temp file; read it back inside a small Python one-liner
-    # so we don't shell out with the raw prompt text (avoids quoting issues).
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".txt", delete=False,
-        encoding="utf-8", errors="replace"
-    ) as f:
-        f.write(prompt)
-        tmp_path = f.name
-
-    try:
-        # Pass the prompt text directly as the argument to --print.
-        # Read from the temp file to avoid Windows command-line length limits.
-        prompt_text = Path(tmp_path).read_text(encoding="utf-8", errors="replace")
-        result = subprocess.run(
-            ["claude", "--print", prompt_text],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-        )
-    finally:
-        Path(tmp_path).unlink(missing_ok=True)
+    result = subprocess.run(
+        ["claude", "--print"],
+        input=prompt,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
 
     if result.returncode != 0:
         stderr_snippet = (result.stderr or "")[:500]
