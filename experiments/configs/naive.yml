@@ -1,0 +1,14 @@
+name: naive
+model: claude-opus-4-7
+framework: markdown-files/analysis_framework.md  # loaded for self-review only; not used for generation
+sections: [labour, gdp, inflation, policy, housing, financial]
+self_review: true
+prompt_mode: naive
+# Naive mode: generation prompt is just task + data, no framework prose, no
+# thresholds, no analytical guidance. Self-review still uses the full framework
+# as the rubric, so naive blurbs get judged by the same standard as framework
+# blurbs. This isolates: how much is the framework prose actually contributing
+# vs. what Claude produces from training alone?
+overrides:
+  output_rules_append: ~
+  output_rules_replace: ~

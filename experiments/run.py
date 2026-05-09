@@ -166,6 +166,26 @@ def _normalize_dashes(text: str) -> str:
     return text
 
 
+# ── Naive prompt (no framework scaffolding) ─────────────────────────────────
+
+def build_naive_prompt(section_name: str, values_str: str) -> str:
+    """
+    Minimal prompt: just task + data. No framework prose, no thresholds, no
+    "what to surface" guidance. Used to test how much the analytical framework
+    is actually contributing vs. what the model produces from training alone.
+
+    Self-review (which still uses the framework as the rubric) is run on the
+    output of this prompt the same way it's run on framework-mode output, so
+    naive blurbs get judged by the same standard.
+    """
+    return f"""You are writing a short analytical blurb for an economics dashboard about Canada's {section_name} for an informed reader. Write 2-4 sentences capturing what the data below shows. Output only the blurb prose — no preamble, no markdown headers, no quotation marks.
+
+== Data ==
+
+{values_str}
+"""
+
+
 # ── Smoke test ───────────────────────────────────────────────────────────────
 
 def smoke_test() -> None:
@@ -198,6 +218,11 @@ def run_config(config_path: Path, section_override: list[str] | None = None) -> 
     sections    = cfg.get("sections", VALID_SECTIONS)
     self_review = cfg.get("self_review", False)
     overrides   = cfg.get("overrides") or {}
+    prompt_mode = cfg.get("prompt_mode", "framework")  # "framework" | "naive"
+
+    if prompt_mode not in ("framework", "naive"):
+        print(f"ERROR: prompt_mode must be 'framework' or 'naive'; got '{prompt_mode}'", file=sys.stderr)
+        sys.exit(2)
 
     if section_override:
         for s in section_override:
@@ -229,7 +254,7 @@ def run_config(config_path: Path, section_override: list[str] | None = None) -> 
     ts_str     = now.strftime("%Y%m%dT%H%M%SZ")
     run_dir    = RESULTS_DIR / ts_str
 
-    print(f"Config: {config_name}  |  Model: {model}  |  Sections: {sections}")
+    print(f"Config: {config_name}  |  Model: {model}  |  Mode: {prompt_mode}  |  Sections: {sections}")
     print(f"Results directory: {run_dir}")
 
     for section_id in sections:
@@ -243,7 +268,10 @@ def run_config(config_path: Path, section_override: list[str] | None = None) -> 
         values_str  = section_def["format"](values)
         print("done.")
 
-        prompt = build_prompt(section_id, framework_text, values_str)
+        if prompt_mode == "naive":
+            prompt = build_naive_prompt(section_def["name"], values_str)
+        else:
+            prompt = build_prompt(section_id, framework_text, values_str)
 
         print(f"  [{section_id}] Calling LLM ({model})...", end=" ", flush=True)
         try:
