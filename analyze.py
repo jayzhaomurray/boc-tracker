@@ -1504,13 +1504,9 @@ def main() -> None:
         print(prompt[:1500] + ("\n... (truncated)" if len(prompt) > 1500 else ""))
         return
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-    if not api_key:
-        print("ERROR: ANTHROPIC_API_KEY not set.", file=sys.stderr)
-        print("Set the env var and rerun. The prompt is ready and the data is computed; "
-              "only the API call is missing.", file=sys.stderr)
-        sys.exit(1)
-
+    # call_claude dispatches to either the SDK or the claude CLI based on
+    # env vars / availability — see the docstring there. It raises if neither
+    # path is available.
     print(f"\nCalling Claude ({MODEL})...")
     blurb = _normalize_dashes(call_claude(prompt))
 
