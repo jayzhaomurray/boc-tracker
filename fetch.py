@@ -149,7 +149,10 @@ def fetch_statscan(vector_id: int, n_periods: int = 10000) -> pd.DataFrame:
     df.columns = ["date", "value"]
     df["date"] = pd.to_datetime(df["date"])
     df["value"] = pd.to_numeric(df["value"], errors="coerce")
-    return df.dropna().sort_values("date").reset_index(drop=True)
+    # Preserve NaN rows so structural gaps (e.g. JVWS Apr-Sep 2020 COVID suspension,
+    # statusCode=1 in the WDS response) survive into the CSV. Plotly auto-breaks
+    # lines at NaN; pandas rolling means handle NaN windows via min_periods.
+    return df.sort_values("date").reset_index(drop=True)
 
 
 def fetch_boc_valet(series_key: str, start_date: str) -> pd.DataFrame:
