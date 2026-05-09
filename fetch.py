@@ -85,6 +85,9 @@ STATSCAN_SERIES = {
     "housing_starts":            52300157,  # Table 34-10-0158-01: Housing starts, Canada total, SAAR (units)
     "new_housing_price_index": 111955442,  # Table 18-10-0205-01: New Housing Price Index, Canada total, Dec 2016 = 100, NSA
     "residential_permits":     1675119646,  # Table 34-10-0292-01: Total residential building permits, value SA, current $ thousands
+    # Housing deep-dive (added May 2026). Vector v52300170 for units_under_construction is Tier 2 pending:
+    # inferred from value magnitude ~246k matching CMHC published counts; getSeriesInfoFromVector API unavailable.
+    "units_under_construction": 52300170,  # Table 34-10-0158-01: Units under construction, Canada total, SAAR (thousands) — Tier 2
 }
 
 # Note: housing_starts units are thousands of SAAR units (e.g. 236 = 236,000 annualized starts)
@@ -122,6 +125,13 @@ BOC_VALET_SERIES = {
     # Housing price indices (added May 2026)
     "crea_mls_hpi":         ("FVI_CREA_MLS_HPI_CANADA", "2014-01-01"),  # CREA MLS HPI, all of Canada, index 2019=100; BoC Financial Vulnerability Indicators; monthly
     "housing_affordability": ("INDINF_AFFORD_Q",        "2000-01-01"),  # BoC housing affordability index (quarterly; ~ratio of mortgage payment to income)
+    # Housing deep-dive (added May 2026)
+    "mortgage_rate_5yr":       ("V80691335",                                   "1990-01-01"),  # 5-yr conventional mortgage rate, weekly; BoC Valet (confirmed via seriesDetails probe)
+    "crea_resales":            ("FVI_CREA_HOUSE_RESALE_INDEXED_CANADA",        "2014-01-01"),  # CREA residential resales, indexed; monthly; BoC FVI
+    "crea_snlr":               ("FVI_CREA_HOUSE_SALES_TO_NEW_LISTINGS_CANADA", "2014-01-01"),  # CREA sales-to-new-listings ratio (%); monthly; BoC FVI
+    "crea_resales_toronto":    ("FVI_HOUSE_RESALES_12M_TORONTO",               "2014-01-01"),  # Toronto 12M rolling resales; monthly; BoC FVI
+    "crea_resales_vancouver":  ("FVI_HOUSE_RESALES_12M_VANCOUVER",             "2014-01-01"),  # Vancouver 12M rolling resales; monthly; BoC FVI
+    "crea_resales_calgary":    ("FVI_HOUSE_RESALES_12M_CALGARY",               "2014-01-01"),  # Calgary 12M rolling resales; monthly; BoC FVI
 }
 
 FRED_SERIES = {

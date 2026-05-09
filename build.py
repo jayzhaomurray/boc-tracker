@@ -34,6 +34,11 @@ SECTION_HEADINGS = {
     "policy_dd_assets":       "BoC Assets",
     "policy_dd_liabilities":  "BoC Liabilities",
     "policy_dd_peers":        "Peer Central Banks",
+    # Housing deep-dive section headings
+    "housing_dd_activity":      "Demand and Market Tightness",
+    "housing_dd_mortgage":      "Mortgage Rates",
+    "housing_dd_pipeline":      "Construction Pipeline",
+    "housing_dd_affordability": "Starts vs Supply Target",
 }
 
 DATA_DIR = Path("data")
@@ -2484,53 +2489,6 @@ DEEP_DIVES = [
         ),
     },
     {
-        "title": "Housing — deep dive",
-        "tagline": "Resale activity, mortgage stress, supply-gap detail, regional breakdowns",
-        "output_file": "housing.html",
-        "intro": (
-            "The overview tracks construction, prices, permits, and the BoC affordability index. The deep-dive "
-            "goes into resale flow, the mortgage transmission channel in detail, the CMHC supply-gap story, "
-            "and regional dispersion (Toronto and Vancouver dominate the national picture)."
-        ),
-        "body": (
-            _dd_section(
-                "Resale activity / CREA sales counts",
-                "Units sold, sales-to-new-listings ratio.",
-                "[Coming soon] CREA national sales counts and new-listings ratio. Sales-to-new-listings is a tightness indicator: above 0.65 = seller's market, below 0.45 = buyer's market. Currently in buyer territory.",
-            )
-            + _dd_section(
-                "Mortgage rate spreads",
-                "5-year fixed mortgage rate vs 5-year GoC bond yield.",
-                "[Coming soon] Per BoC FSR: spread between posted 5-year fixed mortgage rate and 5-year GoC yield. Widens when lender risk premium rises. Currently elevated relative to pre-2020 norms.",
-            )
-            + _dd_section(
-                "Mortgage debt-service ratio (MDSR)",
-                "Share of new mortgages with MDSR above 25%.",
-                "[Coming soon] BoC FSR 2024 noted that over one-third of new mortgages had MDSR > 25% — double the 2019 share. A direct stress indicator at the household level.",
-            )
-            + _dd_section(
-                "Units under construction",
-                "Pipeline metric (distinct from starts).",
-                "[Coming soon] CMHC units-under-construction count. Tells you how much in-flight supply will hit the market over the next 12-24 months. Diverged from starts during 2024 — starts fell faster than under-construction stayed elevated.",
-            )
-            + _dd_section(
-                "Regional decomposition (Toronto, Vancouver, Calgary)",
-                "Provincial and CMA-level breakdowns.",
-                "[Coming soon] CMHC Spring 2026 Supply Report flags Toronto + Vancouver = ~60% of national supply gap. Regional starts, prices, and affordability tell substantially different stories from national averages. Calgary has been outperforming since 2022.",
-            )
-            + _dd_section(
-                "CMHC supply-gap update",
-                "How far Canada is from the affordability-restoring construction pace.",
-                "[Coming soon] Per CMHC's June 2025 report, Canada needs 430-480k starts/year through 2035 to close the 4.8M-unit gap (with 2030 being a more aggressive interim target). Track current 12-month-rolling starts vs the target pace; gap is in 100Ks of units.",
-            )
-            + _dd_section(
-                "Mortgage renewal wave detail",
-                "Per-cohort renewal payment shock (BoC SAN 2025-21).",
-                "[Coming soon] Show the renewal cohorts hitting through end-2027. ~60% of outstanding mortgages renew 2025-2026; 5-year fixed holders face the largest shocks (15-20% on average per the BoC's framework).",
-            )
-        ),
-    },
-    {
         "title": "Financial Conditions — deep dive",
         "tagline": "Multilateral CAD, credit spreads, FX risk premium, terms-of-trade",
         "output_file": "financial.html",
@@ -2970,6 +2928,89 @@ PAGES = [
             ),
         ],
     ),
+    PageSpec(
+        title="Housing Market — Deep Dive",
+        tagline="Construction pipeline, affordability dynamics, and demand signals",
+        output_file="housing.html",
+        is_deep_dive=True,
+        sections={
+            0: "housing_dd_activity",
+            1: "housing_dd_mortgage",
+            2: "housing_dd_pipeline",
+            4: "housing_dd_affordability",
+        },
+        charts=[
+            MultiLineSpec(
+                title="CREA Sales Activity",
+                lines=[
+                    LineConfig("crea_snlr",    "Sales-to-New-Listings (%)",  "#1565c0"),
+                    LineConfig("crea_resales", "Resales Index (2019=100)",   "#7b1fa2", visible=False),
+                ],
+                ticksuffix="",
+                hoverformat=".1f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %Y",
+                unit_label="",
+                footnote="CREA/BoC FVI. SNLR: above 65 = seller's market; below 45 = buyer's market; 45–65 = balanced. Resales Index: 2019 = 100 (different scale from SNLR — toggle to view alongside tightness).",
+            ),
+            MultiLineSpec(
+                title="5-Year Mortgage Rate vs 5-Year GoC Bond",
+                lines=[
+                    LineConfig("mortgage_rate_5yr",           "5Y Mortgage",           "#c62828"),
+                    LineConfig("yield_5yr",                   "5Y GoC Yield",          "#1565c0"),
+                    LineConfig("mortgage_5yr_goc_5yr_spread", "Mortgage − GoC Spread", "#7b1fa2", visible=False, smooth=False),
+                ],
+                ticksuffix="%",
+                hoverformat=".2f",
+                smooth_window=4,
+                default_years=10,
+                date_fmt="%b %d, %Y",
+                unit_label="%",
+                footnote="5-year conventional mortgage rate (BoC Valet V80691335, weekly) vs 5-year GoC benchmark bond yield (daily). Toggle spread to see the lender risk premium — typically 150–200 bp. Spread compression or widening reflects lender credit conditions and pass-through of GoC yield moves into mortgage pricing.",
+            ),
+            ChartSpec(
+                series="units_under_construction",
+                title="Units Under Construction",
+                frequency="monthly",
+                color="#00897b",
+                default_transform="level",
+                default_years=10,
+                hover_decimals=0,
+                unit_label="thousands",
+                footnote="CMHC housing units under construction, Canada total, SAAR (thousands) — StatsCan Table 34-10-0158. Distinct from starts: measures the active construction stock at a point in time. Post-2020 surge reflects apartment-heavy starts mix (longer build timelines vs single-detached). Vector v52300170: Tier 2 — inferred from value magnitude matching CMHC data; getSeriesInfoFromVector API unavailable.",
+            ),
+            MultiLineSpec(
+                title="Resale Activity by CMA",
+                lines=[
+                    LineConfig("crea_resales_toronto",   "Toronto",   "#1565c0"),
+                    LineConfig("crea_resales_vancouver",  "Vancouver", "#c62828"),
+                    LineConfig("crea_resales_calgary",    "Calgary",   "#e65100"),
+                ],
+                ticksuffix="",
+                hoverformat=".0f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %Y",
+                unit_label="units (12M rolling)",
+                footnote="CREA/BoC FVI: 12-month rolling resale counts by CMA (units). Toronto and Vancouver account for the majority of Canada's supply gap; Calgary has outperformed since 2022 on in-migration and relative affordability.",
+            ),
+            MultiLineSpec(
+                title="Housing Starts — CMHC Supply Target Context",
+                lines=[
+                    LineConfig("housing_starts",     "Level (monthly)", "#90a4ae", visible=False),
+                    LineConfig("housing_starts_3m",  "3M Avg",          "#1565c0", visible=True),
+                    LineConfig("housing_starts_12m", "12M Avg",         "#7b1fa2", visible=False),
+                ],
+                ticksuffix="",
+                hoverformat=".0f",
+                default_years=10,
+                date_fmt="%b %Y",
+                unit_label="thousands SAAR",
+                footnote="CMHC housing starts, Canada total, SAAR (thousands). CMHC's June 2025 Housing Supply Report targets 430,000–480,000 starts per year through 2035 to restore affordability (4.8M units needed). Current pace of ~235k is roughly half the target. Long-run average since 1977: ~194k.",
+            ),
+        ],
+    ),
 ]
 
 
@@ -2995,6 +3036,8 @@ _DERIVED_SERIES_SOURCES: dict[str, list[str]] = {
     "yield_10y_2y_spread":   ["yield_10yr", "yield_2yr"],
     "real_overnight_rate":   ["overnight_rate", "cpi_all_items_nsa"],
     "real_2yr_monthly":      ["yield_2yr", "cpi_all_items_nsa"],
+    # Housing deep-dive derived series
+    "mortgage_5yr_goc_5yr_spread": ["mortgage_rate_5yr", "yield_5yr"],
 }
 
 
@@ -3147,6 +3190,16 @@ def _add_derived_series(data: dict[str, pd.DataFrame]) -> None:
                 "date":  merged2["date"],
                 "value": merged2["value"] - merged2["cpi_yoy"],
             }).dropna().reset_index(drop=True)
+
+    # Housing deep-dive: 5Y conventional mortgage minus 5Y GoC yield spread (weekly aligned)
+    if "mortgage_rate_5yr" in data and "yield_5yr" in data:
+        mtg = data["mortgage_rate_5yr"].sort_values("date").reset_index(drop=True)
+        goc = data["yield_5yr"].sort_values("date").rename(columns={"value": "goc"}).reset_index(drop=True)
+        merged = pd.merge_asof(mtg, goc, on="date", direction="backward")
+        data["mortgage_5yr_goc_5yr_spread"] = pd.DataFrame({
+            "date":  merged["date"],
+            "value": merged["value"] - merged["goc"],
+        }).dropna().reset_index(drop=True)
 
 
 def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
