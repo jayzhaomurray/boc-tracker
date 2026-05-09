@@ -1139,6 +1139,93 @@ _CSS = """\
   .site-header .tagline { font-size: 0.88rem; color: #666; margin: 0 0 4px; }
   .site-header .updated { font-size: 0.78rem; color: #bbb; margin: 0; }
 
+  .site-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin: 14px 0 22px;
+    padding: 6px 0;
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+  }
+  .site-nav .nav-item {
+    font-size: 0.78rem;
+    color: #666;
+    padding: 4px 10px;
+    text-decoration: none;
+    border-radius: 3px;
+    white-space: nowrap;
+    transition: background 0.1s, color 0.1s;
+  }
+  .site-nav .nav-item:hover { background: #f5f5f5; color: #1a5276; }
+  .site-nav .nav-item.active { background: #dce9f7; color: #1a5276; font-weight: 600; }
+
+  .dd-banner {
+    background: #fff8e1;
+    border: 1px solid #ffd54f;
+    color: #8d6e08;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    margin: 0 0 18px;
+  }
+  .dd-intro {
+    font-size: 0.9rem;
+    color: #333;
+    line-height: 1.65;
+    margin: 0 0 22px;
+  }
+  .dd-section { margin-bottom: 26px; }
+  .dd-section h2 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0 0 8px;
+    color: #222;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+  }
+  .dd-section p {
+    font-size: 0.88rem;
+    color: #333;
+    line-height: 1.65;
+    margin: 0 0 8px;
+  }
+  .dd-stub {
+    color: #888;
+    font-style: italic;
+    background: #fafafa;
+    padding: 10px 14px;
+    border-left: 3px solid #ddd;
+    border-radius: 2px 4px 4px 2px;
+    font-size: 0.85rem;
+    line-height: 1.55;
+  }
+  .dd-iframe-wrap {
+    border: 1px solid #eee;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 8px 0 12px;
+    background: #fafafa;
+  }
+  .dd-iframe-wrap iframe {
+    border: 0;
+    width: 100%;
+    height: 620px;
+    display: block;
+  }
+  .dd-tag {
+    display: inline-block;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .dd-tag-real { background: #e8f5e9; color: #2e7d32; }
+  .dd-tag-stub { background: #fafafa; color: #999; border: 1px solid #eee; }
+
   .global-controls {
     display: flex;
     align-items: center;
@@ -2096,6 +2183,7 @@ def _assemble_page(page: PageSpec, chart_panels: list[str],
         '<p class="updated">Last updated: ' + last_updated + "</p>"
         "</div>\n"
     )
+    nav = _build_nav_html(page.output_file)
 
     gc = (
         '<div class="global-controls">'
@@ -2132,11 +2220,383 @@ def _assemble_page(page: PageSpec, chart_panels: list[str],
         "<title>" + page.title + "</title>\n"
         "<style>\n" + _CSS + "</style>\n"
         "</head>\n<body>\n"
-        + header + gc
+        + header + nav + gc
         + "".join(chart_panels)
         + about + js
         + "</body>\n</html>\n"
     )
+
+
+# ── Site navigation ──────────────────────────────────────────────────────────
+#
+# Single source of truth for the cross-page nav bar. Same list used to render
+# the nav on the main overview page AND every deep-dive placeholder page. The
+# active item is the one whose output_file matches the page being assembled.
+
+NAV = [
+    ("Overview",             "index.html"),
+    ("Monetary Policy",      "policy.html"),
+    ("Inflation",            "inflation.html"),
+    ("GDP & Activity",       "gdp.html"),
+    ("Labour Market",        "labour.html"),
+    ("Housing",              "housing.html"),
+    ("Financial Conditions", "financial.html"),
+]
+
+
+def _build_nav_html(current_file: str) -> str:
+    items = []
+    for label, file in NAV:
+        cls = "nav-item active" if file == current_file else "nav-item"
+        items.append('<a class="' + cls + '" href="' + file + '">' + label + "</a>")
+    return '<nav class="site-nav">' + "".join(items) + "</nav>\n"
+
+
+# ── Deep-dive placeholder pages ──────────────────────────────────────────────
+#
+# These pages are scaffolding. Most content is structured placeholders ([Coming
+# soon]) tagged against the planned charts/sections in HANDOFF item 5 (and the
+# parked-but-tentative items for the other sections). Where a real chart
+# already exists in analyses/ (notably the Beveridge curve), it gets embedded
+# via iframe so the deep-dive isn't ALL placeholder.
+#
+# As real deep-dive charts get wired into the build pipeline, migrate them out
+# of these placeholder bodies into proper PageSpecs with chart specs.
+
+def _dd_section(heading: str, intro: str, stub: str, real: bool = False) -> str:
+    tag = ('<span class="dd-tag dd-tag-real">live</span>' if real
+           else '<span class="dd-tag dd-tag-stub">stub</span>')
+    intro_html = ('<p>' + intro + '</p>') if intro else ''
+    return (
+        '<div class="dd-section">'
+        '<h2>' + heading + tag + '</h2>'
+        + intro_html +
+        '<div class="dd-stub">' + stub + '</div>'
+        '</div>\n'
+    )
+
+
+def _dd_iframe_section(heading: str, intro: str, src: str) -> str:
+    tag = '<span class="dd-tag dd-tag-real">live</span>'
+    intro_html = ('<p>' + intro + '</p>') if intro else ''
+    return (
+        '<div class="dd-section">'
+        '<h2>' + heading + tag + '</h2>'
+        + intro_html +
+        '<div class="dd-iframe-wrap"><iframe src="' + src + '" loading="lazy"></iframe></div>'
+        '</div>\n'
+    )
+
+
+def _assemble_deep_dive_page(title: str, tagline: str, output_file: str,
+                              intro: str, body_html: str, last_updated: str) -> str:
+    nav = _build_nav_html(output_file)
+    header = (
+        '<div class="site-header">'
+        "<h1>" + title + "</h1>"
+        '<p class="tagline">' + tagline + "</p>"
+        '<p class="updated">Last updated: ' + last_updated + "</p>"
+        "</div>\n"
+    )
+    banner = (
+        '<div class="dd-banner">'
+        '<strong>Draft / under construction.</strong> '
+        'Most content here is placeholder scaffolding. The page exists so the multi-page architecture works end-to-end; '
+        'real charts and analysis migrate in over time. See the labour Beveridge curve for an example of a real chart in this layout.'
+        '</div>\n'
+    )
+    intro_html = '<p class="dd-intro">' + intro + '</p>\n'
+    about = (
+        '<div class="about">'
+        "<strong>About this dashboard</strong> &mdash; "
+        'Built by <a href="https://github.com/' + AUTHOR_DISPLAY_NAME + '">'
+        + AUTHOR_DISPLAY_NAME + "</a> using public data from "
+        '<a href="https://www150.statcan.gc.ca">Statistics Canada</a>, the '
+        '<a href="https://www.bankofcanada.ca/valet/docs">Bank of Canada Valet API</a>, '
+        'the <a href="https://fred.stlouisfed.org">Federal Reserve (FRED)</a>, '
+        'and the <a href="https://economicdashboard.alberta.ca">Alberta Economic Dashboard</a>. '
+        '<em>Deep-dive pages are work-in-progress scaffolding.</em>'
+        "</div>\n"
+    )
+    return (
+        "<!DOCTYPE html>\n<html>\n<head>\n"
+        '<meta charset="utf-8">\n'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+        "<title>" + title + "</title>\n"
+        "<style>\n" + _CSS + "</style>\n"
+        "</head>\n<body>\n"
+        + header + nav + banner + intro_html + body_html + about
+        + "</body>\n</html>\n"
+    )
+
+
+# Per-section deep-dive specs. Each entry is a dict with title, tagline,
+# output_file, intro, and body_html. Body_html is composed at module load time
+# from _dd_section / _dd_iframe_section helpers so the structure stays uniform.
+
+DEEP_DIVES = [
+    {
+        "title": "Monetary Policy — deep dive",
+        "tagline": "Term structure, real rates, balance-sheet decomposition",
+        "output_file": "policy.html",
+        "intro": (
+            "What the overview page can't show: yield-curve shape across maturities, real-rate context, "
+            "the operational tooling around the floor system, and how Canada's policy stance compares to peer central banks."
+        ),
+        "body": (
+            _dd_section(
+                "Yield curve term structure",
+                "5Y, 10Y, 30Y GoC yields plus 2Y vs 10Y spread (recession indicator).",
+                "[Coming soon] Add 5Y, 10Y, 30Y benchmark GoC yields via BoC Valet (BD.CDN.5YR.DQ.YLD, BD.CDN.10YR.DQ.YLD, BD.CDN.LONG.DQ.YLD). 2Y-10Y spread historically inverts ahead of Canadian recessions; the 2024-2025 inversion was the deepest since the early 1990s.",
+            )
+            + _dd_section(
+                "Real rates",
+                "Nominal yields minus inflation expectations.",
+                "[Coming soon] Subtract CSCE 1y consumer expectations from 2Y nominal to derive a market-implied real-rate path. Cross-check with US TIPS-equivalent for cross-border real-rate differential.",
+            )
+            + _dd_section(
+                "CORRA tracking",
+                "How well the overnight rate is being implemented operationally.",
+                "[Coming soon] Daily CORRA vs target. Persistent CORRA-target drift signals balance-sheet management is binding (settlement balances too high or too low). The April 2022 floor-system declaration changed the operational dynamics; watch for episodes where CORRA drifts toward the lower bound.",
+            )
+            + _dd_section(
+                "Forward guidance vs MPR projections",
+                "Compare market expectations against successive MPR forecast vintages.",
+                "[Coming soon] Plot each MPR's projection of the policy rate path against the realized path + market-implied path at the time of each MPR. Tracks how often the BoC's projection has been wrong (often).",
+            )
+            + _dd_section(
+                "Balance sheet decomposition",
+                "BoC holdings broken out by asset type and maturity.",
+                "[Coming soon] Decompose total assets into GoC bonds, T-bills, term repos, and emergency facilities. Separately track BoC holdings as % of total GoC debt outstanding (peaked ~40% in 2021).",
+            )
+            + _dd_section(
+                "Cross-central-bank comparison",
+                "Canada vs peers on rates, balance sheets, framework.",
+                "[Coming soon] BoC vs Fed, ECB, BoE, RBA: policy rate trajectory, balance-sheet-as-% of GDP, framework features (corridor vs floor, asset-purchase capacity).",
+            )
+        ),
+    },
+    {
+        "title": "Inflation — deep dive",
+        "tagline": "Component-level decomposition and persistence detail",
+        "output_file": "inflation.html",
+        "intro": (
+            "The overview page reads inflation at the headline-and-core level. The deep-dive goes into "
+            "component-level drivers, persistence diagnostics, and cleaner versions of metrics that matter "
+            "for distinguishing transitory from sticky inflation."
+        ),
+        "body": (
+            _dd_section(
+                "Headline + ex-indirect-taxes overlay",
+                "Strips out tax-policy effects (carbon tax changes, GST/HST shifts).",
+                "[Coming soon] Headline CPI Y/Y next to a CPI ex-indirect-taxes series. The carbon-tax repeal in early 2025 carved roughly 0.6 pp out of headline; this overlay shows the underlying inflation impulse independent of policy moves.",
+            )
+            + _dd_section(
+                "Sub-component decomposition",
+                "60-component decomposition with per-component contribution.",
+                "[Coming soon] Show top contributors to headline Y/Y week-over-week. Rotation matters: shelter has dominated 2023-2024; transportation took over in early 2025.",
+            )
+            + _dd_section(
+                "Persistence and breadth detail",
+                "Beyond the four-state breadth typology — distributional view.",
+                "[Coming soon] Histogram of component Y/Y by month. Width and skew change in different cyclical phases. Pre-COVID typical cluster was 1-2.5%; 2022 distribution had a tail extending past 10%.",
+            )
+            + _dd_section(
+                "Median, trim, and CPI-common time series",
+                "Each core measure plotted with its own band, not just collapsed into a range.",
+                "[Coming soon] Individual core measures with their historical relationship. CPI-common is the smoothest; trim and median can disagree at turning points.",
+            )
+            + _dd_section(
+                "Inflation-expectations decomposition",
+                "Consumer 1y, 5y, 30y; BOS 2y; long-run anchor.",
+                "[Coming soon] Track 30-year break-even from real-return bonds (for long-run anchor) alongside CSCE consumer measures and BOS firm distribution. Long-run anchor slippage would be the most consequential signal — historically very sticky."
+            )
+        ),
+    },
+    {
+        "title": "GDP & Activity — deep dive",
+        "tagline": "Productivity, capacity, and the output gap",
+        "output_file": "gdp.html",
+        "intro": (
+            "The overview tracks growth vs potential. The deep-dive opens up the underlying productivity story, "
+            "the BoC's output-gap range, and the capacity-utilization data that feeds the slack assessment."
+        ),
+        "body": (
+            _dd_section(
+                "Output gap (live BoC range)",
+                "BoC's quarterly published gap estimate from Indicators of Capacity and Inflation Pressures.",
+                "[Coming soon] BoC publishes a range each MPR (currently roughly -1.5% to -0.5%). This is the operative slack measure, more directly relevant to monetary policy than GDP growth alone. Multiple methodologies (HP filter, Hamilton filter, EMVF, Integrated Framework); the range captures uncertainty.",
+            )
+            + _dd_section(
+                "Productivity decomposition",
+                "Output per hour worked vs trend; sectoral breakdown.",
+                "[Coming soon] Real GDP per hour worked Y/Y. Canadian productivity has been structurally weak since 2015; 2022-2024 was historically poor (Macklem November 2024 speech). Compare manufacturing vs services productivity to identify where the gap originates.",
+            )
+            + _dd_section(
+                "Capacity utilization",
+                "StatsCan capacity utilization rate, by industry.",
+                "[Coming soon] StatsCan Table 36-10-0007 — quarterly capacity utilization rate. Manufacturing utilization is the most cyclically informative; below 80% suggests slack, above 85% suggests tight capacity.",
+            )
+            + _dd_section(
+                "Hours worked and labour input",
+                "Aggregate hours worked, average hours, hours-worked productivity.",
+                "[Coming soon] Total hours from LFS. Average weekly hours have been falling — partly demographic (services / part-time mix), partly cyclical. The shift from monthly GDP to hours-worked productivity gives a cleaner read on Canadian competitiveness.",
+            )
+            + _dd_section(
+                "BoC potential-output decomposition",
+                "Trend labour input × trend labour productivity (the official decomposition).",
+                "[Coming soon] Per SAN 2025-14: potential output decomposes into trend labour input (TLI) and trend labour productivity (TLP). TLI captures demographic/immigration effects; TLP captures the productivity story. Plotting both lets you see which channel is moving over time.",
+            )
+        ),
+    },
+    {
+        "title": "Labour Market — deep dive",
+        "tagline": "Direct-indicator triangulation, demographic decomposition, the Beveridge curve",
+        "output_file": "labour.html",
+        "intro": (
+            "The overview reads the joint move of employment and participation as a starting hypothesis "
+            "for layoff vs labour-force-exit dynamics. This page goes into direct indicators that confirm "
+            "or refute those reads, plus demographic and regional detail the overview can't show. "
+            "The Beveridge curve is the structural-shift visual; everything else is scaffolding for now."
+        ),
+        "body": (
+            _dd_iframe_section(
+                "Beveridge curve (Canada, 2015 onwards)",
+                "Vacancy rate vs unemployment rate, both 3M MA, period-coloured. The post-COVID outward shift is the structural-matching-efficiency story the overview's V/U-bands caveat references.",
+                "analyses/beveridge_curve_canada.html",
+            )
+            + _dd_section(
+                "LFS reason for unemployment",
+                "Job-loser share, the direct layoff signal.",
+                "[Coming soon] StatsCan Table 14-10-0125 — share of unemployed citing job loss vs. job leaving / re-entering / first-time. A rising job-loser share is the cleanest layoff signal; 2024 saw the share climb materially. Resolves the joint-move ambiguity from the overview's utilization decoder.",
+            )
+            + _dd_section(
+                "LFS R-indicators (R3, R7, R8)",
+                "Broader unemployment / discouragement / part-time-for-economic-reasons.",
+                "[Coming soon] R3 (official + waiting), R7 (+ marginally attached), R8 (+ involuntary part-time). Gap between R8 and R3 widens when slack is opening on margins the headline rate doesn't see.",
+            )
+            + _dd_section(
+                "Long-term unemployment share",
+                "Persons unemployed 27 weeks or longer.",
+                "[Coming soon] Long-term-unemployment share rises late in slack episodes. A direct persistent-slack signal that complements the unemployment rate level.",
+            )
+            + _dd_section(
+                "EI claims and beneficiaries",
+                "Real-time labour-loss read (StatsCan Table 14-10-0010 family).",
+                "[Coming soon] EI initial claims is the highest-frequency real-time labour signal available. Beneficiaries lag claims by ~2 weeks but are noisier.",
+            )
+            + _dd_section(
+                "Hours worked",
+                "Aggregate and average hours; deferred from May 2026 overview pass.",
+                "[Coming soon] Hours worked is NSA-only monthly; 12M MA on the LFS series gives a usable trend. Falling hours with stable employment can mean slack opening on the intensive margin.",
+            )
+            + _dd_section(
+                "Demographic decomposition",
+                "Newcomer vs Canadian-born; youth (15-24) vs prime-age (25-54).",
+                "[Coming soon] Per Macklem June 2024 speech: newcomer unemployment is rising faster than overall; youth unemployment is well above 2019 levels. Both are direct BoC-tracked channels not captured in the headline rate.",
+            )
+            + _dd_section(
+                "Regional decomposition",
+                "Provincial unemployment dispersion; CMA-level patterns.",
+                "[Coming soon] StatsCan provincial labour-market data. Gap between strongest and weakest province widens during slack episodes. Toronto and Vancouver labour markets often diverge from national averages.",
+            )
+            + _dd_section(
+                "Indeed Job Postings Index",
+                "Daily / monthly Canadian postings index, baseline Feb 1 2020 = 100.",
+                "[Coming soon] Indeed Hiring Lab Canada postings. Already pulled into data/ (indeed_postings_ca.csv); chart-spec wiring deferred until MultiLineSpec supports a secondary y-axis (since Indeed's index unit doesn't share with the JVWS rate). Covers the JVWS COVID gap (Apr-Sep 2020) where StatsCan has no data.",
+            )
+        ),
+    },
+    {
+        "title": "Housing — deep dive",
+        "tagline": "Resale activity, mortgage stress, supply-gap detail, regional breakdowns",
+        "output_file": "housing.html",
+        "intro": (
+            "The overview tracks construction, prices, permits, and the BoC affordability index. The deep-dive "
+            "goes into resale flow, the mortgage transmission channel in detail, the CMHC supply-gap story, "
+            "and regional dispersion (Toronto and Vancouver dominate the national picture)."
+        ),
+        "body": (
+            _dd_section(
+                "Resale activity / CREA sales counts",
+                "Units sold, sales-to-new-listings ratio.",
+                "[Coming soon] CREA national sales counts and new-listings ratio. Sales-to-new-listings is a tightness indicator: above 0.65 = seller's market, below 0.45 = buyer's market. Currently in buyer territory.",
+            )
+            + _dd_section(
+                "Mortgage rate spreads",
+                "5-year fixed mortgage rate vs 5-year GoC bond yield.",
+                "[Coming soon] Per BoC FSR: spread between posted 5-year fixed mortgage rate and 5-year GoC yield. Widens when lender risk premium rises. Currently elevated relative to pre-2020 norms.",
+            )
+            + _dd_section(
+                "Mortgage debt-service ratio (MDSR)",
+                "Share of new mortgages with MDSR above 25%.",
+                "[Coming soon] BoC FSR 2024 noted that over one-third of new mortgages had MDSR > 25% — double the 2019 share. A direct stress indicator at the household level.",
+            )
+            + _dd_section(
+                "Units under construction",
+                "Pipeline metric (distinct from starts).",
+                "[Coming soon] CMHC units-under-construction count. Tells you how much in-flight supply will hit the market over the next 12-24 months. Diverged from starts during 2024 — starts fell faster than under-construction stayed elevated.",
+            )
+            + _dd_section(
+                "Regional decomposition (Toronto, Vancouver, Calgary)",
+                "Provincial and CMA-level breakdowns.",
+                "[Coming soon] CMHC Spring 2026 Supply Report flags Toronto + Vancouver = ~60% of national supply gap. Regional starts, prices, and affordability tell substantially different stories from national averages. Calgary has been outperforming since 2022.",
+            )
+            + _dd_section(
+                "CMHC supply-gap update",
+                "How far Canada is from the affordability-restoring construction pace.",
+                "[Coming soon] Per CMHC's June 2025 report, Canada needs 430-480k starts/year through 2035 to close the 4.8M-unit gap (with 2030 being a more aggressive interim target). Track current 12-month-rolling starts vs the target pace; gap is in 100Ks of units.",
+            )
+            + _dd_section(
+                "Mortgage renewal wave detail",
+                "Per-cohort renewal payment shock (BoC SAN 2025-21).",
+                "[Coming soon] Show the renewal cohorts hitting through end-2027. ~60% of outstanding mortgages renew 2025-2026; 5-year fixed holders face the largest shocks (15-20% on average per the BoC's framework).",
+            )
+        ),
+    },
+    {
+        "title": "Financial Conditions — deep dive",
+        "tagline": "Multilateral CAD, credit spreads, FX risk premium, terms-of-trade",
+        "output_file": "financial.html",
+        "intro": (
+            "The overview tracks oil and bilateral USDCAD as the financial-conditions backbone. The deep-dive opens "
+            "up the multilateral CAD picture (CEER), credit spreads, equity-market signals, and the FX-risk-premium "
+            "decomposition the BoC has been emphasising in recent MPRs."
+        ),
+        "body": (
+            _dd_section(
+                "CEER (multilateral CAD index)",
+                "BoC trade-weighted CAD index — the relevant FX measure for CPI pass-through.",
+                "[Coming soon] CEER is methodologically the right index for FX pass-through (FX-to-CPI runs off the multilateral, not bilateral). USDCAD and CEER can diverge materially — in some 2025 episodes USDCAD weakened while CEER was roughly flat. Track CEER alongside USDCAD to spot the divergence.",
+            )
+            + _dd_section(
+                "Credit spreads",
+                "Investment-grade and high-yield Canadian corporate spreads.",
+                "[Coming soon] BoC tracks credit spreads as a financial-conditions signal in MPR Current Conditions. Widening = stress; narrowing = risk-on. Cross-check with US IG / HY spreads for global vs. domestic component.",
+            )
+            + _dd_section(
+                "Equity markets",
+                "TSX composite + sector decomposition.",
+                "[Coming soon] TSX is heavily weighted toward financials, energy, and materials. Performance gap vs S&P 500 reflects sectoral mix more than relative growth fundamentals; useful as a wealth-effect signal for consumption.",
+            )
+            + _dd_section(
+                "FX risk premium (standalone)",
+                "Per BoC SAN 2025-2 — the dominant CAD driver in 2024-2025.",
+                "[Coming soon] Decompose CAD moves into rate-differential, FX-risk-premium, and other components. Per SAN 2025-2, FX risk premium was \"a little more than three-quarters\" of the August-December 2024 CAD weakness — the headline rate differential channel was the smaller share.",
+            )
+            + _dd_section(
+                "Terms of trade",
+                "Export prices vs import prices.",
+                "[Coming soon] Terms of trade (export price index ÷ import price index) is a real-income signal partially distinct from FX. Improving terms of trade = real-income transfer to Canada from rest of world; deteriorating = transfer out.",
+            )
+            + _dd_section(
+                "WCS-WTI differential context",
+                "Pipeline takeaway, Alberta fiscal exposure.",
+                "[Coming soon] Detailed pipeline-capacity context: TMX impact, projected re-tightening (CAPP estimates Q3 2028 capacity reconstraint absent new infrastructure). Alberta royalties scale with realized WCS, not WTI; provincial fiscal position swings materially with the spread.",
+            )
+        ),
+    },
+]
 
 
 # ── Page definitions ──────────────────────────────────────────────────────────
@@ -2679,6 +3139,21 @@ def main():
     print("Building pages...")
     for page in PAGES:
         build_page(page, data)
+
+    print("Building deep-dive scaffolding...")
+    last_updated = datetime.now(timezone.utc).strftime("%B %d, %Y at %H:%M UTC")
+    for dd in DEEP_DIVES:
+        html = _assemble_deep_dive_page(
+            title=dd["title"],
+            tagline=dd["tagline"],
+            output_file=dd["output_file"],
+            intro=dd["intro"],
+            body_html=dd["body"],
+            last_updated=last_updated,
+        )
+        with open(dd["output_file"], "w", encoding="utf-8") as f:
+            f.write(html)
+        print(f"  -> {dd['output_file']}")
 
     print("Done.")
 

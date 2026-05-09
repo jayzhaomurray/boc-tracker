@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Financial Conditions — deep dive</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 36px 20px 64px;
+    background: #ffffff;
+    color: #1a1a1a;
+  }
+  .site-header { margin-bottom: 10px; }
+  .site-header h1 { font-size: 1.45rem; font-weight: 700; margin: 0 0 6px; }
+  .site-header .tagline { font-size: 0.88rem; color: #666; margin: 0 0 4px; }
+  .site-header .updated { font-size: 0.78rem; color: #bbb; margin: 0; }
+
+  .site-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin: 14px 0 22px;
+    padding: 6px 0;
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+  }
+  .site-nav .nav-item {
+    font-size: 0.78rem;
+    color: #666;
+    padding: 4px 10px;
+    text-decoration: none;
+    border-radius: 3px;
+    white-space: nowrap;
+    transition: background 0.1s, color 0.1s;
+  }
+  .site-nav .nav-item:hover { background: #f5f5f5; color: #1a5276; }
+  .site-nav .nav-item.active { background: #dce9f7; color: #1a5276; font-weight: 600; }
+
+  .dd-banner {
+    background: #fff8e1;
+    border: 1px solid #ffd54f;
+    color: #8d6e08;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    margin: 0 0 18px;
+  }
+  .dd-intro {
+    font-size: 0.9rem;
+    color: #333;
+    line-height: 1.65;
+    margin: 0 0 22px;
+  }
+  .dd-section { margin-bottom: 26px; }
+  .dd-section h2 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0 0 8px;
+    color: #222;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+  }
+  .dd-section p {
+    font-size: 0.88rem;
+    color: #333;
+    line-height: 1.65;
+    margin: 0 0 8px;
+  }
+  .dd-stub {
+    color: #888;
+    font-style: italic;
+    background: #fafafa;
+    padding: 10px 14px;
+    border-left: 3px solid #ddd;
+    border-radius: 2px 4px 4px 2px;
+    font-size: 0.85rem;
+    line-height: 1.55;
+  }
+  .dd-iframe-wrap {
+    border: 1px solid #eee;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 8px 0 12px;
+    background: #fafafa;
+  }
+  .dd-iframe-wrap iframe {
+    border: 0;
+    width: 100%;
+    height: 620px;
+    display: block;
+  }
+  .dd-tag {
+    display: inline-block;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .dd-tag-real { background: #e8f5e9; color: #2e7d32; }
+  .dd-tag-stub { background: #fafafa; color: #999; border: 1px solid #eee; }
+
+  .global-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 20px;
+  }
+  .gc-label { font-size: 0.75rem; color: #aaa; }
+
+  .section-divider { margin-top: 28px; margin-bottom: 14px; }
+  .section-divider:first-of-type { margin-top: 8px; }
+  .section-heading {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #eee;
+  }
+  .section-blurb {
+    font-size: 0.9rem;
+    color: #333;
+    line-height: 1.65;
+    margin: 0 0 8px;
+  }
+
+  .chart-panel { margin-bottom: 24px; }
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 2px;
+  }
+  .chart-title-block {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
+  .chart-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #222;
+  }
+  .chart-subtitle {
+    font-size: 0.75rem;
+    color: #555;
+    line-height: 1.1;
+    margin-top: 1px;
+  }
+  .chart-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .btn-group { display: flex; }
+  .btn-sep { width: 8px; }
+
+  .ctrl-btn {
+    font-size: 10px;
+    line-height: 1;
+    padding: 3px 7px;
+    border: 1px solid #ddd;
+    border-right-width: 0;
+    background: #f5f5f5;
+    color: #555;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: background 0.1s;
+  }
+  .ctrl-btn:first-child { border-radius: 3px 0 0 3px; }
+  .ctrl-btn:last-child  { border-radius: 0 3px 3px 0; border-right-width: 1px; }
+  .btn-group .ctrl-btn:only-child { border-radius: 3px; border-right-width: 1px; }
+  .ctrl-btn:hover { background: #e8e8e8; }
+  .ctrl-btn.active { background: #dce9f7; border-color: #aac4e8; color: #1a5276; }
+  .ctrl-btn.active + .ctrl-btn { border-left-color: #aac4e8; }
+
+  .chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    padding: 7px 2px 2px;
+    border-top: 1px solid #eee;
+    margin-top: 2px;
+  }
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.75rem;
+    color: #555;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 3px 5px;
+    border-radius: 3px;
+    opacity: 0.35;
+    transition: opacity 0.15s, background 0.1s;
+    font-family: inherit;
+  }
+  .legend-item.active { opacity: 1; }
+  .legend-item:hover { background: #f0f0f0; }
+
+  .chart-footnote {
+    font-size: 0.72rem;
+    color: #999;
+    margin-top: 4px;
+    padding: 0 2px;
+    line-height: 1.5;
+  }
+
+  .about {
+    margin-top: 40px;
+    padding: 13px 17px;
+    background: #f7f7f7;
+    border-left: 3px solid #ddd;
+    font-size: 0.8rem;
+    color: #666;
+    line-height: 1.7;
+  }
+  .about a { color: #1a5276; text-decoration: none; }
+  .about a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="site-header"><h1>Financial Conditions — deep dive</h1><p class="tagline">Multilateral CAD, credit spreads, FX risk premium, terms-of-trade</p><p class="updated">Last updated: May 09, 2026 at 09:31 UTC</p></div>
+<nav class="site-nav"><a class="nav-item" href="index.html">Overview</a><a class="nav-item" href="policy.html">Monetary Policy</a><a class="nav-item" href="inflation.html">Inflation</a><a class="nav-item" href="gdp.html">GDP & Activity</a><a class="nav-item" href="labour.html">Labour Market</a><a class="nav-item" href="housing.html">Housing</a><a class="nav-item active" href="financial.html">Financial Conditions</a></nav>
+<div class="dd-banner"><strong>Draft / under construction.</strong> Most content here is placeholder scaffolding. The page exists so the multi-page architecture works end-to-end; real charts and analysis migrate in over time. See the labour Beveridge curve for an example of a real chart in this layout.</div>
+<p class="dd-intro">The overview tracks oil and bilateral USDCAD as the financial-conditions backbone. The deep-dive opens up the multilateral CAD picture (CEER), credit spreads, equity-market signals, and the FX-risk-premium decomposition the BoC has been emphasising in recent MPRs.</p>
+<div class="dd-section"><h2>CEER (multilateral CAD index)<span class="dd-tag dd-tag-stub">stub</span></h2><p>BoC trade-weighted CAD index — the relevant FX measure for CPI pass-through.</p><div class="dd-stub">[Coming soon] CEER is methodologically the right index for FX pass-through (FX-to-CPI runs off the multilateral, not bilateral). USDCAD and CEER can diverge materially — in some 2025 episodes USDCAD weakened while CEER was roughly flat. Track CEER alongside USDCAD to spot the divergence.</div></div>
+<div class="dd-section"><h2>Credit spreads<span class="dd-tag dd-tag-stub">stub</span></h2><p>Investment-grade and high-yield Canadian corporate spreads.</p><div class="dd-stub">[Coming soon] BoC tracks credit spreads as a financial-conditions signal in MPR Current Conditions. Widening = stress; narrowing = risk-on. Cross-check with US IG / HY spreads for global vs. domestic component.</div></div>
+<div class="dd-section"><h2>Equity markets<span class="dd-tag dd-tag-stub">stub</span></h2><p>TSX composite + sector decomposition.</p><div class="dd-stub">[Coming soon] TSX is heavily weighted toward financials, energy, and materials. Performance gap vs S&P 500 reflects sectoral mix more than relative growth fundamentals; useful as a wealth-effect signal for consumption.</div></div>
+<div class="dd-section"><h2>FX risk premium (standalone)<span class="dd-tag dd-tag-stub">stub</span></h2><p>Per BoC SAN 2025-2 — the dominant CAD driver in 2024-2025.</p><div class="dd-stub">[Coming soon] Decompose CAD moves into rate-differential, FX-risk-premium, and other components. Per SAN 2025-2, FX risk premium was "a little more than three-quarters" of the August-December 2024 CAD weakness — the headline rate differential channel was the smaller share.</div></div>
+<div class="dd-section"><h2>Terms of trade<span class="dd-tag dd-tag-stub">stub</span></h2><p>Export prices vs import prices.</p><div class="dd-stub">[Coming soon] Terms of trade (export price index ÷ import price index) is a real-income signal partially distinct from FX. Improving terms of trade = real-income transfer to Canada from rest of world; deteriorating = transfer out.</div></div>
+<div class="dd-section"><h2>WCS-WTI differential context<span class="dd-tag dd-tag-stub">stub</span></h2><p>Pipeline takeaway, Alberta fiscal exposure.</p><div class="dd-stub">[Coming soon] Detailed pipeline-capacity context: TMX impact, projected re-tightening (CAPP estimates Q3 2028 capacity reconstraint absent new infrastructure). Alberta royalties scale with realized WCS, not WTI; provincial fiscal position swings materially with the spread.</div></div>
+<div class="about"><strong>About this dashboard</strong> &mdash; Built by <a href="https://github.com/jayzhaomurray">jayzhaomurray</a> using public data from <a href="https://www150.statcan.gc.ca">Statistics Canada</a>, the <a href="https://www.bankofcanada.ca/valet/docs">Bank of Canada Valet API</a>, the <a href="https://fred.stlouisfed.org">Federal Reserve (FRED)</a>, and the <a href="https://economicdashboard.alberta.ca">Alberta Economic Dashboard</a>. <em>Deep-dive pages are work-in-progress scaffolding.</em></div>
+</body>
+</html>

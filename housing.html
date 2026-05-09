@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Housing — deep dive</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 36px 20px 64px;
+    background: #ffffff;
+    color: #1a1a1a;
+  }
+  .site-header { margin-bottom: 10px; }
+  .site-header h1 { font-size: 1.45rem; font-weight: 700; margin: 0 0 6px; }
+  .site-header .tagline { font-size: 0.88rem; color: #666; margin: 0 0 4px; }
+  .site-header .updated { font-size: 0.78rem; color: #bbb; margin: 0; }
+
+  .site-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin: 14px 0 22px;
+    padding: 6px 0;
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+  }
+  .site-nav .nav-item {
+    font-size: 0.78rem;
+    color: #666;
+    padding: 4px 10px;
+    text-decoration: none;
+    border-radius: 3px;
+    white-space: nowrap;
+    transition: background 0.1s, color 0.1s;
+  }
+  .site-nav .nav-item:hover { background: #f5f5f5; color: #1a5276; }
+  .site-nav .nav-item.active { background: #dce9f7; color: #1a5276; font-weight: 600; }
+
+  .dd-banner {
+    background: #fff8e1;
+    border: 1px solid #ffd54f;
+    color: #8d6e08;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    margin: 0 0 18px;
+  }
+  .dd-intro {
+    font-size: 0.9rem;
+    color: #333;
+    line-height: 1.65;
+    margin: 0 0 22px;
+  }
+  .dd-section { margin-bottom: 26px; }
+  .dd-section h2 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0 0 8px;
+    color: #222;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+  }
+  .dd-section p {
+    font-size: 0.88rem;
+    color: #333;
+    line-height: 1.65;
+    margin: 0 0 8px;
+  }
+  .dd-stub {
+    color: #888;
+    font-style: italic;
+    background: #fafafa;
+    padding: 10px 14px;
+    border-left: 3px solid #ddd;
+    border-radius: 2px 4px 4px 2px;
+    font-size: 0.85rem;
+    line-height: 1.55;
+  }
+  .dd-iframe-wrap {
+    border: 1px solid #eee;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 8px 0 12px;
+    background: #fafafa;
+  }
+  .dd-iframe-wrap iframe {
+    border: 0;
+    width: 100%;
+    height: 620px;
+    display: block;
+  }
+  .dd-tag {
+    display: inline-block;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .dd-tag-real { background: #e8f5e9; color: #2e7d32; }
+  .dd-tag-stub { background: #fafafa; color: #999; border: 1px solid #eee; }
+
+  .global-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 20px;
+  }
+  .gc-label { font-size: 0.75rem; color: #aaa; }
+
+  .section-divider { margin-top: 28px; margin-bottom: 14px; }
+  .section-divider:first-of-type { margin-top: 8px; }
+  .section-heading {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #eee;
+  }
+  .section-blurb {
+    font-size: 0.9rem;
+    color: #333;
+    line-height: 1.65;
+    margin: 0 0 8px;
+  }
+
+  .chart-panel { margin-bottom: 24px; }
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 2px;
+  }
+  .chart-title-block {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
+  .chart-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #222;
+  }
+  .chart-subtitle {
+    font-size: 0.75rem;
+    color: #555;
+    line-height: 1.1;
+    margin-top: 1px;
+  }
+  .chart-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .btn-group { display: flex; }
+  .btn-sep { width: 8px; }
+
+  .ctrl-btn {
+    font-size: 10px;
+    line-height: 1;
+    padding: 3px 7px;
+    border: 1px solid #ddd;
+    border-right-width: 0;
+    background: #f5f5f5;
+    color: #555;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: background 0.1s;
+  }
+  .ctrl-btn:first-child { border-radius: 3px 0 0 3px; }
+  .ctrl-btn:last-child  { border-radius: 0 3px 3px 0; border-right-width: 1px; }
+  .btn-group .ctrl-btn:only-child { border-radius: 3px; border-right-width: 1px; }
+  .ctrl-btn:hover { background: #e8e8e8; }
+  .ctrl-btn.active { background: #dce9f7; border-color: #aac4e8; color: #1a5276; }
+  .ctrl-btn.active + .ctrl-btn { border-left-color: #aac4e8; }
+
+  .chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    padding: 7px 2px 2px;
+    border-top: 1px solid #eee;
+    margin-top: 2px;
+  }
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.75rem;
+    color: #555;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 3px 5px;
+    border-radius: 3px;
+    opacity: 0.35;
+    transition: opacity 0.15s, background 0.1s;
+    font-family: inherit;
+  }
+  .legend-item.active { opacity: 1; }
+  .legend-item:hover { background: #f0f0f0; }
+
+  .chart-footnote {
+    font-size: 0.72rem;
+    color: #999;
+    margin-top: 4px;
+    padding: 0 2px;
+    line-height: 1.5;
+  }
+
+  .about {
+    margin-top: 40px;
+    padding: 13px 17px;
+    background: #f7f7f7;
+    border-left: 3px solid #ddd;
+    font-size: 0.8rem;
+    color: #666;
+    line-height: 1.7;
+  }
+  .about a { color: #1a5276; text-decoration: none; }
+  .about a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="site-header"><h1>Housing — deep dive</h1><p class="tagline">Resale activity, mortgage stress, supply-gap detail, regional breakdowns</p><p class="updated">Last updated: May 09, 2026 at 09:31 UTC</p></div>
+<nav class="site-nav"><a class="nav-item" href="index.html">Overview</a><a class="nav-item" href="policy.html">Monetary Policy</a><a class="nav-item" href="inflation.html">Inflation</a><a class="nav-item" href="gdp.html">GDP & Activity</a><a class="nav-item" href="labour.html">Labour Market</a><a class="nav-item active" href="housing.html">Housing</a><a class="nav-item" href="financial.html">Financial Conditions</a></nav>
+<div class="dd-banner"><strong>Draft / under construction.</strong> Most content here is placeholder scaffolding. The page exists so the multi-page architecture works end-to-end; real charts and analysis migrate in over time. See the labour Beveridge curve for an example of a real chart in this layout.</div>
+<p class="dd-intro">The overview tracks construction, prices, permits, and the BoC affordability index. The deep-dive goes into resale flow, the mortgage transmission channel in detail, the CMHC supply-gap story, and regional dispersion (Toronto and Vancouver dominate the national picture).</p>
+<div class="dd-section"><h2>Resale activity / CREA sales counts<span class="dd-tag dd-tag-stub">stub</span></h2><p>Units sold, sales-to-new-listings ratio.</p><div class="dd-stub">[Coming soon] CREA national sales counts and new-listings ratio. Sales-to-new-listings is a tightness indicator: above 0.65 = seller's market, below 0.45 = buyer's market. Currently in buyer territory.</div></div>
+<div class="dd-section"><h2>Mortgage rate spreads<span class="dd-tag dd-tag-stub">stub</span></h2><p>5-year fixed mortgage rate vs 5-year GoC bond yield.</p><div class="dd-stub">[Coming soon] Per BoC FSR: spread between posted 5-year fixed mortgage rate and 5-year GoC yield. Widens when lender risk premium rises. Currently elevated relative to pre-2020 norms.</div></div>
+<div class="dd-section"><h2>Mortgage debt-service ratio (MDSR)<span class="dd-tag dd-tag-stub">stub</span></h2><p>Share of new mortgages with MDSR above 25%.</p><div class="dd-stub">[Coming soon] BoC FSR 2024 noted that over one-third of new mortgages had MDSR > 25% — double the 2019 share. A direct stress indicator at the household level.</div></div>
+<div class="dd-section"><h2>Units under construction<span class="dd-tag dd-tag-stub">stub</span></h2><p>Pipeline metric (distinct from starts).</p><div class="dd-stub">[Coming soon] CMHC units-under-construction count. Tells you how much in-flight supply will hit the market over the next 12-24 months. Diverged from starts during 2024 — starts fell faster than under-construction stayed elevated.</div></div>
+<div class="dd-section"><h2>Regional decomposition (Toronto, Vancouver, Calgary)<span class="dd-tag dd-tag-stub">stub</span></h2><p>Provincial and CMA-level breakdowns.</p><div class="dd-stub">[Coming soon] CMHC Spring 2026 Supply Report flags Toronto + Vancouver = ~60% of national supply gap. Regional starts, prices, and affordability tell substantially different stories from national averages. Calgary has been outperforming since 2022.</div></div>
+<div class="dd-section"><h2>CMHC supply-gap update<span class="dd-tag dd-tag-stub">stub</span></h2><p>How far Canada is from the affordability-restoring construction pace.</p><div class="dd-stub">[Coming soon] Per CMHC's June 2025 report, Canada needs 430-480k starts/year through 2035 to close the 4.8M-unit gap (with 2030 being a more aggressive interim target). Track current 12-month-rolling starts vs the target pace; gap is in 100Ks of units.</div></div>
+<div class="dd-section"><h2>Mortgage renewal wave detail<span class="dd-tag dd-tag-stub">stub</span></h2><p>Per-cohort renewal payment shock (BoC SAN 2025-21).</p><div class="dd-stub">[Coming soon] Show the renewal cohorts hitting through end-2027. ~60% of outstanding mortgages renew 2025-2026; 5-year fixed holders face the largest shocks (15-20% on average per the BoC's framework).</div></div>
+<div class="about"><strong>About this dashboard</strong> &mdash; Built by <a href="https://github.com/jayzhaomurray">jayzhaomurray</a> using public data from <a href="https://www150.statcan.gc.ca">Statistics Canada</a>, the <a href="https://www.bankofcanada.ca/valet/docs">Bank of Canada Valet API</a>, the <a href="https://fred.stlouisfed.org">Federal Reserve (FRED)</a>, and the <a href="https://economicdashboard.alberta.ca">Alberta Economic Dashboard</a>. <em>Deep-dive pages are work-in-progress scaffolding.</em></div>
+</body>
+</html>
