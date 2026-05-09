@@ -531,19 +531,13 @@ None. Methodology is undocumented in framework prose but the result reproduces.
 
 ### Provenance tier
 
-**Tier 2 — autonomously verified 2026-05-09.** Not user-reviewed.
+**Tier 3 — resolved 2026-05-09 via user decision (drop grid entirely).** User chose option (A) — drop the 3×2 grid entirely; paragraph framing only. Matches the Inflation Q3 breadth typology precedent and the Labour Claim 2 2×2 utilization decoder rejection. The interpretive logic is preserved as natural prose; future blurb generations use the continuous tier + action_state context without forced categorical mapping. Edge cases (flat drift, recent stance change, magnitude-dominant drift) handled by prose, not table lookup.
 
-### Framework prose (verbatim, lines 116-124)
+### Framework prose (verbatim, line 120) — SUPERSEDED
 
-> **Direction of `can2y_overnight_spread` drift — interpretation depends on the BoC's `action_state`.** Track both a 4-week window (tactical repricing around meetings) and a 12-week window (trend confirmation); the signal is strongest when both agree. The same drift means very different things based on what the BoC has been doing:
->
-> | BoC `action_state` | Hawkish drift (spread rising) means | Dovish drift (spread falling) means |
-> |---|---|---|
-> | Active *cutting* cycle | Market doubting more cuts will happen | Market expects deeper cuts than already priced |
-> | *On hold* | Market starting to price *hike* risk | Market starting to price resumption of cuts |
-> | Active *hiking* cycle | Market expects more hikes | Market doubting more hikes will happen |
->
-> **Always frame the read as "market vs. Bank's current stance,"** never as if the cycle is always cutting.
+*The original prose (pre-2026-05-09) contained a 3×2 conditional grid. User decision 2026-05-09 replaced it with paragraph framing. Current prose:*
+
+> **Direction of `can2y_overnight_spread` drift — interpretation depends on the BoC's `action_state`.** Track both a 4-week window (tactical repricing around meetings) and a 12-week window (trend confirmation); the signal is strongest when both agree. Use the continuous spread tier (per `distribution_conventions.md`) for the magnitude read; the contextual interpretation handles direction. The same direction of drift means different things in different stances: when the BoC is cutting, hawkish drift (rising spread) signals the market doubting more cuts; when the BoC is on hold, hawkish drift signals the market pricing hike risk; when the BoC is hiking, hawkish drift signals more hikes priced. The interpretation is symmetric for dovish drift. **Always frame the read as "market vs. Bank's current stance,"** never as if the cycle is always cutting. Edge cases — flat drift, recent stance change, or large-magnitude drift where level dominates direction — should be flagged in prose rather than forced into a categorical mapping.
 
 ### Verification verdict
 

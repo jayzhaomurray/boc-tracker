@@ -19,6 +19,19 @@ A personal data dashboard that tracks the economic indicators the Bank of Canada
 
 ---
 
+## What landed 2026-05-09
+
+Four major milestones completed in a single day:
+
+1. **Distribution conventions framework introduced and fully applied.** `markdown-files/distribution_conventions.md` codifies a five-tier ladder (typical / uncommon / pronounced / rare / extreme) at P50/P80/P95/P99 boundaries, binary BoC-band dual classification for BoC-band indicators, and per-indicator tail-axis + descriptor-pair metadata. Applied across all six framework sections in nine commits (see Phase commits table). Every framework indicator now has a calibrated empirical tier definition replacing asserted thresholds.
+2. **CI auto-commit step fixed.** GitHub Actions `git-auto-commit-action` v5 was failing on Node.js 24 (the runner default as of 2026-05). Upgraded to v7 (`49d8f26`); CI builds are now green again.
+3. **Deep-dive design doc landed.** `analyses/deep-dive-design-2026-05-09.md` covers all 8 deep-dives (6 section deep-dives + Trade + Demographics), 43 charts, 9 judgment calls resolved. Data-source probes (`analyses/data-source-probe-2026-05-09.md`, `analyses/lfs-gross-flows-probe-2026-05-09.md`) resolved the output gap, CORRA, CPI ex-indirect-tax, and TSX blockers.
+4. **Hooks installed and validated.** Pre-commit checkpoint + edit-burst detector hooks are live; see CLAUDE.md Workflow conventions for rationale.
+
+The convention sweep is the main analytical milestone: all six sections are now convention-aligned, all six verification logs updated, and blurb regen is now a clean operation (no stale anchors).
+
+---
+
 ## Overnight checkpoint (2026-05-09 → 10)
 
 User went to sleep around 04:00 with the prompt "do work overnight that requires the least input and judgment from me." Five phases landed; each independently committed so any phase's work can be reviewed in isolation. **The biggest finding is that Tier 2 verification of the four non-Labour-non-Inflation-non-Policy sections surfaced concrete defects that don't match project data — the "verified end-to-end (May 2026)" status flags in framework prose are now empirically wrong for at least three sections.**
@@ -36,71 +49,66 @@ User went to sleep around 04:00 with the prompt "do work overnight that requires
 | 6 | `95c9ac5` | **Patch proposals across all six verification logs.** 44 mechanical patches drafted with copy-paste-able old_string / new_string pairs, ready for Edit-tool accept/reject. ~38 judgment items deferred. Restructures morning review from compose-from-scratch to fast accept/reject. | All `markdown-files/verification/*.md` files; "Proposed patches" subsection per claim |
 | 7 | `ccf5244` | **Deep-dive site scaffolding.** Multi-page architecture wired into `build.py`: shared cross-page nav bar; 6 placeholder deep-dive pages (one per section); Beveridge curve embedded as a real iframe in the Labour deep-dive. Placeholder content per planned-content list. | `build.py` (`NAV`, `_build_nav_html`, `DEEP_DIVES`, `_assemble_deep_dive_page`); `policy.html`, `inflation.html`, `gdp.html`, `labour.html`, `housing.html`, `financial.html` at project root |
 | 8 | `c994fb0` | **`distribution_conventions.md` introduced.** Five-tier ladder (typical / uncommon / pronounced / rare / extreme) at central 50/80/95/99% boundaries. Per-indicator metadata (tail axis, descriptor pair). Binary BoC-band frame for indicators with published BoC bands (inflation, policy rate vs neutral, output gap). Synonymic latitude within tier. New First-Moves doc; new "Preserve design rationale sparingly" workflow rule in CLAUDE.md. Designed via long discussion 2026-05-09 (research basis: Mosteller-Youtz 1990, IPCC, EU pharmacovigilance). | `markdown-files/distribution_conventions.md`; CLAUDE.md First Moves §5 + Workflow conventions; `analyses/bocfed_spread_distribution.py` (worked-example data); `analyses/bocfed_spread_38bp_test.md` (methodology drift evidence) |
-| 9 | this commit | **Convention applied end-to-end on `bocfed_spread` (worked example).** Framework prose retuned (`analysis_framework.md` line ~90 verification status, ~114 paragraph, ~144 threshold banner). Code retuned (`analyze.py` `_classify_bocfed` thresholds, line ~589 banner). Verification log Claim 5 marked Tier 3 (resolved via convention adoption); old patch proposals marked superseded. | `markdown-files/analysis_framework.md`; `analyze.py`; `markdown-files/verification/policy.md` Claim 5 |
+| 9 | `3f020ad` | **Convention applied end-to-end on `bocfed_spread` (worked example).** Framework prose retuned; code retuned (`analyze.py` `_classify_bocfed` thresholds, banner). Verification log Claim 5 marked Tier 3. Old patch proposals superseded. | `markdown-files/analysis_framework.md`; `analyze.py`; `markdown-files/verification/policy.md` Claim 5 |
+| 10 | `760b254` | **Convention applied to `can2y_overnight_spread`.** Vocabulary update; no threshold change needed (audit had found it VERIFIED). | `analysis_framework.md`; `markdown-files/verification/policy.md` Claim 4 |
+| 11 | `49d8f26` | **CI fix: `git-auto-commit-action` v5 → v7.** Node.js 24 incompatibility was silently breaking nightly auto-commits. Green again. | `.github/workflows/update.yml` |
+| 12 | `7c8b170` | **Convention applied to Inflation.** First BoC-band dual classification for an inflation indicator. Four-state breadth classification dropped (analyst synthesis; user Q1 decision). Unsourced thresholds retuned. | `analysis_framework.md`; `analyze.py`; `markdown-files/verification/inflation.md` |
+| 13 | `e9f3240` | **Inflation Q1/Q2/Q3 user decisions applied.** Breadth dropped; core-vs-headline logic refined per user direction. | `analysis_framework.md`; `markdown-files/verification/inflation.md` |
+| 14 | `d010e64` | **Convention applied to Financial Conditions.** USDCAD stress-corridor peaks corrected to match project data (1.4539). CAD pass-through ranges retuned. MPR/SAN mis-attribution resolved. | `analysis_framework.md`; `analyze.py`; `markdown-files/verification/financial.md` |
+| 15 | `637f7bd` | **Convention applied to GDP & Activity.** BCC criteria corrected to canonical "amplitude, duration, scope." Housing-trough anchors corrected (April 2009 = 111.8k). Inventories threshold retuned to P80 (±3.55pp) from asserted ±3pp. Data-source probe doc landed. | `analysis_framework.md`; `analyze.py`; `analyses/gdp_distribution.py`; `analyses/data-source-probe-2026-05-09.md` |
+| 16 | `7b80c79` | **Convention applied to Housing.** CMHC citation conflation resolved (2023 vs 2025 reports). CREA HPI methodology corrected. Cyclical anchors retuned against project data. | `analysis_framework.md`; `analyze.py`; `markdown-files/verification/housing.md` |
+| 17 | `90bdb5d` | **Convention applied to Labour Market (final section).** Claim 8 fabricated quote removed. Claim 10 US-heuristic propagation removed. Real wage benchmark added per user direction. LFS gross-flows probe landed. | `analysis_framework.md`; `analyze.py`; `markdown-files/verification/labour.md`; `analyses/lfs-gross-flows-probe-2026-05-09.md` |
 
-### Highest-priority items for the morning review
+### Open judgment items (as of 2026-05-09 end of day)
 
-The cross-section findings reveal a **defect-class pattern**: the same Tier-2-verified framework that the user is currently auditing claim-by-claim for Labour has analogous defects in every other section. The user's choice to introduce the three-tier framework was prescient — Tier 2 is real but not equivalent to Tier 3.
+All mechanical defects and factual corrections from the original five-section Tier 2 audit have been resolved via the convention sweep. What remains requires domain judgment from the user:
 
-**Immediate-fix candidates** (defects where the framework prose is demonstrably wrong against project data; can be corrected without research):
+1. **Labour Claim 3 — V/U threshold bands.** Discussion was mid-flight 2026-05-09; no resolution committed. Whether 0.45–0.60 is genuine tightness or status-quo-bias employer baseline remains open. Resolution also gates Claim 10 (V/U-line propagation).
+2. **Labour Claim 10 — V/U-line propagation.** Depends entirely on Claim 3 resolution. Not actionable until Claim 3 is settled.
+3. **Policy — 3×2 conditional grid for `can2y_overnight_spread` × `action_state`.** Analyst synthesis; same construct class as the Labour Claim 2 decoder (which was Tier 3 resolved by softening). No patch applied during convention sweep — deferred as judgment item.
+4. **Output gap implementation.** Valet path confirmed (`INDINF_OUTGAPMPR_Q`, via data-source probe). User wants HP-filter-based potential GDP comparison added alongside. Awaiting implementation in `fetch.py` + framework wiring.
+5. **Real wage benchmark.** Added to Labour framework per user direction during sweep; framework cites live computation but no current-state assessment exists yet (Tier 1 placeholder).
 
-1. ~~**Policy** — `bocfed_spread` thresholds in framework + `analyze.py` line ~581 disagree with project data.~~ **Resolved 2026-05-09 via convention adoption** (commits `c994fb0`, this one). Underlying problem (silent methodology drift: thresholds calibrated against daily 2009+ data but labelled "since 1996") addressed at the framework level by introducing `markdown-files/distribution_conventions.md`. Bocfed_spread now has tail axis (`|spread|` monthly month-start since 1996) + descriptor (high/low) + retuned thresholds (P50=62.5bp, P80=100.0bp, P95=187.5bp, P99=231.0bp) per the convention. Tier 3 in `verification/policy.md` Claim 5.
-2. **Housing** — Citation conflation. Framework's *"2023 CMHC Housing Shortages report estimated Canada needs ~430-500k starts/year through 2030 to close the 4.8M-unit affordability gap"* mixes two reports: 2023 report says 3.5M units by 2030; 4.8M / 430-480k figures come from June 2025 "Solving the Affordability Crisis" report targeting 2035. (`verification/housing.md` Claim 2.)
-3. **Financial** — USDCAD stress-corridor peaks don't match project data: framework says "March 2020 (1.466)" but actual `data/usdcad.csv` peak was 1.4539. (`verification/financial.md` Claim 2.)
-4. **GDP** — C.D. Howe BCC criteria mis-named: framework says *"depth, duration, breadth"* with literal quote *"pronounced, pervasive, and persistent decline"*; canonical wording is *"amplitude, duration, scope"* with *"pronounced, persistent, and pervasive"*. (`verification/gdp.md` Claim 4.)
-5. **Labour** — Claim 8: *"1.6% annual real wage gains since 2023"* attributed to MPR October 2024 was not located in any HTML chapter retrieved. Likely fabrication or conflation with the September 2024 headline-CPI figure (1.6%). User to confirm against the PDF or remove. (`verification/labour.md` Claim 8.) Plus Claim 10 V/U-line propagation defect.
+**Queued implementation work (no judgment needed, just implementation):**
 
-**Deeper analytical items** (defects where the right answer needs user judgment):
-
-- **Labour Claim 3 V/U thresholds** — flagged for user re-review per Tuesday's "save the revision but i still want to go over it again tomorrow morning."
-- **Inflation Claim 3** — four-state breadth classification (broad-based pressure / softening / clustered / polarized) is analyst synthesis presented as canonical (same defect class as Labour Claim 2's 2×2 utilization decoder). Cover only 4 of 9 logical breadth-deviation states. Propagates into Inflation Claim 10 ("What to surface").
-- **Policy** — 3×2 conditional grid for `can2y_overnight_spread` × `action_state` is analyst synthesis. Same construct class as Labour Claim 2's rejected 2×2 decoder.
-- **Housing** — CREA MLS HPI methodology mis-described as "hedonic" (actually hybrid repeat-sales + hedonic); BoC affordability indicator's anchor mis-stated.
-
-**Queued (deferred from earlier commits, still valid):**
-
-- 12M→3M code change in `compute_labour_values` + chart spec + `_DERIVED_SERIES_SOURCES`. Framework has been updated; code is not.
+- 12M→3M code change in `compute_labour_values` + chart spec + `_DERIVED_SERIES_SOURCES`. Framework updated in earlier sweep; code is not.
 - `MultiLineSpec` secondary y-axis extension to wire the Indeed line into the Unemployment & Job Vacancies chart.
-- Re-fetch other StatsCan series and accept the leading-NaN rows (audit Option A) or tighten `fetch_statscan` to strip leading NaN only (Option B).
+- Re-fetch other StatsCan series and accept leading-NaN rows (audit Option A) or tighten `fetch_statscan` to strip leading NaN only (Option B).
 
-### Defect-class index across all six sections
+### Defect-class resolution (post-sweep, 2026-05-09)
 
-| Defect class | Sections affected | Severity |
-|---|---|---|
-| Fabricated quote / number | Labour (Claim 1, Claim 8) | CRITICAL — must fix before any blurb regen |
-| Threshold values that disagree with project data | Policy (bocfed_spread), GDP (housing-trough anchors), Financial (USDCAD peaks), Housing (cyclical anchors) | CRITICAL |
-| Citation conflation (right facts, wrong source) | Housing (2023 vs 2025 CMHC reports), Financial (MPR Jan 2025 vs SAN 2025-2), GDP (C.D. Howe BCC wording), Labour Claim 7 (Macklem Apr 2023 vs MPR July 2024 In Focus) | high |
-| Threshold values asserted without primary-source backing | Inflation (3 thresholds), Labour Claim 4 (ULC > 3%), GDP (inventories ±3pp) | medium |
-| Rigid n×n decoder presented as canonical | Labour Claim 2 (resolved Tier 3); Inflation Claim 3 (open); Policy 3×2 grid (open) | medium |
-| US heuristic transferred to Canada | Labour Claim 3 (resolved Tier 3); Labour Claim 10 (propagation, open) | high |
-| Indicator-naming-leak risk | Labour Claim 9, Financial Claim 10 | low (judgment call) |
+| Defect class | Status |
+|---|---|
+| Fabricated quote / number (Labour Claims 1, 8) | **RESOLVED** — Claim 8 fabricated MPR quote removed; Claim 1 revised Tier 3 |
+| Threshold values disagreeing with project data (Policy bocfed_spread, GDP housing-trough, Financial USDCAD, Housing anchors) | **RESOLVED** — All retuned per convention sweep; Tier 3 in per-section verification logs |
+| Citation conflation (Housing CMHC, Financial MPR vs SAN, GDP BCC wording) | **RESOLVED** — Corrected in framework prose during sweep |
+| Threshold values asserted without primary-source backing (Inflation 3 thresholds, Labour Claim 4, GDP inventories) | **RESOLVED** — All retuned to empirical P80 per convention; sources in distribution analysis files |
+| Rigid n×n decoder (Inflation Claim 3 four-state breadth, Policy 3×2 grid) | Inflation Claim 3: **RESOLVED** — breadth classification dropped per user Q1 decision. Policy 3×2 grid: **open** (judgment item, not addressed in convention sweep) |
+| US heuristic transferred to Canada (Labour Claims 3, 10) | Claim 3: **RESOLVED** Tier 3 (provisional, re-review). Claim 10: **open** — blocked on Claim 3 resolution |
+| Indicator-naming-leak risk (Labour Claim 9, Financial Claim 10) | Low priority; not addressed in sweep |
 
-The "VERIFICATION STATUS: verified end-to-end (May 2026)" header in `analysis_framework.md` is now empirically wrong for at least Policy, GDP, Financial, and Housing. **Recommend the user decide tomorrow whether to (a) downgrade those headers to "Tier 2 audit identified defects; see verification/<section>.md" before any further blurb regen, or (b) leave them as-is and rely on the per-section audit logs for ground truth.** I left framework prose untouched overnight — the headers reflect the May 8 status, not the post-audit state.
+### What's now unblocked (2026-05-09 end of day)
 
-### What I deliberately did NOT do overnight
+The convention sweep clears the main blocker on blurb regen. All mechanical defects are resolved; framework prose is convention-aligned across all six sections. The four autonomous-draft blurbs (Labour, Financial, GDP, Housing) can now be regenerated without baking stale anchors.
 
-- Did not edit `markdown-files/analysis_framework.md` framework prose. The audits surfaced defects but the user's original "save and revisit tomorrow" framing for Labour Claim 3 implied the prose-level decisions are user-only.
-- Did not regen any blurbs. `data/blurbs.json` for the four autonomous-draft sections (Labour, Financial, GDP, Housing) is still Tier 1; tomorrow's framework decisions should land before any regen.
-- Did not run `python fetch.py` to re-pull the StatsCan CSVs (would have surfaced the leading-NaN issue from the audit). Held for user resolution choice.
-- Did not extend `MultiLineSpec` for the Indeed dual-axis chart wiring. Architectural change with judgment on schema design.
-- Did not push to remote yet — pushing is on user discretion. (Five commits ready: `b34bebe`, `1219d80`, `165e7cc`, `33eb0cd`, `2a5fef7`, plus this one.)
+Remaining blockers per section:
+- **Labour**: Claim 3 V/U judgment still open; regenerating a blurb is safe (fabricated quotes removed), but the V/U bands language may need a follow-up pass.
+- **Financial, GDP, Housing**: no open judgment items. Blurb regen is clean.
 
-### Morning review workflow (use this for the 2026-05-10 review pass)
-
-The 44 mechanical patches in the verification logs are designed for accept/reject batching, not compose-from-scratch review. Recommended approach:
-
-1. **Mechanical batch first.** Open the cross-claim defect-class index above. For each CRITICAL / high-severity entry that has a "Proposed patches" subsection in its verification log, scan the proposed patch (`old_string` + `new_string` + source URL + direct quote) and accept or reject. Each takes ~30–60 seconds. Goal: clear all mechanical patches in one focused session.
-2. **Apply via Edit tool.** Patches are formatted to feed straight into Edit (`old_string` / `new_string`). For accepted patches, run Edit on `analysis_framework.md` (or `analyze.py` for the bocfed_spread code patch). Mark the verification log entry as Tier 3 with date.
-3. **Judgment items in a separate session.** Items flagged "Judgment item (no patch proposed)" — analyst-synthesised decoders, unsourced thresholds, indicator-naming-leak risk — need different cognitive mode. Do these in a dedicated review where you have headspace to weigh tradeoffs. Don't interleave with mechanical accept/reject — context-switching between mechanical and judgment work doubles the friction.
-4. **Defer Labour Claim 3 (V/U) to its own dedicated session.** It's already flagged for re-review with a specific user-skepticism question (whether 0.45–0.60 is genuine tightness or status-quo-bias employer baseline). Treat as a third batch.
-5. **After patches land, regen blurbs** for the four Tier 1 sections (Labour, Financial, GDP, Housing) using the corrected framework prose. The autonomous-draft blurbs in `data/blurbs.json` predate every framework change since they were generated.
+Recommended next-session order:
+1. Resolve Labour Claim 3 V/U bands + Claim 10 propagation (dedicated session; bring the discussion thread).
+2. Regen all four blurbs: `python analyze.py --section labour` / `financial` / `gdp` / `housing`. (CLI subscription path; no API key needed locally.)
+3. Voice-iteration pass on the regenerated blurbs.
+4. Implement deep-dives per `analyses/deep-dive-design-2026-05-09.md` — Policy page first (yield dependencies for Housing).
 
 ### Resume entry points
 
-- **Start with the defect-class index above** — pick which CRITICAL items to address first.
-- **Read commits in order** if you want to see the night's logical progression: `git log --oneline b34bebe..HEAD`
-- **Per-section verification logs** at `markdown-files/verification/{labour,inflation,policy,gdp,housing,financial}.md` carry the page-level evidence chain. Each Tier 2 claim with mechanical defects has a "Proposed patches" subsection.
-- **`markdown-files/verification/_tiers.md`** is the canonical glossary for the three-tier framework.
+- **Open judgment items** — see "Open judgment items" above. Labour Claim 3 V/U is the highest-priority unresolved item.
+- **Blurb regen** — all four autonomous-draft sections are now ready: `python analyze.py --section <labour|financial|gdp|housing>`.
+- **Deep-dive implementation** — `analyses/deep-dive-design-2026-05-09.md` is the spec. Policy page first.
+- **Convention sweep log** — `git log --oneline c994fb0..90bdb5d` shows the full sweep in chronological order.
+- **Per-section verification logs** — `markdown-files/verification/{labour,inflation,policy,gdp,housing,financial}.md`. All mechanical patches applied; open items marked.
+- **`markdown-files/verification/_tiers.md`** — canonical glossary for the three-tier framework.
 
 ---
 
@@ -149,7 +157,20 @@ boc-tracker/
 │   ├── trim_vs_median_skewness.py        ← empirical test on a framework claim
 │   ├── trim_vs_median_skewness_results.csv
 │   ├── trim_vs_median_skewness_plot.png
-│   └── boc_speech_breadth_reference.csv  ← BoC's own published breadth chart data
+│   ├── boc_speech_breadth_reference.csv  ← BoC's own published breadth chart data
+│   ├── bocfed_spread_distribution.py / .csv / .png  ← worked example for distribution_conventions.md
+│   ├── bocfed_spread_38bp_test.md        ← methodology drift evidence
+│   ├── can2y_overnight_spread_distribution.py / .csv / .png
+│   ├── financial_distribution.py / .csv  ← USDCAD distribution analysis
+│   ├── gdp_distribution.py / .csv        ← inventories + housing-trough distribution
+│   ├── inflation_distribution.py / .csv
+│   ├── housing_distribution.py / .csv
+│   ├── labour_distribution.py / .csv
+│   ├── beveridge_curve_canada.py / .html ← Plotly Beveridge curve; candidate lead chart for Labour deep-dive
+│   ├── deep-dive-design-2026-05-09.md    ← full design for all 8 deep-dives (43 charts, 9 judgment calls resolved)
+│   ├── data-source-probe-2026-05-09.md   ← output gap, CORRA, CPI ex-indirect-tax, TSX confirmations
+│   ├── lfs-gross-flows-probe-2026-05-09.md ← LFS gross-flows methodology probe
+│   └── project-evolution-2026-05-09.md / .html / .pdf ← project evolution narrative
 └── markdown-files/          ← reference docs and this handoff
     ├── HANDOFF.md
     ├── analysis_framework.md             ← internal analytical brief for blurb generation
