@@ -546,11 +546,30 @@ A separate page for practitioner-grade detail that doesn't fit on the overview:
 - Balance sheet decomposition (maturity, BoC holdings as % of total GoC debt outstanding)
 - Cross-central-bank balance sheet comparison
 
-### 5. Multi-page split (eventually)
+### 5. Eventually: deep-dive Labour Market page
+
+All entries below are **tentative** — surfaced during the framework verification pass on 2026-05-09 and earlier labour scoping discussions. The verification log at `markdown-files/verification/labour.md` carries the discussion that motivated several of them.
+
+**Direct-indicator triangulation for the framework's joint-move read.** The overview-page Labour framework reads employment-rate and participation-rate moves together to infer dynamics (layoffs, discouragement, slack). The 9-state combinatorial space means the inference often forces wrong assignments. Direct indicators that would verify or refute specific inferences:
+- LFS reason-for-unemployment (StatsCan Table 14-10-0125) — job-loser share as a direct layoff signal
+- LFS R-indicators (R3, R7, R8 etc.) — broader unemployment / discouragement / part-time-for-economic-reasons
+- Long-term unemployment share (≥27 weeks) — direct persistent-slack signal
+- EI initial claims / beneficiaries (StatsCan Table 14-10-0010 family) — real-time labour-loss read
+
+**Own NAIRU estimation.** The overview-page anchor is currently the IMF's July 2024 estimate (~6%) — a borrowed figure with limited transparency on whether it captures the 2022–2024 immigration-surge skill-mismatch effects. A self-grounded estimate using post-2022 Canadian data (Beveridge-curve regression or Phillips-curve regression with population-growth controls) would materially improve precision. The 2024–2025 immigration policy pullback should reduce structural distortion in the data over time, making a re-estimate increasingly tractable.
+
+**Other candidate content:**
+- Sectoral employment moves (manufacturing layoffs vs services resilience; trade-exposed sectors during tariff cycles)
+- Hours worked (NSA monthly with 12M MA — deferred from the May 2026 overview add-pass for data-quality reasons)
+- Involuntary part-time rate (annual cadence; deferred similarly)
+- Demographic decompositions (newcomer vs Canadian-born; youth 15–24 vs prime-age 25–54 unemployment)
+- Regional decompositions (provincial labour-market dispersion; Toronto / Vancouver / Calgary employment patterns)
+
+### 6. Multi-page split (eventually)
 
 When chart count grows further, split into themed pages (policy, inflation, labour, housing deep-dives). Infrastructure is ready; not urgent at 20 charts.
 
-### 6. Charts still on the wishlist
+### 7. Charts still on the wishlist
 
 | Chart | Data |
 |---|---|
