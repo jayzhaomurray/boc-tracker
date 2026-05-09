@@ -9,6 +9,7 @@ Output: data/cpi_all_items.csv
 """
 
 import argparse
+import io
 import json
 import os
 import re
@@ -253,6 +254,46 @@ def fetch_cpi_components() -> pd.DataFrame:
     return df.sort_index()
 
 
+def fetch_indeed_canada() -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Indeed Hiring Lab Canada Job Postings Index — daily SA, baseline Feb 1 2020 = 100.
+
+    Source: github.com/hiring-lab/data, CC BY 4.0. The "total postings" variable is
+    the headline series; "new postings" is a sub-cut for postings new in the most
+    recent 7 days. We use total postings, SA, daily.
+
+    Returns (daily, monthly) — both with `date, value` columns. Monthly is the
+    simple mean of the SA index within each calendar month (month-start label, to
+    match StatsCan's date convention). The user can swap to NSA or to a different
+    aggregation later (e.g. month-end value, median, or trimmed mean) — for now
+    monthly mean is the default; flagged for review.
+
+    Coverage: Feb 1 2020 onward — covers the JVWS COVID suspension (Apr-Sep 2020)
+    where StatsCan has no data. BoC has used Indeed-Canada postings as a
+    complementary read on JVWS in SAN 2021-18 and SWP 2022-17.
+    """
+    url = "https://raw.githubusercontent.com/hiring-lab/data/master/CA/aggregate_job_postings_CA.csv"
+    r = requests.get(url, timeout=30)
+    r.raise_for_status()
+    df = pd.read_csv(io.StringIO(r.text))
+    df = df[df["variable"] == "total postings"].copy()
+    df = df[["date", "indeed_job_postings_index_SA"]].rename(
+        columns={"indeed_job_postings_index_SA": "value"}
+    )
+    df["date"] = pd.to_datetime(df["date"])
+    daily = df.sort_values("date").reset_index(drop=True)
+    # Monthly mean, month-start convention (matches StatsCan).
+    monthly = (
+        daily.set_index("date")["value"]
+        .resample("MS")
+        .mean()
+        .dropna()
+        .reset_index()
+    )
+    monthly.columns = ["date", "value"]
+    return daily, monthly
+
+
 def fetch_wcs() -> pd.DataFrame:
     """Western Canada Select crude price (monthly) from Alberta Economic Dashboard API."""
     r = requests.get(
@@ -406,6 +447,17 @@ def main(wait: bool = False):
         path = DATA_DIR / "wcs.csv"
         df.to_csv(path, index=False)
         print(f"  -> {len(df)} rows saved to {path}")
+
+    print("Fetching indeed_postings_ca (Indeed Hiring Lab Canada postings index)...")
+    result = _safe("indeed_postings_ca", fetch_indeed_canada)
+    if result is not None:
+        daily, monthly = result
+        daily_path = DATA_DIR / "indeed_postings_ca.csv"
+        monthly_path = DATA_DIR / "indeed_postings_ca_monthly.csv"
+        daily.to_csv(daily_path, index=False)
+        monthly.to_csv(monthly_path, index=False)
+        print(f"  -> {len(daily)} daily rows saved to {daily_path}")
+        print(f"  -> {len(monthly)} monthly rows saved to {monthly_path}")
 
     path = DATA_DIR / "cpi_components.csv"
     prior = _latest_saved_date(path) if wait else None

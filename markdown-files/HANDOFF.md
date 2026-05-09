@@ -41,7 +41,8 @@ boc-tracker/
 │   │     job_vacancy_level.csv (monthly NSA, scaled to millions), unit_labour_cost.csv,
 │   │     lfs_wages_all.csv, lfs_wages_permanent.csv, seph_earnings.csv, lfs_micro.csv
 │   ├── Policy / financial series: overnight_rate.csv, overnight_rate_daily.csv, fed_funds.csv,
-│   │     yield_2yr.csv, us_2yr.csv, usdcad.csv, wti.csv, brent.csv, wcs.csv
+│   │     yield_2yr.csv, us_2yr.csv, usdcad.csv, wti.csv, brent.csv, wcs.csv,
+│   │     indeed_postings_ca.csv (daily SA), indeed_postings_ca_monthly.csv (monthly mean derived)
 │   ├── BoC Balance Sheet: boc_total_assets.csv, boc_goc_bonds.csv, boc_settlement_balances.csv
 │   ├── Inflation expectations: infl_exp_consumer_1y.csv, infl_exp_consumer_5y.csv,
 │   │     bos_dist_below1.csv, bos_dist_1to2.csv, bos_dist_2to3.csv, bos_dist_above3.csv,
@@ -170,6 +171,7 @@ No auth required. Returns ~700 records covering several oil grades. WCS is filte
 | `wti` | FRED | `DCOILWTICO` | WTI crude oil, USD/barrel | Daily |
 | `brent` | FRED | `DCOILBRENTEU` | Brent crude oil, USD/barrel | Daily |
 | `wcs` | Alberta API | `OilPrices` table, Type=WCS | Western Canada Select, USD/barrel | Monthly |
+| `indeed_postings_ca` | Indeed Hiring Lab (CC BY 4.0) | `github.com/hiring-lab/data` `CA/aggregate_job_postings_CA.csv`, "total postings" SA | Indeed Job Postings Index, Canada, daily SA, baseline Feb 1 2020 = 100. Pre-aggregated monthly mean is saved as `indeed_postings_ca_monthly.csv`. **Tier 2 (autonomous) data source — not yet user-reviewed; chart wiring pending 2026-05-10 design pass (needs MultiLineSpec secondary y-axis for the index unit).** Covers JVWS COVID gap (Apr-Sep 2020); BoC has used Indeed-Canada in SAN 2021-18 and SWP 2022-17. | Daily |
 | `gdp_monthly` | StatsCan | Vector 65201210 | Monthly real GDP, all industries, chained 2017 $, SAAR — C$ trillions | Monthly |
 | `gdp_industry_goods` | StatsCan | Vector 65201211 | Monthly real GDP, goods-producing industries, chained 2017 $, SAAR — C$ trillions | Monthly |
 | `gdp_industry_services` | StatsCan | Vector 65201212 | Monthly real GDP, services-producing industries, chained 2017 $, SAAR — C$ trillions | Monthly |
