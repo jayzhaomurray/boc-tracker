@@ -798,9 +798,22 @@ def _build_band_panel(chart: "BandSpec", data: dict,
 
     legend_parts = ['<div class="chart-legend">']
 
-    # Comparator legend buttons (at the end of the trace list)
     n_band = len(chart.band_lines)
     comp_start_idx = 2 + n_band  # traces 0 and 1 are the band fill
+
+    # Featured band member first (if present) — primary line leads the legend
+    if featured_series_name is not None:
+        for bi, bl in enumerate(chart.band_lines):
+            if bl.series == featured_series_name:
+                trace_idx = 2 + bi
+                legend_parts.append(
+                    '<button class="legend-item active"'
+                    ' onclick="toggleTrace(this,\'' + div_id + '\',[' + str(trace_idx) + '])">'
+                    + _swatch_line(bl.color) + bl.label + '</button>'
+                )
+                break
+
+    # Comparators next
     for ci, cl in enumerate(chart.comparators):
         trace_idx = comp_start_idx + ci
         active_cls = " active" if cl.visible else ""
@@ -810,13 +823,13 @@ def _build_band_panel(chart: "BandSpec", data: dict,
             + _swatch_line(cl.color, dash=cl.dash) + cl.label + '</button>'
         )
 
-    # Band member legend buttons
+    # Non-featured band members (off by default)
     for bi, bl in enumerate(chart.band_lines):
+        if featured_series_name is not None and bl.series == featured_series_name:
+            continue
         trace_idx = 2 + bi
-        is_featured = (featured_series_name is not None and bl.series == featured_series_name)
-        active_cls = " active" if is_featured else ""
         legend_parts.append(
-            '<button class="legend-item' + active_cls + '"'
+            '<button class="legend-item"'
             ' onclick="toggleTrace(this,\'' + div_id + '\',[' + str(trace_idx) + '])">'
             + _swatch_line(bl.color) + bl.label + '</button>'
         )
@@ -3053,8 +3066,9 @@ PAGES = [
             BandSpec(
                 title="Wage Growth",
                 band_lines=[
+                    LineConfig("lfs_micro", "LFS-Micro (BoC)", "#1565c0"),
                     LineConfig(
-                        "lfs_wages_all_yoy", "LFS All Employees", "#1565c0",
+                        "lfs_wages_all_yoy", "LFS All Employees", "#4a148c",
                         formula=lambda d: d["lfs_wages_all"].set_index("date")["value"].pct_change(12) * 100,
                         formula_deps=["lfs_wages_all"],
                     ),
@@ -3068,7 +3082,6 @@ PAGES = [
                         formula=lambda d: d["seph_earnings"].set_index("date")["value"].pct_change(12) * 100,
                         formula_deps=["seph_earnings"],
                     ),
-                    LineConfig("lfs_micro", "LFS-Micro (BoC)", "#4a148c"),
                 ],
                 comparators=[
                     LineConfig(
@@ -3077,11 +3090,7 @@ PAGES = [
                         formula_deps=["cpi_services"],
                     ),
                 ],
-                featured=LineConfig(
-                    "lfs_wages_all_yoy", "LFS All Employees", "#1565c0",
-                    formula=lambda d: d["lfs_wages_all"].set_index("date")["value"].pct_change(12) * 100,
-                    formula_deps=["lfs_wages_all"],
-                ),
+                featured=LineConfig("lfs_micro", "LFS-Micro (BoC)", "#1565c0"),
                 reference_y=0.0,
                 footnote="Year-over-year %. LFS: average hourly wages. SEPH: average weekly earnings, all industries. LFS-Micro: BoC composition-adjusted measure. Services CPI overlay for wage-price context.",
                 default_years=10,
