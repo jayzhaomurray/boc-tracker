@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BoC Tracker &mdash; Where Canada stands</title>
+<meta name="viewport" content="width=1280">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600;700&family=Cascadia+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="./colors_and_type.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+/* ===== v2 page chrome ===== */
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); }
+
+/* Masthead */
+.v2-masthead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: color-mix(in oklch, var(--paper) 90%, transparent);
+  border-bottom: 1px solid var(--rule);
+}
+.v2-masthead-inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 12px 32px 10px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.v2-wordmark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--ink);
+}
+.v2-wordmark-text {
+  font: 600 18px/1 var(--font-display);
+  letter-spacing: -0.02em;
+}
+.v2-nav {
+  display: flex;
+  gap: 18px;
+  margin-left: 32px;
+}
+.v2-nav a {
+  font: 500 12px/1 var(--font-sans);
+  color: var(--ink-sub);
+  text-decoration: none;
+  position: relative;
+  padding-bottom: 2px;
+}
+.v2-nav a.active { color: var(--ink); }
+.v2-nav a::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 1px;
+  background: var(--rule-strong);
+  transition: background 140ms;
+}
+.v2-nav a:hover::after { background: var(--foil); }
+.v2-masthead-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.v2-refresh-stamp {
+  font: 500 11px/1 var(--font-mono);
+  color: var(--ink-quiet);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.foil-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--foil);
+  vertical-align: middle;
+}
+.foil-rule { height: 1px; background: var(--foil); width: 100%; }
+
+/* Main layout */
+.v2-main {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 36px 32px 0;
+}
+
+/* Title block */
+.v2-title-block { margin-bottom: 28px; }
+.v2-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.eyebrow {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-quiet);
+  font-weight: 600;
+}
+.v2-foil-rule-short {
+  height: 1px;
+  background: var(--foil);
+  width: 56px;
+  margin: 10px 0 12px;
+}
+.v2-stamp {
+  font: 500 11px/1 var(--font-mono);
+  color: var(--ink-quiet);
+}
+.v2-tier-row {
+  margin-top: 14px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.tier-tag {
+  font: 600 10px/1 var(--font-mono);
+  letter-spacing: 0.04em;
+  padding: 4px 7px;
+  border-radius: 2px;
+  border: 1px solid;
+}
+.tier-tag-1 {
+  background: oklch(94% 0.005 85);
+  color: var(--ink-quiet);
+  border-color: var(--rule);
+}
+.tier-tag-2 {
+  background: var(--cobalt-tint);
+  color: var(--cobalt);
+  border-color: oklch(80% 0.06 260);
+}
+
+/* KPI strip */
+.v2-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.kpi-tile {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.kpi-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.kpi-stamp {
+  font: 500 10px/1 var(--font-mono);
+  color: var(--ink-quiet);
+}
+.kpi-value {
+  font-family: var(--font-mono);
+  font-size: 36px;
+  line-height: 1.05;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  margin: 12px 0 6px;
+}
+.kpi-unit {
+  color: var(--ink-quiet);
+  font-size: 0.4em;
+  margin-left: 4px;
+  letter-spacing: 0;
+}
+.kpi-delta {
+  font: 500 11px/1 var(--font-mono);
+}
+.kpi-delta-up   { color: var(--vermillion); }
+.kpi-delta-down { color: var(--cat-pine); }
+.kpi-sub {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-sub);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.status-pill {
+  font: 600 10px/1 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 7px;
+  border-radius: 999px;
+  border: 1px solid;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.status-pill-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+}
+.pill-above {
+  color: var(--vermillion);
+  background: var(--vermillion-tint);
+  border-color: var(--vermillion);
+}
+.pill-on {
+  color: var(--cobalt);
+  background: var(--cobalt-tint);
+  border-color: var(--cobalt);
+}
+.pill-below {
+  color: var(--cat-teal);
+  background: oklch(94% 0.03 195);
+  border-color: var(--cat-teal);
+}
+.pill-neutral {
+  color: var(--ink-quiet);
+  background: oklch(94% 0.005 85);
+  border-color: var(--rule-strong);
+}
+
+/* Chart cards */
+.v2-chart-block { margin-bottom: 20px; }
+.chart-card {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+  padding: 16px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chart-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.chart-card-title-area h3 {
+  margin: 4px 0 0;
+  font: 600 19px/1.25 var(--font-display);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.chart-card-body { /* plotly div sits here */ }
+.chart-card-legend {
+  border-top: 1px solid var(--rule);
+  padding-top: 10px;
+}
+.chart-card-footnote {
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--ink-quiet);
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
+}
+.chart-card-footnote-nolegend {
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--ink-quiet);
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
+}
+
+/* Legend chips */
+.legend-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 500 12px/1 var(--font-sans);
+  color: var(--ink-sub);
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+}
+.legend-swatch-line {
+  width: 12px;
+  height: 2px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.legend-swatch-dash {
+  width: 12px;
+  height: 0;
+  border-top: 2px dashed;
+  display: inline-block;
+}
+.legend-swatch-band {
+  width: 14px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--band-fill);
+  border: 1px solid var(--rule-strong);
+  display: inline-block;
+}
+
+/* Range-button toolbar pills (static, no JS in v2) */
+.chart-toolbar { display: flex; gap: 10px; }
+.toolbar-pills {
+  display: inline-flex;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--card);
+}
+.toolbar-pill {
+  font: 500 12px/1 var(--font-mono);
+  padding: 7px 12px;
+  color: var(--ink-sub);
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--rule);
+  position: relative;
+  cursor: default;
+}
+.toolbar-pill:last-child { border-right: 0; }
+.toolbar-pill.active {
+  color: var(--cobalt);
+  background: var(--cobalt-tint);
+}
+.toolbar-pill.active::after {
+  content: "";
+  position: absolute;
+  left: 8px; right: 8px; bottom: 0;
+  height: 2px;
+  background: var(--foil);
+}
+
+/* Deep-dive index grid */
+.v2-deepdive-section { margin-top: 36px; margin-bottom: 12px; }
+.v2-deepdive-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--rule);
+  margin-top: 14px;
+}
+.v2-deepdive-card {
+  padding: 20px 18px 22px;
+  border-bottom: 1px solid var(--rule);
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.v2-deepdive-card:nth-child(3n+1),
+.v2-deepdive-card:nth-child(3n+2) {
+  border-right: 1px solid var(--rule);
+}
+.v2-deepdive-card:hover { background: var(--vellum); }
+.v2-deepdive-n {
+  font: 500 11px/1 var(--font-mono);
+  color: var(--ink-quiet);
+  margin-bottom: 6px;
+}
+.v2-deepdive-card h3 {
+  font: 600 22px/1.15 var(--font-display);
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+  color: var(--ink);
+}
+.v2-deepdive-card p {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-sub);
+  margin: 0;
+}
+
+/* Footer */
+.v2-footer {
+  border-top: 1px solid var(--rule);
+  padding: 24px 32px 40px;
+  margin-top: 64px;
+  color: var(--ink-quiet);
+}
+.v2-footer-inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.v2-footer a {
+  color: inherit;
+  text-decoration: none;
+}
+.v2-footer a:hover { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<!-- ===== Masthead ===== -->
+<header class="v2-masthead">
+  <div class="v2-masthead-inner">
+    <a href="./index.html" class="v2-wordmark">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="foilM" x1="0" y1="0" x2="48" y2="32" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#e08a6e"/>
+            <stop offset="0.20" stop-color="#d56fb0"/>
+            <stop offset="0.42" stop-color="#8e6ad6"/>
+            <stop offset="0.62" stop-color="#5b8fd0"/>
+            <stop offset="0.82" stop-color="#5fb9b6"/>
+            <stop offset="1" stop-color="#aeb976"/>
+          </linearGradient>
+        </defs>
+        <rect x="1" y="1" width="46" height="46" rx="3" fill="none" stroke="currentColor" stroke-width="1.25"/>
+        <text x="24" y="33" text-anchor="middle" font-family="Newsreader, Georgia, serif" font-style="italic" font-weight="500" font-size="30" fill="currentColor">B</text>
+        <circle cx="40" cy="9" r="3.2" fill="url(#foilM)"/>
+      </svg>
+      <span class="v2-wordmark-text">BoC Tracker</span>
+    </a>
+    <nav class="v2-nav">
+      <a href="./index.html" class="active">Overview</a>
+      <a href="#">Monetary</a>
+      <a href="#">Inflation</a>
+      <a href="#">GDP</a>
+      <a href="#">Labour</a>
+      <a href="#">Housing</a>
+      <a href="#">Financial</a>
+      <a href="#">Trade</a>
+    </nav>
+    <div class="v2-masthead-right">
+      <span class="v2-refresh-stamp">
+        <span class="foil-dot"></span>
+        refreshed&nbsp;{{ refreshed_stamp }}
+      </span>
+    </div>
+  </div>
+  <div class="foil-rule"></div>
+</header>
+
+<!-- ===== Main content ===== -->
+<main class="v2-main">
+
+  <!-- Title block -->
+  <div class="v2-title-block">
+    <div class="v2-eyebrow">
+      <span class="eyebrow">Where Canada stands</span>
+      <span class="v2-stamp">&middot; {{ refreshed_stamp }}</span>
+      <span class="foil-dot" style="margin-left:auto"></span>
+    </div>
+    <div class="v2-foil-rule-short"></div>
+    <h1 class="display-2" style="margin-bottom:10px">{{ headline }}</h1>
+    <p class="lede" style="max-width:68ch;margin:0">{{ lede }}</p>
+    <div class="v2-tier-row">
+      <span class="tier-tag tier-tag-2">Tier 2 &middot; Auto-verified</span>
+    </div>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="v2-kpi-strip">
+    {% for tile in kpi_tiles %}
+    <div class="kpi-tile">
+      <div class="kpi-header">
+        <span class="eyebrow">{{ tile.label }}</span>
+        <span class="kpi-stamp">{{ tile.stamp }}</span>
+      </div>
+      <div class="kpi-value">{{ tile.value }}{%- if tile.unit -%}<span class="kpi-unit">{{ tile.unit }}</span>{%- endif -%}</div>
+      {% if tile.delta %}
+      <div class="kpi-delta {{ 'kpi-delta-down' if tile.delta_dir == 'down' else 'kpi-delta-up' }}">{{ tile.delta }}</div>
+      {% endif %}
+      {% if tile.sub %}
+      <div class="kpi-sub">
+        <span class="status-pill pill-{{ tile.sub.tone }}">
+          <span class="status-pill-dot" style="background:currentColor"></span>
+          {{ tile.sub.pill }}
+        </span>
+        {% if tile.sub.text %}<span>{{ tile.sub.text }}</span>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Charts -->
+  {% for chart in charts %}
+  <div class="v2-chart-block">
+    <section class="chart-card">
+      <div class="chart-card-header">
+        <div class="chart-card-title-area">
+          <div class="v2-eyebrow">
+            <span class="eyebrow">{{ chart.eyebrow }}</span>
+            {% if chart.stamp %}<span class="v2-stamp">&middot; {{ chart.stamp }}</span>{% endif %}
+          </div>
+          <h3>{{ chart.title }}</h3>
+        </div>
+        {% if chart.toolbar %}
+        <div class="chart-toolbar">
+          {% for group in chart.toolbar %}
+          <div class="toolbar-pills">
+            {% for pill in group %}
+            <span class="toolbar-pill {{ 'active' if pill.active else '' }}">{{ pill.label }}</span>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      <div class="chart-card-body">{{ chart.plotly_html | safe }}</div>
+      {% if chart.legend_items %}
+      <div class="chart-card-legend">
+        <div class="legend-chips">
+          {% for item in chart.legend_items %}
+          <span class="legend-chip">
+            {% if item.kind == 'band' %}
+            <span class="legend-swatch-band"></span>
+            {% elif item.dash %}
+            <span class="legend-swatch-dash" style="border-color:{{ item.color }}"></span>
+            {% else %}
+            <span class="legend-swatch-line" style="background:{{ item.color }}"></span>
+            {% endif %}
+            {{ item.label }}
+          </span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      {% if chart.footnote %}
+      <div class="chart-card-footnote{% if not chart.legend_items %}-nolegend{% endif %}">{{ chart.footnote }}</div>
+      {% endif %}
+    </section>
+  </div>
+  {% endfor %}
+
+  <!-- Deep-dive index -->
+  <div class="v2-deepdive-section">
+    <div class="v2-eyebrow">
+      <span class="eyebrow">Deep-dive pages</span>
+    </div>
+    <div class="v2-foil-rule-short"></div>
+  </div>
+  <div class="v2-deepdive-grid">
+    {% for page in deep_dive_pages %}
+    <a href="{{ page.href }}" class="v2-deepdive-card">
+      <div class="v2-deepdive-n">{{ page.n }}</div>
+      <h3>{{ page.title }}</h3>
+      <p>{{ page.lede }}</p>
+    </a>
+    {% endfor %}
+  </div>
+
+</main>
+
+<!-- ===== Footer ===== -->
+<footer class="v2-footer">
+  <div class="v2-footer-inner">
+    <div>BoC Tracker &middot; a personal data dashboard &middot; built nightly via GitHub Actions</div>
+    <div>
+      <a href="https://github.com/jayzhaomurray/boc-tracker">Source</a> &middot;
+      <a href="https://github.com/jayzhaomurray/boc-tracker/tree/main/data">CSVs</a> &middot;
+      <a href="#">Analysis framework</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Lucide icons
+window.requestAnimationFrame(function() {
+  if (window.lucide) window.lucide.createIcons();
+});
+</script>
+</body>
+</html>
