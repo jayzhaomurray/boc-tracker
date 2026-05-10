@@ -2614,10 +2614,22 @@ def _build_beveridge_curve_panel(data: dict, chart_idx: int,
         "likely structural (immigration-driven labour-force composition, skill mismatch)."
     )
 
+    script_block = (
+        '<script>\n'
+        '(function(){\n'
+        f"    var el = document.getElementById('{div_id}');\n"
+        "    el.on('plotly_restyle', function(){\n"
+        "        Plotly.relayout(el, {'xaxis.autorange': true, 'yaxis.autorange': true});\n"
+        "    });\n"
+        "})();\n"
+        '</script>\n'
+    )
+
     return (
         '<div class="chart-panel">'
         '<div class="chart-header">' + title_html + '</div>'
         + plotly_frag
+        + script_block
         + '<div class="chart-footnote">' + footnote + '</div>'
         + '</div>\n'
     )
