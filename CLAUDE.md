@@ -7,7 +7,8 @@ A real, in-use personal data dashboard tracking Bank of Canada indicators. Live 
 Read these documents in order before doing anything substantive. They are the source of truth.
 
 1. **`markdown-files/dashboard_purpose.md`** — what the dashboard exists to answer. Six sub-questions across six sections. Every chart and blurb earns its place against this filter.
-2. **`markdown-files/HANDOFF.md`** — current state, file structure, ordered next-steps. Orient here.
+2. **`markdown-files/HANDOFF.md`** — current state, open next steps, parked/blocked items. Orient here.
+   - **`markdown-files/ARCHITECTURE.md`** — read on demand (not at startup): spec dataclasses, PAGES definition, series table, API docs, transform reference. Read when adding charts, adding series, or debugging the build.
 3. **`markdown-files/chart_style_guide.md`** — formatting principles + workflow rules (§8 governs how to break or revise a principle).
 4. **`markdown-files/analysis_framework.md`** — internal analytical brief for blurb generation. Per-section questions, signals, thresholds.
 5. **`markdown-files/distribution_conventions.md`** — how to label indicator readings on the typical / uncommon / pronounced / rare / extreme ladder. Tail-axis and descriptor metadata per indicator; BoC-band binary frame.
