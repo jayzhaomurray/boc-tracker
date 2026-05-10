@@ -15,8 +15,30 @@ from datetime import datetime, timezone
 
 import json
 import math
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+
+try:
+    from statsmodels.tsa.filters.hp_filter import hpfilter as _sm_hpfilter
+    def _hp_filter(series: pd.Series, lamb: int = 129600) -> pd.Series:
+        """Return the HP-filter trend (potential) component."""
+        cycle, trend = _sm_hpfilter(series.values, lamb=lamb)
+        return pd.Series(trend, index=series.index)
+except ImportError:
+    def _hp_filter(series: pd.Series, lamb: int = 129600) -> pd.Series:
+        """Manual HP filter via banded-matrix solve (Hodrick-Prescott 1997).
+        lambda=129600 is the monthly convention (= 1600 × 3^4)."""
+        n = len(series)
+        y = series.values.astype(float)
+        # Build the second-difference matrix D (shape (n-2) × n)
+        # and solve (I + λ D'D) τ = y
+        e = np.ones(n)
+        d2 = np.diag(e, 0) - 2 * np.diag(e[:-1], -1) + np.diag(e[:-2], -2)
+        d2 = d2[2:]  # drop first 2 rows to get (n-2) × n
+        A = np.eye(n) + lamb * d2.T @ d2
+        trend = np.linalg.solve(A, y)
+        return pd.Series(trend, index=series.index)
 
 BLURBS_PATH = Path("data/blurbs.json")
 
@@ -39,6 +61,7 @@ SECTION_HEADINGS = {
     "housing_dd_mortgage":      "Mortgage Rates",
     "housing_dd_pipeline":      "Construction Pipeline",
     "housing_dd_affordability": "Starts vs Supply Target",
+    "housing_dd_renewal":       "Mortgage Renewal Shock",
 }
 
 DATA_DIR = Path("data")
@@ -217,6 +240,14 @@ class StackedBarSpec:
     footnote: str = ""
     unit_label: str = "%"
     overlay: "LineConfig | None" = None  # optional headline-line overlay drawn on top of bars
+
+
+@dataclass
+class MortgageShockSpec:
+    """Static horizontal bar chart with hardcoded payment-shock data (BoC SAN 2025-21).
+    No transforms, no date range buttons — this is a static reference chart."""
+    title: str
+    footnote: str = ""
 
 
 # ── Transform system ──────────────────────────────────────────────────────────
@@ -2035,6 +2066,73 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
     return html
 
 
+def _build_mortgage_shock_panel(chart: "MortgageShockSpec", chart_idx: int,
+                                include_plotlyjs: bool) -> str:
+    """Static horizontal bar chart: mortgage renewal payment-shock estimates.
+    Data hardcoded from BoC SAN 2025-21 and SAN 2023-19. No transforms or date range buttons."""
+    div_id = "chart-" + str(chart_idx)
+
+    labels = [
+        "5-yr fixed holders",
+        "Variable-rate fixed-payment",
+        "Median payment increase<br>(2022 → end-2027)",
+    ]
+    values = [17.5, 54.0, 34.0]   # midpoint for 5-yr fixed (15–20%); direct for the others
+    colors = ["#1565c0", "#1565c0", "#1565c0"]
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=values,
+        y=labels,
+        orientation="h",
+        marker=dict(color=colors),
+        text=[f"~{v:.0f}%" if v != 17.5 else "~15–20%" for v in values],
+        textposition="outside",
+        hovertemplate="%{y}<br>%{x:.1f}%<extra></extra>",
+        showlegend=False,
+    ))
+
+    fig.update_layout(
+        height=200,
+        showlegend=False,
+        paper_bgcolor="#ffffff",
+        plot_bgcolor="#fafafa",
+        margin=dict(l=220, r=60, t=8, b=32),
+        font=dict(family=_FONT_STACK),
+        xaxis=dict(
+            title="Payment increase (%)",
+            title_font=dict(size=11),
+            showgrid=True, gridcolor="#ebebeb", zeroline=False,
+            range=[0, 65],
+            ticksuffix="%",
+        ),
+        yaxis=dict(
+            showgrid=False, zeroline=False,
+            automargin=True,
+        ),
+    )
+
+    plotly_frag = fig.to_html(
+        full_html=False,
+        include_plotlyjs="cdn" if include_plotlyjs else False,
+        div_id=div_id,
+        config={"displayModeBar": False},
+    )
+
+    title_html = _title_block_html(chart.title, "%", div_id)
+    footnote_html = (
+        '<div class="chart-footnote">' + chart.footnote + '</div>'
+        if chart.footnote else ""
+    )
+    return (
+        '<div class="chart-panel">'
+        '<div class="chart-header">' + title_html + '</div>'
+        + plotly_frag
+        + footnote_html
+        + '</div>\n'
+    )
+
+
 def _build_stackedbar_panel(chart: "StackedBarSpec", data: dict,
                             chart_idx: int, include_plotlyjs: bool) -> str:
     div_id = "chart-" + str(chart_idx)
@@ -2263,6 +2361,8 @@ NAV = [
     ("Labour Market",        "labour.html"),
     ("Housing",              "housing.html"),
     ("Financial Conditions", "financial.html"),
+    ("Trade",                "trade.html"),
+    ("Demographics",         "demographics.html"),
 ]
 
 
@@ -2352,9 +2452,619 @@ def _assemble_deep_dive_page(title: str, tagline: str, output_file: str,
     )
 
 
+# ── Native deep-dive chart builders ─────────────────────────────────────────
+#
+# These generate self-contained Plotly chart HTML for embedding in the
+# DEEP_DIVES scaffold pages. Unlike PAGES charts, they don't plug into the
+# JS range/transform infrastructure — they are static Plotly figures with
+# displayModeBar disabled. For phase-space charts (Beveridge curve) and charts
+# that live inside the _assemble_deep_dive_page layout, this is correct.
+#
+# Each builder accepts the project `data` dict and returns an HTML string
+# following the .chart-panel / .chart-header / .chart-title / plotly-div /
+# .chart-footnote structure so they inherit existing CSS styling.
+
+
+def _build_beveridge_curve_panel(data: dict, chart_idx: int,
+                                  include_plotlyjs: bool) -> str:
+    """Beveridge curve: vacancy rate (Y) vs unemployment rate (X), period-coloured.
+
+    Scatter-plots the 3M moving averages for both series to denoise the NSA
+    vacancy data. Period colouring shows the structural shift (pre-pandemic
+    curve vs post-COVID outward shift). Does NOT use the range/transform
+    button infrastructure — this is a phase-space chart with no time axis."""
+    div_id = "chart-" + str(chart_idx)
+
+    u_df = data.get("unemployment_rate")
+    v_df = data.get("job_vacancy_rate")
+    if u_df is None or v_df is None:
+        return ""
+
+    u = u_df.sort_values("date").set_index("date")["value"]
+    v = v_df.sort_values("date").set_index("date")["value"]
+
+    df = pd.DataFrame({"u": u, "v": v}).dropna()
+    df["u_3m"] = df["u"].rolling(3, min_periods=2).mean()
+    df["v_3m"] = df["v"].rolling(3, min_periods=2).mean()
+    df = df.dropna()
+
+    def _period(d: pd.Timestamp) -> str:
+        if d < pd.Timestamp("2020-03-01"):
+            return "Pre-pandemic (2015–Feb 2020)"
+        if d < pd.Timestamp("2021-04-01"):
+            return "COVID shock (Mar 2020–Mar 2021)"
+        if d < pd.Timestamp("2023-01-01"):
+            return "Post-COVID overheat (Apr 2021–Dec 2022)"
+        if d < pd.Timestamp("2024-07-01"):
+            return "Cooling (Jan 2023–Jun 2024)"
+        return "Recent slack (Jul 2024–latest)"
+
+    df["period"] = df.index.map(_period)
+
+    period_order = [
+        "Pre-pandemic (2015–Feb 2020)",
+        "COVID shock (Mar 2020–Mar 2021)",
+        "Post-COVID overheat (Apr 2021–Dec 2022)",
+        "Cooling (Jan 2023–Jun 2024)",
+        "Recent slack (Jul 2024–latest)",
+    ]
+    period_colors = {
+        "Pre-pandemic (2015–Feb 2020)":            "#1565c0",
+        "COVID shock (Mar 2020–Mar 2021)":         "#7b1fa2",
+        "Post-COVID overheat (Apr 2021–Dec 2022)": "#c62828",
+        "Cooling (Jan 2023–Jun 2024)":             "#ef6c00",
+        "Recent slack (Jul 2024–latest)":          "#00897b",
+    }
+
+    fig = go.Figure()
+
+    # Background grey trajectory line (chronological order)
+    fig.add_trace(go.Scatter(
+        x=df["u_3m"], y=df["v_3m"],
+        mode="lines",
+        line=dict(color="rgba(150,150,150,0.45)", width=1.5),
+        showlegend=False,
+        hoverinfo="skip",
+    ))
+
+    for p in period_order:
+        sub = df[df["period"] == p]
+        if sub.empty:
+            continue
+        fig.add_trace(go.Scatter(
+            x=sub["u_3m"], y=sub["v_3m"],
+            mode="markers",
+            name=p,
+            marker=dict(size=7, color=period_colors[p],
+                        line=dict(width=0.5, color="white")),
+            text=[d.strftime("%b %Y") for d in sub.index],
+            hovertemplate="%{text}<br>U = %{x:.2f}%<br>V = %{y:.2f}%<extra>" + p + "</extra>",
+            showlegend=True,
+        ))
+
+    # Star marker for the most recent observation
+    last = df.iloc[-1]
+    last_label = df.index[-1].strftime("%b %Y")
+    fig.add_trace(go.Scatter(
+        x=[last["u_3m"]], y=[last["v_3m"]],
+        mode="markers+text",
+        marker=dict(size=12, color="black", symbol="star"),
+        text=[f" Latest ({last_label})"],
+        textposition="middle right",
+        textfont=dict(size=10, color="black"),
+        showlegend=False,
+        hoverinfo="skip",
+    ))
+
+    # 45° V = U reference line
+    line_max = max(df["u_3m"].max(), df["v_3m"].max()) * 1.05
+    fig.add_trace(go.Scatter(
+        x=[0, line_max], y=[0, line_max],
+        mode="lines",
+        line=dict(color="rgba(100,100,100,0.4)", width=1, dash="dot"),
+        name="V = U (rough V/U ≈ 1 reference)",
+        showlegend=True,
+        hoverinfo="skip",
+    ))
+
+    fig.update_layout(
+        height=340,
+        showlegend=True,
+        legend=dict(
+            yanchor="top", y=0.98,
+            xanchor="right", x=0.99,
+            bgcolor="rgba(255,255,255,0.85)",
+            font=dict(size=11),
+        ),
+        paper_bgcolor="#ffffff",
+        plot_bgcolor="#fafafa",
+        margin=dict(l=52, r=16, t=8, b=40),
+        font=dict(family=_FONT_STACK),
+        hovermode="closest",
+    )
+    fig.update_xaxes(
+        title_text="Unemployment rate (%, 3M MA)",
+        title_font=dict(size=11),
+        showgrid=True, gridcolor="#ebebeb", zeroline=False,
+    )
+    fig.update_yaxes(
+        title_text="Vacancy rate (%, 3M MA)",
+        title_font=dict(size=11),
+        showgrid=True, gridcolor="#ebebeb", zeroline=False,
+    )
+
+    plotly_frag = fig.to_html(
+        full_html=False,
+        include_plotlyjs="cdn" if include_plotlyjs else False,
+        div_id=div_id,
+        config={"displayModeBar": False},
+    )
+
+    title_html = (
+        '<div class="chart-title-block">'
+        '<div class="chart-title">Beveridge Curve</div>'
+        '<div class="chart-subtitle">Vacancy rate vs Unemployment rate</div>'
+        '</div>'
+    )
+    footnote = (
+        "Vacancy rate: StatsCan Table 14-10-0371 (monthly NSA), 3M MA. "
+        "Unemployment rate: StatsCan Table 14-10-0287 (monthly SA), 3M MA. "
+        "Vacancy data begins April 2015. "
+        "Post-COVID outward shift reflects reduced matching efficiency — "
+        "likely structural (immigration-driven labour-force composition, skill mismatch)."
+    )
+
+    return (
+        '<div class="chart-panel">'
+        '<div class="chart-header">' + title_html + '</div>'
+        + plotly_frag
+        + '<div class="chart-footnote">' + footnote + '</div>'
+        + '</div>\n'
+    )
+
+
+def _build_gdp_potential_panel(data: dict, chart_idx: int,
+                                include_plotlyjs: bool) -> str:
+    """Actual vs HP-filter potential GDP. Level only (C$ trillions). 10Y default window."""
+    div_id = "chart-" + str(chart_idx)
+
+    gdp_df = data.get("gdp_monthly")
+    if gdp_df is None or gdp_df.empty:
+        return ""
+
+    gdp = gdp_df.sort_values("date").set_index("date")["value"].dropna()
+    trend = _hp_filter(gdp, lamb=129600)
+
+    today = pd.Timestamp.now().normalize()
+    x_start = (today - pd.DateOffset(years=10)).strftime("%Y-%m-%d")
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=gdp.index.strftime("%Y-%m-%d").tolist(),
+        y=gdp.values.tolist(),
+        name="Real GDP",
+        line=dict(color="#1565c0", width=2),
+        hovertemplate="%{x|%b %Y}<br>%{y:.3f} C$ T<extra>Real GDP</extra>",
+        showlegend=False,
+    ))
+    fig.add_trace(go.Scatter(
+        x=trend.index.strftime("%Y-%m-%d").tolist(),
+        y=trend.values.tolist(),
+        name="Potential GDP (HP)",
+        line=dict(color="#546e7a", width=1.5, dash="dash"),
+        hovertemplate="%{x|%b %Y}<br>%{y:.3f} C$ T<extra>Potential (HP)</extra>",
+        showlegend=False,
+    ))
+
+    # Compute y-axis range for the 10Y window
+    cutoff = today - pd.DateOffset(years=10)
+    mask = gdp.index >= cutoff
+    combined_10y = pd.concat([gdp[mask], trend[mask]])
+    if not combined_10y.empty:
+        ymin_10y = float(combined_10y.min())
+        ymax_10y = float(combined_10y.max())
+        pad = max((ymax_10y - ymin_10y) * 0.08, 0.01)
+        dtick = _nice_dtick(ymin_10y - pad, ymax_10y + pad)
+        tickfmt = _dtick_format(dtick)
+    else:
+        dtick, tickfmt = 0.1, ".1f"
+
+    fig.update_layout(
+        height=_CHART_HEIGHT,
+        showlegend=False,
+        paper_bgcolor="#ffffff",
+        plot_bgcolor="#fafafa",
+        margin=_CHART_MARGINS,
+        font=dict(family=_FONT_STACK),
+        xaxis=dict(range=[x_start, today.strftime("%Y-%m-%d")],
+                   showgrid=False, zeroline=False),
+        yaxis=dict(showgrid=True, gridcolor="#ebebeb", zeroline=False,
+                   tick0=0, dtick=dtick, tickformat=tickfmt),
+    )
+
+    plotly_frag = fig.to_html(
+        full_html=False,
+        include_plotlyjs="cdn" if include_plotlyjs else False,
+        div_id=div_id,
+        config={"displayModeBar": False},
+    )
+
+    # Unit label top-left (style guide §2)
+    unit_annotation = (
+        '<div style="position:relative;">'
+        '<span style="position:absolute;top:6px;left:52px;'
+        'font-size:0.72rem;color:#888;z-index:1;pointer-events:none;">'
+        'C$ trillions</span>'
+        + plotly_frag +
+        '</div>'
+    )
+
+    title_html = (
+        '<div class="chart-title-block">'
+        '<div class="chart-title">Real GDP vs Potential GDP (HP Filter)</div>'
+        '</div>'
+    )
+
+    # Legend swatches
+    def _swatch(color, dash=False):
+        border = "border-top: 2px dashed " + color + ";" if dash else "background:" + color + ";"
+        return (
+            '<span style="display:inline-block;width:22px;height:' +
+            ("0" if dash else "2.5px") + ';' + border +
+            'vertical-align:middle;margin-right:5px"></span>'
+        )
+
+    legend_html = (
+        '<div class="chart-legend">'
+        '<span class="legend-item active" style="cursor:default;">'
+        + _swatch("#1565c0") + 'Real GDP</span>'
+        '<span class="legend-item active" style="cursor:default;">'
+        + _swatch("#546e7a", dash=True) + 'Potential GDP (HP)</span>'
+        '</div>'
+    )
+
+    footnote = (
+        "Potential GDP estimated via HP filter (λ=129,600). "
+        "HP filter is trend-only — it does not incorporate BoC’s structural model estimates."
+    )
+
+    return (
+        '<div class="chart-panel">'
+        '<div class="chart-header">' + title_html + '</div>'
+        + unit_annotation
+        + legend_html
+        + '<div class="chart-footnote">' + footnote + '</div>'
+        + '</div>\n'
+    )
+
+
+def _build_output_gap_panel(data: dict, chart_idx: int,
+                             include_plotlyjs: bool) -> str:
+    """Output gap = (actual GDP / potential GDP - 1) × 100. HP filter estimate. 10Y default."""
+    div_id = "chart-" + str(chart_idx)
+
+    gdp_df = data.get("gdp_monthly")
+    if gdp_df is None or gdp_df.empty:
+        return ""
+
+    gdp = gdp_df.sort_values("date").set_index("date")["value"].dropna()
+    trend = _hp_filter(gdp, lamb=129600)
+    gap = (gdp / trend - 1.0) * 100.0
+
+    today = pd.Timestamp.now().normalize()
+    x_start = (today - pd.DateOffset(years=10)).strftime("%Y-%m-%d")
+
+    fig = go.Figure()
+
+    # Zero reference line
+    fig.add_hline(y=0, line_color="#999", line_width=1, line_dash="dot")
+
+    fig.add_trace(go.Scatter(
+        x=gap.index.strftime("%Y-%m-%d").tolist(),
+        y=gap.values.tolist(),
+        name="Output Gap (HP)",
+        line=dict(color="#1565c0", width=2),
+        hovertemplate="%{x|%b %Y}<br>%{y:.2f}%<extra>Output Gap (HP)</extra>",
+        showlegend=False,
+    ))
+
+    cutoff = today - pd.DateOffset(years=10)
+    gap_10y = gap[gap.index >= cutoff]
+    if not gap_10y.empty:
+        ymin_10y = float(gap_10y.min())
+        ymax_10y = float(gap_10y.max())
+        pad = max((ymax_10y - ymin_10y) * 0.08, 0.1)
+        dtick = _nice_dtick(ymin_10y - pad, ymax_10y + pad)
+        tickfmt = _dtick_format(dtick)
+    else:
+        dtick, tickfmt = 1.0, ".0f"
+
+    fig.update_layout(
+        height=_CHART_HEIGHT,
+        showlegend=False,
+        paper_bgcolor="#ffffff",
+        plot_bgcolor="#fafafa",
+        margin=_CHART_MARGINS,
+        font=dict(family=_FONT_STACK),
+        xaxis=dict(range=[x_start, today.strftime("%Y-%m-%d")],
+                   showgrid=False, zeroline=False),
+        yaxis=dict(showgrid=True, gridcolor="#ebebeb", zeroline=False,
+                   tick0=0, dtick=dtick, tickformat=tickfmt),
+    )
+
+    plotly_frag = fig.to_html(
+        full_html=False,
+        include_plotlyjs="cdn" if include_plotlyjs else False,
+        div_id=div_id,
+        config={"displayModeBar": False},
+    )
+
+    unit_annotation = (
+        '<div style="position:relative;">'
+        '<span style="position:absolute;top:6px;left:52px;'
+        'font-size:0.72rem;color:#888;z-index:1;pointer-events:none;">'
+        '%</span>'
+        + plotly_frag +
+        '</div>'
+    )
+
+    title_html = (
+        '<div class="chart-title-block">'
+        '<div class="chart-title">Output Gap — HP Filter Estimate</div>'
+        '</div>'
+    )
+
+    footnote = (
+        "HP-filter-based estimate only. "
+        "BoC publishes its own output gap estimates quarterly in MPR Appendix; "
+        "this is a mechanical approximation."
+    )
+
+    return (
+        '<div class="chart-panel">'
+        '<div class="chart-header">' + title_html + '</div>'
+        + unit_annotation
+        + '<div class="chart-footnote">' + footnote + '</div>'
+        + '</div>\n'
+    )
+
+
+def _build_core_inflation_individual_panel(data: dict, chart_idx: int,
+                                            include_plotlyjs: bool) -> str:
+    """Five individual core measure lines (CPI-trim, -median, -common, CPIX, CPIXFET).
+    Static deep-dive chart; no range/transform buttons. 10Y window baked into x-axis."""
+    div_id = "chart-" + str(chart_idx)
+
+    series_cfg = [
+        ("cpi_trim",    "CPI-trim",    "#1565c0", True),
+        ("cpi_median",  "CPI-median",  "#546e7a", False),
+        ("cpi_common",  "CPI-common",  "#78909c", False),
+        ("cpix",        "CPIX",        "#ef6c00", False),
+        ("cpixfet",     "CPIXFET",     "#00897b", False),
+    ]
+
+    today = pd.Timestamp.now().normalize()
+    cutoff = today - pd.DateOffset(years=10)
+    x_start = cutoff.strftime("%Y-%m-%d")
+
+    fig = go.Figure()
+    fig.add_hline(y=2, line_color="#555", line_width=1, line_dash="dot")
+
+    all_vals_10y = []
+    for key, label, color, visible in series_cfg:
+        df = data.get(key)
+        if df is None or df.empty:
+            continue
+        s = df.sort_values("date").set_index("date")["value"].dropna()
+        fig.add_trace(go.Scatter(
+            x=s.index.strftime("%Y-%m-%d").tolist(),
+            y=s.values.tolist(),
+            name=label,
+            visible=True if visible else "legendonly",
+            line=dict(color=color, width=2),
+            hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>" + label + "</extra>",
+            showlegend=False,
+        ))
+        vals_10y = s[s.index >= cutoff]
+        if not vals_10y.empty:
+            all_vals_10y.extend(vals_10y.values.tolist())
+
+    if all_vals_10y:
+        ymin_10y = min(all_vals_10y)
+        ymax_10y = max(all_vals_10y)
+        pad = max((ymax_10y - ymin_10y) * 0.08, 0.1)
+        dtick = _nice_dtick(ymin_10y - pad, ymax_10y + pad)
+        tickfmt = _dtick_format(dtick)
+    else:
+        dtick, tickfmt = 1.0, ".0f"
+
+    fig.update_layout(
+        height=_CHART_HEIGHT, showlegend=False,
+        paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
+        margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
+        xaxis=dict(range=[x_start, today.strftime("%Y-%m-%d")],
+                   showgrid=False, zeroline=False),
+        yaxis=dict(showgrid=True, gridcolor="#ebebeb", zeroline=False,
+                   tick0=0, dtick=dtick, tickformat=tickfmt),
+    )
+
+    plotly_frag = fig.to_html(
+        full_html=False,
+        include_plotlyjs="cdn" if include_plotlyjs else False,
+        div_id=div_id,
+        config={"displayModeBar": False},
+    )
+
+    unit_annotation = (
+        '<div style="position:relative;">'
+        '<span style="position:absolute;top:6px;left:52px;'
+        'font-size:0.72rem;color:#888;z-index:1;pointer-events:none;">'
+        '%</span>'
+        + plotly_frag +
+        '</div>'
+    )
+
+    title_html = (
+        '<div class="chart-title-block">'
+        '<div class="chart-title">Core Inflation — Individual Measures</div>'
+        '</div>'
+    )
+
+    def _swatch_line(color: str) -> str:
+        return (
+            '<span style="display:inline-block;width:22px;height:2.5px;'
+            'background:' + color + ';border-radius:1px;vertical-align:middle;'
+            'margin-right:5px"></span>'
+        )
+
+    legend_html = (
+        '<div class="chart-legend">'
+        + ''.join(
+            '<span class="legend-item' + (' active' if visible else '') + '" style="cursor:default;">'
+            + _swatch_line(color) + label + '</span>'
+            for _, label, color, visible in series_cfg
+        )
+        + '</div>'
+    )
+
+    footnote = (
+        "CPI-trim and CPI-median are BoC staff measures published monthly. "
+        "CPI-common is estimated via common-component extraction and is the smoothest of the three; "
+        "it tends to lag turning points relative to trim and median. "
+        "CPIX (ex-8 volatile + indirect taxes) and CPIXFET (ex-food, energy, indirect taxes) "
+        "are older BoC measures, superseded by the current preferred trio but still published for continuity."
+    )
+
+    return (
+        '<div class="chart-panel">'
+        '<div class="chart-header">' + title_html + '</div>'
+        + unit_annotation
+        + legend_html
+        + '<div class="chart-footnote">' + footnote + '</div>'
+        + '</div>\n'
+    )
+
+
+def _build_wcs_wti_panel(data: dict, chart_idx: int,
+                          include_plotlyjs: bool) -> str:
+    """WCS-WTI differential (USD/barrel): WTI monthly mean minus WCS.
+    Static deep-dive chart; no range/transform buttons. 10Y window baked in.
+    Reference bands: $10–15 (normal), dashed line at $20 (pipeline-constrained)."""
+    div_id = "chart-" + str(chart_idx)
+
+    wcs_df = data.get("wcs")
+    wti_df = data.get("wti")
+    if wcs_df is None or wcs_df.empty or wti_df is None or wti_df.empty:
+        return ""
+
+    # Resample WTI (daily) to monthly mean, then subtract WCS
+    wti = wti_df.sort_values("date").set_index("date")["value"].dropna()
+    wti_monthly = wti.resample("MS").mean()  # month-start frequency
+    wcs = wcs_df.sort_values("date").set_index("date")["value"].dropna()
+    wcs.index = wcs.index.to_period("M").to_timestamp()  # normalise to month-start
+
+    combined = pd.DataFrame({"wti": wti_monthly, "wcs": wcs}).dropna()
+    diff = combined["wti"] - combined["wcs"]
+
+    today = pd.Timestamp.now().normalize()
+    cutoff = today - pd.DateOffset(years=10)
+    x_start = cutoff.strftime("%Y-%m-%d")
+
+    fig = go.Figure()
+
+    # Normal range band: $10–15
+    fig.add_hrect(
+        y0=10, y1=15,
+        fillcolor="rgba(180,180,180,0.35)", line_width=0,
+        annotation_text="Normal range", annotation_position="top left",
+        annotation_font=dict(size=10, color="#666"),
+    )
+
+    # Pipeline-constrained reference line at $20
+    fig.add_hline(
+        y=20, line_color="#c62828", line_width=1.5, line_dash="dash",
+        annotation_text="Pipeline-constrained (~$20+)", annotation_position="top right",
+        annotation_font=dict(size=10, color="#c62828"),
+    )
+
+    fig.add_trace(go.Scatter(
+        x=diff.index.strftime("%Y-%m-%d").tolist(),
+        y=diff.values.tolist(),
+        name="WTI − WCS",
+        line=dict(color="#1565c0", width=2),
+        hovertemplate="%{x|%b %Y}<br>$%{y:.2f}/bbl<extra>WTI − WCS</extra>",
+        showlegend=False,
+    ))
+
+    diff_10y = diff[diff.index >= cutoff]
+    if not diff_10y.empty:
+        ymin_10y = float(diff_10y.min())
+        ymax_10y = float(diff_10y.max())
+        pad = max((ymax_10y - ymin_10y) * 0.08, 0.5)
+        dtick = _nice_dtick(max(ymin_10y - pad, 0), ymax_10y + pad)
+        tickfmt = _dtick_format(dtick)
+        y_floor = max(0.0, ymin_10y - pad)
+        y_ceil = ymax_10y + pad
+    else:
+        dtick, tickfmt = 5.0, ".0f"
+        y_floor, y_ceil = 0, 40
+
+    fig.update_layout(
+        height=_CHART_HEIGHT, showlegend=False,
+        paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
+        margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
+        xaxis=dict(range=[x_start, today.strftime("%Y-%m-%d")],
+                   showgrid=False, zeroline=False),
+        yaxis=dict(showgrid=True, gridcolor="#ebebeb", zeroline=False,
+                   tick0=0, dtick=dtick, tickformat=tickfmt,
+                   range=[y_floor, y_ceil]),
+    )
+
+    plotly_frag = fig.to_html(
+        full_html=False,
+        include_plotlyjs="cdn" if include_plotlyjs else False,
+        div_id=div_id,
+        config={"displayModeBar": False},
+    )
+
+    unit_annotation = (
+        '<div style="position:relative;">'
+        '<span style="position:absolute;top:6px;left:52px;'
+        'font-size:0.72rem;color:#888;z-index:1;pointer-events:none;">'
+        'USD/barrel</span>'
+        + plotly_frag +
+        '</div>'
+    )
+
+    title_html = (
+        '<div class="chart-title-block">'
+        '<div class="chart-title">WTI − WCS Differential</div>'
+        '</div>'
+    )
+
+    footnote = (
+        "WTI monthly mean (Alberta Economic Dashboard) minus WCS monthly (CAPP/Alberta). "
+        "Normal range ($10–15/bbl) reflects pre-2018 average differential before pipeline constraints. "
+        "Differentials above $20 historically coincide with pipeline take-away binding; "
+        "Trans Mountain Expansion (TMX) opening in May 2024 added ~590,000 bbl/d capacity and "
+        "materially compressed the spread. Alberta royalties scale with realized WCS price."
+    )
+
+    return (
+        '<div class="chart-panel">'
+        '<div class="chart-header">' + title_html + '</div>'
+        + unit_annotation
+        + '<div class="chart-footnote">' + footnote + '</div>'
+        + '</div>\n'
+    )
+
+
 # Per-section deep-dive specs. Each entry is a dict with title, tagline,
 # output_file, intro, and body_html. Body_html is composed at module load time
 # from _dd_section / _dd_iframe_section helpers so the structure stays uniform.
+# Entries with a `body_fn` key instead of `body` receive the project `data` dict
+# at build time and return the body HTML dynamically (used for native charts).
 
 DEEP_DIVES = [
     {
@@ -2366,8 +3076,16 @@ DEEP_DIVES = [
             "component-level drivers, persistence diagnostics, and cleaner versions of metrics that matter "
             "for distinguishing transitory from sticky inflation."
         ),
-        "body": (
-            _dd_section(
+        "body_fn": lambda data: (
+            '<div class="dd-section">'
+            '<h2>Core Inflation — Individual Measures'
+            '<span class="dd-tag dd-tag-real">live</span></h2>'
+            '<p>Five BoC core measures on individual lines. CPI-trim is the primary read; '
+            'toggle others to see where measures agree or diverge at turning points. '
+            'CPI-common is the smoothest measure and tends to lag trim and median at inflection points.</p>'
+            + _build_core_inflation_individual_panel(data, 0, include_plotlyjs=True)
+            + '</div>\n'
+            + _dd_section(
                 "Headline + ex-indirect-taxes overlay",
                 "Strips out tax-policy effects (carbon tax changes, GST/HST shifts).",
                 "[Coming soon] Headline CPI Y/Y next to a CPI ex-indirect-taxes series. The carbon-tax repeal in early 2025 carved roughly 0.6 pp out of headline; this overlay shows the underlying inflation impulse independent of policy moves.",
@@ -2381,11 +3099,6 @@ DEEP_DIVES = [
                 "Persistence and breadth detail",
                 "Beyond the four-state breadth typology — distributional view.",
                 "[Coming soon] Histogram of component Y/Y by month. Width and skew change in different cyclical phases. Pre-COVID typical cluster was 1-2.5%; 2022 distribution had a tail extending past 10%.",
-            )
-            + _dd_section(
-                "Median, trim, and CPI-common time series",
-                "Each core measure plotted with its own band, not just collapsed into a range.",
-                "[Coming soon] Individual core measures with their historical relationship. CPI-common is the smoothest; trim and median can disagree at turning points.",
             )
             + _dd_section(
                 "Inflation-expectations decomposition",
@@ -2402,8 +3115,10 @@ DEEP_DIVES = [
             "The overview tracks growth vs potential. The deep-dive opens up the underlying productivity story, "
             "the BoC's output-gap range, and the capacity-utilization data that feeds the slack assessment."
         ),
-        "body": (
-            _dd_section(
+        "body_fn": lambda data: (
+            _build_gdp_potential_panel(data, 0, include_plotlyjs=True)
+            + _build_output_gap_panel(data, 1, include_plotlyjs=False)
+            + _dd_section(
                 "Output gap (live BoC range)",
                 "BoC's quarterly published gap estimate from Indicators of Capacity and Inflation Pressures.",
                 "[Coming soon] BoC publishes a range each MPR (currently roughly -1.5% to -0.5%). This is the operative slack measure, more directly relevant to monetary policy than GDP growth alone. Multiple methodologies (HP filter, Hamilton filter, EMVF, Integrated Framework); the range captures uncertainty.",
@@ -2440,12 +3155,15 @@ DEEP_DIVES = [
             "or refute those reads, plus demographic and regional detail the overview can't show. "
             "The Beveridge curve is the structural-shift visual; everything else is scaffolding for now."
         ),
-        "body": (
-            _dd_iframe_section(
-                "Beveridge curve (Canada, 2015 onwards)",
-                "Vacancy rate vs unemployment rate, both 3M MA, period-coloured. The post-COVID outward shift is the structural-matching-efficiency story the overview's V/U-bands caveat references.",
-                "analyses/beveridge_curve_canada.html",
-            )
+        "body_fn": lambda data: (
+            '<div class="dd-section">'
+            '<h2>Beveridge Curve (Canada, 2015–present)'
+            '<span class="dd-tag dd-tag-real">live</span></h2>'
+            '<p>Vacancy rate vs unemployment rate, both 3M MA, period-coloured. '
+            'The post-COVID outward shift is the structural-matching-efficiency story '
+            "the overview's V/U-bands caveat references.</p>"
+            + _build_beveridge_curve_panel(data, 0, include_plotlyjs=True)
+            + '</div>\n'
             + _dd_section(
                 "LFS reason for unemployment",
                 "Job-loser share, the direct layoff signal.",
@@ -2497,7 +3215,7 @@ DEEP_DIVES = [
             "up the multilateral CAD picture (CEER), credit spreads, equity-market signals, and the FX-risk-premium "
             "decomposition the BoC has been emphasising in recent MPRs."
         ),
-        "body": (
+        "body_fn": lambda data: (
             _dd_section(
                 "CEER (multilateral CAD index)",
                 "BoC trade-weighted CAD index — the relevant FX measure for CPI pass-through.",
@@ -2523,10 +3241,85 @@ DEEP_DIVES = [
                 "Export prices vs import prices.",
                 "[Coming soon] Terms of trade (export price index ÷ import price index) is a real-income signal partially distinct from FX. Improving terms of trade = real-income transfer to Canada from rest of world; deteriorating = transfer out.",
             )
+            + '<div class="dd-section">'
+            '<h2>WTI − WCS Differential'
+            '<span class="dd-tag dd-tag-real">live</span></h2>'
+            '<p>Monthly WTI (Alberta Economic Dashboard) minus WCS (CAPP/Alberta). '
+            'Pipeline take-away capacity is the dominant driver; the TMX opening in May 2024 '
+            'materially compressed the spread from the 2018–2023 elevated range.</p>'
+            + _build_wcs_wti_panel(data, 0, include_plotlyjs=False)
+            + '</div>\n'
+        ),
+    },
+    {
+        "title": "Trade & External Sector — Deep Dive",
+        "tagline": "Canada's trade exposure, bilateral flows, and terms-of-trade conditions",
+        "output_file": "trade.html",
+        "intro": (
+            "What is Canada's trade exposure — by commodity, sector, and bilaterally to the US — and what do "
+            "terms-of-trade and tariff-shock indicators say about current risk?"
+        ),
+        "body": (
+            _dd_section(
+                "Goods Exports by Category",
+                "Breakdown of merchandise exports by commodity category.",
+                "[Coming soon] StatsCan Table 12-10-0011 — goods exports by category (energy, autos, agricultural, industrial goods, etc.). Concentration in energy and automotive is the structural vulnerability; the tariff-shock exposure differs materially by category.",
+            )
             + _dd_section(
-                "WCS-WTI differential context",
-                "Pipeline takeaway, Alberta fiscal exposure.",
-                "[Coming soon] Detailed pipeline-capacity context: TMX impact, projected re-tightening (CAPP estimates Q3 2028 capacity reconstraint absent new infrastructure). Alberta royalties scale with realized WCS, not WTI; provincial fiscal position swings materially with the spread.",
+                "Canada–US Bilateral Trade Balance",
+                "Monthly goods trade balance with the United States.",
+                "[Coming soon] StatsCan Table 12-10-0011 — Canada-US bilateral goods exports and imports. The US accounts for roughly three-quarters of Canadian goods exports; bilateral balance shifts are the primary channel for tariff-shock transmission.",
+            )
+            + _dd_section(
+                "Goods Exports Excluding Gold",
+                "Export volumes stripped of gold-flow distortions.",
+                "[Coming soon] Non-monetary gold shipments can swing the headline export figure by several billion dollars in a single month without reflecting underlying trade conditions. Excluding gold gives a cleaner read on real export momentum.",
+            )
+            + _dd_section(
+                "Terms of Trade",
+                "Export price index relative to import price index.",
+                "[Coming soon] Terms of trade (export price index ÷ import price index) is a real-income signal partially distinct from FX. Improving terms of trade = real-income transfer to Canada from rest of world; deteriorating = transfer out. Commodity-price cycles are the dominant driver for Canada.",
+            )
+            + _dd_section(
+                "Export Shares by Partner",
+                "Geographic concentration of Canadian goods exports.",
+                "[Coming soon] US share of Canadian exports has exceeded 75% in recent years; EU, UK, China, and other Asian markets make up most of the remainder. Partner-concentration risk is central to the tariff-shock narrative; any trade-diversion story needs the baseline share picture.",
+            )
+        ),
+    },
+    {
+        "title": "Demographics & Labour Supply — Deep Dive",
+        "tagline": "Population dynamics, immigration, and the structural capacity constraints monetary policy cannot resolve",
+        "output_file": "demographics.html",
+        "intro": (
+            "What does Canada's population and age structure say about the labour-supply trajectory and "
+            "structural capacity constraints?"
+        ),
+        "body": (
+            _dd_section(
+                "Population Growth by Component",
+                "Natural increase, international migration, and interprovincial flows.",
+                "[Coming soon] StatsCan Table 17-10-0008 — quarterly population estimates by component of growth. Natural increase (births minus deaths) has been declining for decades; international migration has become the dominant driver. The pace and composition of that shift matters for labour-supply forecasts.",
+            )
+            + _dd_section(
+                "Net International Migration (Permanent + Temporary)",
+                "Annual flows of permanent residents and net temporary residents.",
+                "[Coming soon] StatsCan Table 17-10-0008 / IRCC — permanent resident admissions plus net change in temporary residents (international students, TFWs, etc.). The 2022-2024 surge in temporary residents drove much of the labour-force growth; the policy reversal in late 2024 is the structural inflection.",
+            )
+            + _dd_section(
+                "Working-Age Population and Dependency Ratio",
+                "15-64 population share; old-age dependency ratio.",
+                "[Coming soon] StatsCan Table 17-10-0005 — population by age group. The working-age share has been declining since the mid-2000s as Boomers age out; dependency ratio is rising. Dependency ratio directly constrains trend growth in labour input, which feeds potential output.",
+            )
+            + _dd_section(
+                "Labour Force by Age Group",
+                "Participation and employment rates for youth, prime-age, and older workers.",
+                "[Coming soon] StatsCan LFS Table 14-10-0287 by age group. Prime-age (25-54) participation is near its ceiling; youth (15-24) unemployment is highly cyclical; older-worker (55+) participation has trended up. Age-group composition shifts can move the headline rate without any change in underlying conditions.",
+            )
+            + _dd_section(
+                "Population Projections vs Actual",
+                "StatsCan medium-growth scenario vs realised population.",
+                "[Coming soon] StatsCan Table 17-10-0057 — medium-growth projection scenario vs. actual realised population. Projections have repeatedly underestimated actual inflows; tracking the gap is informative for capacity-constraint assessments.",
             )
         ),
     },
@@ -2938,6 +3731,7 @@ PAGES = [
             1: "housing_dd_mortgage",
             2: "housing_dd_pipeline",
             4: "housing_dd_affordability",
+            5: "housing_dd_renewal",
         },
         charts=[
             MultiLineSpec(
@@ -3008,6 +3802,10 @@ PAGES = [
                 date_fmt="%b %Y",
                 unit_label="thousands SAAR",
                 footnote="CMHC housing starts, Canada total, SAAR (thousands). CMHC's June 2025 Housing Supply Report targets 430,000–480,000 starts per year through 2035 to restore affordability (4.8M units needed). Current pace of ~235k is roughly half the target. Long-run average since 1977: ~194k.",
+            ),
+            MortgageShockSpec(
+                title="Mortgage Renewal Payment Shock",
+                footnote="BoC SAN 2025-21 (May 2025). ~15–20% of 5-year fixed holders face payment increases above 20% at renewal. Variable-rate fixed-payment holders already absorbed rate increases through extended amortization; the 54% figure is the share facing a contractual reset. Median payment increase of ~34% applies to mortgages originated 2020–2022 renewing through 2027.",
             ),
         ],
     ),
@@ -3222,6 +4020,8 @@ def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
             panels.append(_build_multiline_panel(chart, data, i, i == 0))
         elif isinstance(chart, StackedBarSpec):
             panels.append(_build_stackedbar_panel(chart, data, i, i == 0))
+        elif isinstance(chart, MortgageShockSpec):
+            panels.append(_build_mortgage_shock_panel(chart, i, i == 0))
         else:
             df = data[chart.series]
             panels.append(_chart_panel_html(chart, df, i, include_plotlyjs=(i == 0), data=data))
@@ -3273,6 +4073,8 @@ def main():
                         all_series.update(_DERIVED_SERIES_SOURCES[line.series])
                     else:
                         print(f"  Warning: {line.series}.csv missing — run fetch.py. Line will be skipped.")
+            elif isinstance(chart, MortgageShockSpec):
+                pass  # hardcoded data — no CSV needed
             else:
                 # ChartSpec: series may be raw (CSV exists) or derived.
                 if (DATA_DIR / f"{chart.series}.csv").exists():
@@ -3309,12 +4111,18 @@ def main():
     print("Building deep-dive scaffolding...")
     last_updated = datetime.now(timezone.utc).strftime("%B %d, %Y at %H:%M UTC")
     for dd in DEEP_DIVES:
+        # body_fn(data) generates body HTML at build time (used for native charts);
+        # body is a pre-computed string (used for pure placeholder pages).
+        if "body_fn" in dd:
+            body_html = dd["body_fn"](data)
+        else:
+            body_html = dd["body"]
         html = _assemble_deep_dive_page(
             title=dd["title"],
             tagline=dd["tagline"],
             output_file=dd["output_file"],
             intro=dd["intro"],
-            body_html=dd["body"],
+            body_html=body_html,
             last_updated=last_updated,
         )
         with open(dd["output_file"], "w", encoding="utf-8") as f:
