@@ -91,6 +91,33 @@ STATSCAN_SERIES = {
     # Labour deep-dive additions
     "youth_unemployment_rate": 2062842,    # Table 14-10-0287-01: Unemployment rate, Total Gender, 15-24, SA
     "prime_age_unemployment_rate": 2062950, # Table 14-10-0287-01: Unemployment rate, Total Gender, 25-54, SA
+    # Labour force by age group — participation and employment rates (added May 2026)
+    # Note: unemployment rates for youth (2062842) and prime-age (2062950) already exist above.
+    # Note: prime-age employment rate V2062952 previously returned HTTP 409 from WDS (see comment above);
+    # included here to re-test — fetch failure will be reported and existing CSV (if any) preserved.
+    "lf_participation_prime": 2062951,  # Table 14-10-0287-01: Participation rate, 25-54, SA (%)
+    "lf_employment_prime":    2062952,  # Table 14-10-0287-01: Employment rate, 25-54, SA (%)
+    "lf_participation_youth": 2062843,  # Table 14-10-0287-01: Participation rate, 15-24, SA (%)
+    "lf_employment_youth":    2062844,  # Table 14-10-0287-01: Employment rate, 15-24, SA (%)
+    # Capacity utilization (quarterly, %; added May 2026)
+    "capacity_util_total":    4331081,  # Table 16-10-0359-01: Canada, Total industrial capacity utilization, SA (%)
+    "capacity_util_mfg":      4331088,  # Table 16-10-0359-01: Canada, Manufacturing capacity utilization, SA (%)
+    # EI regular beneficiaries (monthly, SA, persons; added May 2026)
+    "ei_regular_beneficiaries": 64549350,  # Table 14-10-0005-01: Canada, EI regular benefits recipients, SA
+    # Merchandise trade (monthly, SA, C$ millions; added May 2026)
+    "trade_exports_us":       87008898,  # Table 12-10-0119-01: Exports, Customs basis, SA, United States (C$ millions)
+    "trade_imports_us":       87008782,  # Table 12-10-0119-01: Imports, Customs basis, SA, United States (C$ millions)
+    "trade_balance_us":       87008985,  # Table 12-10-0119-01: Trade balance, BOP basis, SA, United States (C$ millions)
+    "trade_exports_total":    87008897,  # Table 12-10-0119-01: Exports, Customs basis, SA, All countries (C$ millions)
+    "trade_imports_total":    87008781,  # Table 12-10-0119-01: Imports, Customs basis, SA, All countries (C$ millions)
+    "trade_balance_total":    87008984,  # Table 12-10-0119-01: Trade balance, BOP basis, SA, All countries (C$ millions)
+    # Population components (quarterly, persons; added May 2026)
+    # Note: pop_total V1 was flagged as unusually small — excluded pending verification.
+    "pop_immigrants":       29850342,   # Table 17-10-0040-01: Canada, Immigrants
+    "pop_emigrants":        29850343,   # Table 17-10-0040-01: Canada, Emigrants
+    "pop_net_emigration": 1566834788,   # Table 17-10-0040-01: Canada, Net emigration
+    "pop_net_npr":          29850346,   # Table 17-10-0040-01: Canada, Net non-permanent residents
+    "pop_npr_inflows":    1566834758,   # Table 17-10-0040-01: Canada, NPR inflows
 }
 
 # Note: housing_starts units are thousands of SAAR units (e.g. 236 = 236,000 annualized starts)

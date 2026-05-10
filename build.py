@@ -62,6 +62,24 @@ SECTION_HEADINGS = {
     "housing_dd_pipeline":      "Construction Pipeline",
     "housing_dd_affordability": "Starts vs Supply Target",
     "housing_dd_renewal":       "Mortgage Renewal Shock",
+    # GDP deep-dive section headings
+    "gdp_dd_gap":          "Output Gap",
+    "gdp_dd_productivity": "Productivity",
+    "gdp_dd_capacity":     "Capacity Utilization",
+    "gdp_dd_hours":        "Hours Worked",
+    # Labour deep-dive section headings
+    "labour_dd_tightness":    "Labour Market Tightness",
+    "labour_dd_layoffs":      "Layoffs and Separations",
+    "labour_dd_r_indicators": "R-Indicators",
+    "labour_dd_ei":           "EI Recipients",
+    "labour_dd_demographics": "Demographic Decomposition",
+    "labour_dd_postings":     "Online Job Postings",
+    # Trade deep-dive section headings
+    "trade_dd_us":    "Canada–US Bilateral Trade",
+    "trade_dd_total": "Total Merchandise Trade",
+    # Demographics deep-dive section headings
+    "demographics_dd_migration": "International Migration",
+    "demographics_dd_age":       "Labour Force by Age Group",
 }
 
 DATA_DIR = Path("data")
@@ -3746,13 +3764,12 @@ PAGES = [
             0: "labour_dd_tightness",
             1: "labour_dd_layoffs",
             2: "labour_dd_r_indicators",
-            4: "labour_dd_ei",
-            5: "labour_dd_demographics",
-            6: "labour_dd_postings",
+            3: "labour_dd_ei",
+            4: "labour_dd_demographics",
+            7: "labour_dd_postings",
         },
         charts=[
-            # Beveridge Curve (already has a builder, we'll wrap it or call it)
-            # For now, use the placeholder sections as defined in design doc
+            # Chart 0: Unemployment by Age — tightness section
             MultiLineSpec(
                 title="Unemployment by Age",
                 lines=[
@@ -3764,11 +3781,12 @@ PAGES = [
                 default_years=10,
                 footnote="StatsCan Table 14-10-0287, monthly SA. Youth unemployment is highly cyclical and has risen faster than prime-age during the 2024–2025 cooling. Tracking the gap identifies where slack is most acute.",
             ),
-            # Chart 2: Beveridge Curve — phase-space scatter, custom builder
+            # Chart 1: Beveridge Curve — phase-space scatter, custom builder
             NativeChartSpec(
                 builder=_build_beveridge_curve_panel,
                 data_keys=["unemployment_rate", "job_vacancy_rate"],
             ),
+            # Chart 2: LFS R-Indicators — r_indicators section (placeholder)
             MultiLineSpec(
                 title="LFS R-Indicators",
                 lines=[
@@ -3778,15 +3796,71 @@ PAGES = [
                 default_years=10,
                 footnote="[Coming soon] StatsCan Table 14-10-0074. R3 (official + waiting), R7 (+ marginally attached), R8 (+ involuntary part-time). Gap between R8 and R3 widens when underutilization grows on margins the headline rate misses.",
             ),
-            MultiLineSpec(
-                title="EI Claims vs Beneficiaries",
-                lines=[
-                    LineConfig("unemployment_rate", "Unemployment (ref)", "#90a4ae"),
-                ],
-                ticksuffix="",
-                default_years=5,
-                footnote="[Coming soon] StatsCan Table 14-10-0010 family. EI initial claims is the highest-frequency real-time labour signal. Beneficiaries lag claims by ~2 weeks.",
+            # Chart 3: EI Regular Beneficiaries — ei section
+            ChartSpec(
+                series="ei_regular_beneficiaries_k",
+                title="EI Regular Beneficiaries",
+                frequency="monthly",
+                color="#e65100",
+                default_transform="level",
+                default_years=10,
+                hover_decimals=0,
+                unit_label="thousands (persons)",
+                transform_unit_labels={
+                    "level": "thousands (persons)",
+                    "mom":   "%",
+                    "yoy":   "%",
+                },
+                footnote="Statistics Canada Table 14-10-0010, monthly SA. EI regular beneficiaries (persons receiving regular benefits). A high-frequency, real-time signal of labour demand deterioration — beneficiary counts rise 2–4 weeks after initial claims surge, providing an early read ahead of the LFS unemployment rate.",
             ),
+            # Chart 4: Prime-age labour market — demographics section
+            MultiLineSpec(
+                title="Prime-Age Labour Market (25–54)",
+                lines=[
+                    LineConfig("lf_participation_prime", "Participation rate", "#1565c0"),
+                    LineConfig("lf_employment_prime",    "Employment rate",    "#2e7d32"),
+                    LineConfig("prime_age_unemployment_rate", "Unemployment rate", "#c62828"),
+                ],
+                ticksuffix="%",
+                hoverformat=".1f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %Y",
+                unit_label="%",
+                footnote="Statistics Canada Table 14-10-0287, monthly SA. Prime-age (25–54) participation, employment, and unemployment rates. The prime-age cohort is the BoC's preferred measure of labour market slack — less sensitive to retirement and school-enrollment trends than the headline 15+ rates. Divergence between participation and employment rates signals discouraged-worker effects.",
+            ),
+            # Chart 5: Youth labour market
+            MultiLineSpec(
+                title="Youth Labour Market (15–24)",
+                lines=[
+                    LineConfig("lf_participation_youth", "Participation rate", "#1565c0"),
+                    LineConfig("lf_employment_youth",    "Employment rate",    "#2e7d32"),
+                    LineConfig("youth_unemployment_rate", "Unemployment rate", "#c62828"),
+                ],
+                ticksuffix="%",
+                hoverformat=".1f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %Y",
+                unit_label="%",
+                footnote="Statistics Canada Table 14-10-0287, monthly SA. Youth (15–24) participation, employment, and unemployment rates. Youth labour is more cyclically volatile and more exposed to structural shifts (gig work, education transitions). Youth unemployment running above 14% as of early 2026 signals demand weakness concentrated in this cohort.",
+            ),
+            # Chart 6: Overall participation and employment (aggregate complement)
+            MultiLineSpec(
+                title="Aggregate Participation and Employment",
+                lines=[
+                    LineConfig("participation_rate", "Participation rate (15+)", "#1565c0"),
+                    LineConfig("employment_rate",    "Employment rate (15+)",    "#2e7d32"),
+                ],
+                ticksuffix="%",
+                hoverformat=".1f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %Y",
+                unit_label="%",
+                footnote="Statistics Canada Table 14-10-0287, monthly SA. Total (15+) participation and employment rates. Provides aggregate context for the prime-age and youth cohort charts above. Post-pandemic participation recovery has stalled, partly reflecting population aging; employment rate decline since 2023 reflects demand-side weakness.",
+            ),
+            # Chart 7: Indeed Job Postings placeholder — postings section
             MultiLineSpec(
                 title="Indeed Job Postings Index",
                 lines=[
@@ -3804,10 +3878,9 @@ PAGES = [
         output_file="gdp.html",
         is_deep_dive=True,
         sections={
-            2: "gdp_dd_gap",
-            3: "gdp_dd_productivity",
-            4: "gdp_dd_capacity",
-            5: "gdp_dd_hours",
+            0: "gdp_dd_gap",
+            2: "gdp_dd_productivity",
+            3: "gdp_dd_capacity",
         },
         charts=[
             NativeChartSpec(
@@ -3822,6 +3895,21 @@ PAGES = [
                 title="Productivity Decomposition",
                 lines=[], # Placeholder
                 footnote="[Coming soon] Real GDP per hour worked. Canadian productivity has been structurally weak since 2015; trend divergence vs US is a key BoC concern.",
+            ),
+            MultiLineSpec(
+                title="Industrial Capacity Utilization",
+                lines=[
+                    LineConfig("capacity_util_total", "Total industry", "#1565c0"),
+                    LineConfig("capacity_util_mfg",   "Manufacturing",  "#c62828"),
+                ],
+                ticksuffix="%",
+                hoverformat=".1f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%Y",
+                unit_label="%",
+                footnote="Statistics Canada Table 16-10-0004: capacity utilization rates, quarterly, seasonally adjusted. Total industry and manufacturing sub-index. Values above the historical mean indicate demand outpacing productive capacity; below-average readings point to economic slack. The BoC treats capacity pressure as a leading indicator of core inflation.",
+                # TODO: gdp_dd_hours section placeholder — hours-worked series not yet fetched
             ),
         ],
     ),
@@ -3863,17 +3951,43 @@ PAGES = [
         tagline="Canada's trade exposure, bilateral flows, and terms-of-trade conditions",
         output_file="trade.html",
         is_deep_dive=True,
-        sections={},
+        sections={
+            0: "trade_dd_us",
+            1: "trade_dd_total",
+        },
         charts=[
+            # Chart 0: Canada–US bilateral trade — us section
             MultiLineSpec(
-                title="Goods Exports by Category",
-                lines=[],
-                footnote="[Coming soon] StatsCan Table 12-10-0011 — goods exports by category. Concentration in energy and automotive is the structural vulnerability.",
+                title="Canada–US Bilateral Trade",
+                lines=[
+                    LineConfig("trade_exports_us_b", "Exports to US",  "#1565c0"),
+                    LineConfig("trade_imports_us_b", "Imports from US", "#c62828"),
+                    LineConfig("trade_balance_us_b", "Trade balance",   "#2e7d32"),
+                ],
+                ticksuffix="",
+                hoverformat=".1f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %Y",
+                unit_label="C$ billions",
+                footnote="Statistics Canada Table 12-10-0121 (BoC Valet), monthly SA. Canada–US goods trade in C$ billions. Exports to the US represent approximately 75% of Canada's total goods exports; this bilateral channel is the primary transmission mechanism for US tariff shocks. A negative balance indicates a Canadian surplus (exports exceed imports) — Canada has historically run a goods surplus with the US.",
             ),
+            # Chart 1: Total merchandise trade — total section
             MultiLineSpec(
-                title="Canada–US Bilateral Trade Balance",
-                lines=[],
-                footnote="[Coming soon] Monthly goods trade balance with the United States. Primary channel for tariff-shock transmission.",
+                title="Total Merchandise Trade",
+                lines=[
+                    LineConfig("trade_exports_total_b", "Total exports",  "#1565c0"),
+                    LineConfig("trade_imports_total_b", "Total imports",  "#c62828"),
+                    LineConfig("trade_balance_total_b", "Trade balance",  "#2e7d32"),
+                ],
+                ticksuffix="",
+                hoverformat=".1f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %Y",
+                unit_label="C$ billions",
+                footnote="Statistics Canada Table 12-10-0121 (BoC Valet), monthly SA. Total Canadian goods exports and imports in C$ billions, all partner countries. The overall balance reflects terms-of-trade conditions, commodity cycle exposure, and CAD competitiveness effects.",
+                # TODO: goods exports by category (energy, automotive, ag, etc.) — not yet fetched; StatsCan Table 12-10-0011
             ),
         ],
     ),
@@ -3882,22 +3996,45 @@ PAGES = [
         tagline="Population dynamics, immigration, and structural capacity constraints",
         output_file="demographics.html",
         is_deep_dive=True,
-        sections={},
+        sections={
+            0: "demographics_dd_migration",
+            1: "demographics_dd_age",
+        },
         charts=[
+            # Chart 0: Population migration components — migration section
             MultiLineSpec(
-                title="Population Growth by Component",
-                lines=[],
-                footnote="[Coming soon] Natural increase vs international migration. Migration is now the dominant driver of labour-force growth.",
+                title="International Migration Components",
+                lines=[
+                    LineConfig("pop_immigrants",    "Immigrants",     "#1565c0"),
+                    LineConfig("pop_npr_inflows",   "NPR inflows",    "#e65100"),
+                    LineConfig("pop_emigrants",     "Emigrants",      "#c62828"),
+                    LineConfig("pop_net_emigration","Net emigration", "#7b1fa2"),
+                    LineConfig("pop_net_npr",       "Net NPR",        "#00897b"),
+                ],
+                ticksuffix="",
+                hoverformat=".0f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%Y",
+                unit_label="persons (quarterly)",
+                footnote="Statistics Canada Table 17-10-0040, quarterly SA. Quarterly population flows in persons. Immigrants and NPR (non-permanent residents) inflows are the dominant positive contributors to population growth; net NPR swung sharply negative in 2024–2025 as the government caps temporary resident levels. The BoC monitors these flows as a key input to potential labour supply and longer-run inflation pressure.",
+                # TODO: natural_increase quarterly — not available from StatsCan quarterly tables; annual only (17100008)
             ),
+            # Chart 1: Age-group unemployment — age section
             MultiLineSpec(
                 title="Labour Force by Age Group",
                 lines=[
-                    LineConfig("youth_unemployment_rate",     "Youth (15–24)",    "#c62828"),
-                    LineConfig("prime_age_unemployment_rate", "Prime-age (25–54)", "#1565c0"),
+                    LineConfig("youth_unemployment_rate",     "Youth unemployment (15–24)",     "#c62828"),
+                    LineConfig("prime_age_unemployment_rate", "Prime-age unemployment (25–54)", "#1565c0"),
                 ],
                 ticksuffix="%",
+                hoverformat=".1f",
                 default_years=10,
-                footnote="Age-group unemployment rates. Repeated here from the Labour deep-dive for demographic context.",
+                line_shape="linear",
+                date_fmt="%b %Y",
+                unit_label="%",
+                footnote="Statistics Canada Table 14-10-0287, monthly SA. Age-group unemployment rates shown here for demographic context. See the Labour Market deep-dive for full participation + employment + unemployment decompositions by cohort.",
+                # TODO: pop_by_age_group quarterly — not available; annual only (17100005)
             ),
         ],
     ),
@@ -3928,6 +4065,15 @@ _DERIVED_SERIES_SOURCES: dict[str, list[str]] = {
     "real_2yr_monthly":      ["yield_2yr", "cpi_all_items_nsa"],
     # Housing deep-dive derived series
     "mortgage_5yr_goc_5yr_spread": ["mortgage_rate_5yr", "yield_5yr"],
+    # Labour deep-dive derived series
+    "ei_regular_beneficiaries_k": ["ei_regular_beneficiaries"],
+    # Trade deep-dive derived series (C$M source → C$B display)
+    "trade_exports_us_b":     ["trade_exports_us"],
+    "trade_imports_us_b":     ["trade_imports_us"],
+    "trade_balance_us_b":     ["trade_balance_us"],
+    "trade_exports_total_b":  ["trade_exports_total"],
+    "trade_imports_total_b":  ["trade_imports_total"],
+    "trade_balance_total_b":  ["trade_balance_total"],
 }
 
 
@@ -4079,6 +4225,30 @@ def _add_derived_series(data: dict[str, pd.DataFrame]) -> None:
             data["real_2yr_monthly"] = pd.DataFrame({
                 "date":  merged2["date"],
                 "value": merged2["value"] - merged2["cpi_yoy"],
+            }).dropna().reset_index(drop=True)
+
+    # Labour deep-dive: EI regular beneficiaries scaled to thousands for legibility
+    if "ei_regular_beneficiaries" in data:
+        df = data["ei_regular_beneficiaries"].sort_values("date").reset_index(drop=True)
+        data["ei_regular_beneficiaries_k"] = pd.DataFrame({
+            "date":  df["date"],
+            "value": df["value"] / 1_000.0,
+        }).dropna().reset_index(drop=True)
+
+    # Trade deep-dive: source CSVs are in C$ millions; display in C$ billions (÷ 1000)
+    for _src, _dst in [
+        ("trade_exports_us",    "trade_exports_us_b"),
+        ("trade_imports_us",    "trade_imports_us_b"),
+        ("trade_balance_us",    "trade_balance_us_b"),
+        ("trade_exports_total", "trade_exports_total_b"),
+        ("trade_imports_total", "trade_imports_total_b"),
+        ("trade_balance_total", "trade_balance_total_b"),
+    ]:
+        if _src in data:
+            df = data[_src].sort_values("date").reset_index(drop=True)
+            data[_dst] = pd.DataFrame({
+                "date":  df["date"],
+                "value": df["value"] / 1_000.0,
             }).dropna().reset_index(drop=True)
 
     # Housing deep-dive: 5Y conventional mortgage minus 5Y GoC yield spread (weekly aligned)

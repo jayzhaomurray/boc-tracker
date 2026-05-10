@@ -12,7 +12,7 @@ Read these documents in order before doing anything substantive. They are the so
 4. **`markdown-files/analysis_framework.md`** — internal analytical brief for blurb generation. Per-section questions, signals, thresholds.
 5. **`markdown-files/distribution_conventions.md`** — how to label indicator readings on the typical / uncommon / pronounced / rare / extreme ladder. Tail-axis and descriptor metadata per indicator; BoC-band binary frame.
 
-**Escape hatch:** for genuinely trivial edits — typo fix, single comment edit, single color tweak, one-line text change — skip the canonical reading. Anything that touches logic, data, analytical framing, or chart structure still earns the full first-moves pass.
+**Escape hatch:** for genuinely trivial edits — typo fix, single comment edit, single color tweak, one-line text change — skip the canonical reading. Does NOT qualify: adding or removing a chart, adding a data series, any edit to analyze.py, any change to thresholds or blurb logic. Anything that touches logic, data, analytical framing, or chart structure still earns the full first-moves pass.
 
 **One-source-of-truth rule:** these docs reference each other rather than duplicate. If a fact lives in the style guide, HANDOFF should link to it not copy it. Drift between docs has been a real risk; treat it seriously.
 
@@ -29,14 +29,19 @@ Read these documents in order before doing anything substantive. They are the so
   - Completing a Next Steps item or verifying a framework section: cross it off / move it.
   - Architectural changes (new spec class, new pipeline step, new helper): document in HANDOFF's architecture section.
   - Tiny commits (typo, single-color tweak, comment fix) don't need HANDOFF updates.
+  - Trip-wire: any edit to `build.py` or `fetch.py` requires a HANDOFF update in the same commit, no exceptions.
   - Level of detail: enough that a fresh session reading HANDOFF understands current state, not a per-commit changelog.
   - Model: routine HANDOFF updates (table row, marking a todo done, adding a sub-bullet) run fine on Sonnet via subagent — delegate it after the main code commit. Major restructuring (re-prioritising the entire Next Steps list, rewriting an architecture section because the architecture changed) needs Opus on the main thread.
   - Same applies to the other canonical docs when the change touches their domain: chart_style_guide.md when introducing a new chart treatment pattern; analysis_framework.md when adding a new section signal.
 
 ## Delegation Rules
 
-- For HANDOFF refreshes, deep-dive flesh-outs, and multi-file research/audit tasks, ALWAYS delegate to a subagent rather than doing the work inline.
-- Batch script-execution approvals: present the full plan once and ask for blanket approval rather than re-prompting for each similar command.
+**Zone map:** `markdown-files/FILE_OWNERSHIP.md` defines 5 agent zones (Fetcher, Charter, Auditor, Doc Writer, Deployer). Consult it before dispatching any non-trivial task to determine the right agent(s).
+
+- **Any delegated work:** assign to the agent whose zone covers the required files. Pass each agent its zone's file list explicitly so it doesn't stray. No agent commits — agents stage or edit only.
+- **Multi-zone work that can run in parallel:** dispatch a fleet using `markdown-files/coordinator_template.md`. Send all non-conflicting agents in a single message. After all complete, run merge-review via `markdown-files/merge_review_prompt.md`.
+- **Main-thread only:** design decisions, blurb voice/judgment calls, and single Read/Edit/Grep calls where dispatch overhead exceeds the work itself.
+- **Batch script-execution approvals:** present the full plan once and ask for blanket approval rather than re-prompting for each similar command.
 
 ## Analytical bar
 

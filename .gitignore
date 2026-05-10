@@ -1,6 +1,8 @@
 __pycache__/
 *.pyc
-.claude/
+.claude/*
+!.claude/skills/
+!.claude/hooks/
 probe_*.py
 table-*.json
 experiments/results/*

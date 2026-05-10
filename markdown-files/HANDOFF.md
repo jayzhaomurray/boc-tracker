@@ -88,6 +88,38 @@ After session reload (to activate fetch MCP):
 
 Longer-term priority order unchanged: (3) flesh out deep-dive pages → (4) manual review pass → (5) framework/blurb work.
 
+### 6. Afternoon session — 2026-05-10
+
+**Data pipeline — 18 new StatsCan series added to `fetch.py` and fetched:**
+
+- **Capacity utilization (quarterly, %):** `capacity_util_total.csv` (V4331081, Table 16-10-0359-01, total industry SA) + `capacity_util_mfg.csv` (V4331088, manufacturing SA)
+- **EI regular beneficiaries (monthly, SA):** `ei_regular_beneficiaries.csv` (V64549350, Table 14-10-0005-01, persons)
+- **Merchandise trade (monthly, SA, C$M) — 6 series:** `trade_exports_us`, `trade_imports_us`, `trade_balance_us` (Table 12-10-0119-01, CA–US); `trade_exports_total`, `trade_imports_total`, `trade_balance_total` (all-countries)
+- **Population components (quarterly) — 5 series:** `pop_immigrants` (V29850342), `pop_emigrants` (V29850343), `pop_net_emigration` (V1566834788), `pop_net_npr` (V29850346), `pop_npr_inflows` (V1566834758) — Table 17-10-0040-01
+- **Labour force by age group (monthly, SA) — 4 series:** `lf_participation_prime` (V2062951, 25–54), `lf_employment_prime` (V2062952, 25–54), `lf_participation_youth` (V2062843, 15–24), `lf_employment_youth` (V2062844, 15–24) — Table 14-10-0287-01. Unemployment rates for both age groups already existed.
+
+**Two gaps confirmed unavailable at useful frequency, noted per fallback policy:**
+- Natural increase (births minus deaths): annual only (Table 17100008); TODO comment placed in `build.py`, no chart wired
+- Population by age group: annual only (Table 17100005); same treatment
+
+**StatsCan API note:** `getSeriesInfoFromCubePidCoord` returns 404 as of 2026-05-10. Confirmed reliable path: bulk CSV download → `getDataFromVectorsAndLatestNPeriods` with vector IDs. The probe scripts that used the coord endpoint are now stale.
+
+**Chart wiring — all 9 pages build clean:**
+
+- **`gdp.html`:** Industrial Capacity Utilization added as a `MultiLineSpec` (total + manufacturing, quarterly; wired via `capacity_util_total` + `capacity_util_mfg`)
+- **`labour.html`:** EI Regular Beneficiaries added as a `ChartSpec` (monthly, scaled to thousands via `ei_regular_beneficiaries_k` derived series); Prime-Age Labour Market (25–54) and Youth Labour Market (15–24) each added as `MultiLineSpec` (participation + employment + unemployment)
+- **`trade.html`:** Canada–US Bilateral Trade `MultiLineSpec` (exports / imports / balance in C$B) + Total Merchandise Trade `MultiLineSpec` (exports / imports / balance in C$B). Source CSVs are C$M; display converted via `_add_derived_series` pattern (`trade_*_b` suffixed derived series)
+- **`demographics.html`:** International Migration Components `MultiLineSpec` (5 series: immigrants, NPR inflows, emigrants, net emigration, net NPR; quarterly)
+
+**Workflow infrastructure landed:**
+
+- **CLAUDE.md Delegation Rules** replaced with zone-map–based fleet framework: `FILE_OWNERSHIP.md` as the arbiter; `coordinator_template.md` for dispatching parallel agents. Zone assignments drive which files each agent may touch.
+- **CLAUDE.md escape hatch** hardened with explicit non-qualifiers: adding/removing a chart, adding a data series, or any edit to `analyze.py` does NOT qualify.
+- **CLAUDE.md HANDOFF trip-wire** formalized: any edit to `build.py` or `fetch.py` requires a HANDOFF update in the same commit, no exceptions.
+- **Global `~/.claude/CLAUDE.md`:** Diagnosis Discipline section added.
+- **Memory files:** `workflow_dispatch_default.md` created; `feedback_decision_style.md` popup self-check rule added.
+- **`/chart` skill** created at `.claude/skills/chart/SKILL.md`: 4-step workflow (2-question popup → paragraph + series description → approve/modify popup → build + verify loop with 3-iteration cap).
+
 ---
 
 ## What this project is
@@ -418,6 +450,24 @@ No auth required. Returns ~700 records covering several oil grades. WCS is filte
 | `boe_rate` | FRED | `IRSTCB01GBM156N` | Bank of England policy rate | Monthly — **CSV pending FRED retry** |
 | `rba_rate` | FRED | `IRSTCB01AUM156N` | Reserve Bank of Australia policy rate | Monthly — **CSV pending FRED retry** |
 | `indeed_postings_ca` | Indeed Hiring Lab (CC BY 4.0) | `github.com/hiring-lab/data` `CA/aggregate_job_postings_CA.csv`, "total postings" SA | Indeed Job Postings Index, Canada, daily SA, baseline Feb 1 2020 = 100. Pre-aggregated monthly mean is saved as `indeed_postings_ca_monthly.csv`. **Tier 2 (autonomous) data source — not yet user-reviewed; chart wiring pending 2026-05-10 design pass (needs MultiLineSpec secondary y-axis for the index unit).** Covers JVWS COVID gap (Apr-Sep 2020); BoC has used Indeed-Canada in SAN 2021-18 and SWP 2022-17. | Daily |
+| `lf_participation_prime` | StatsCan | Vector 2062951 | Participation rate, 25–54, SA — Table 14-10-0287-01 | Monthly |
+| `lf_employment_prime` | StatsCan | Vector 2062952 | Employment rate, 25–54, SA — Table 14-10-0287-01 | Monthly |
+| `lf_participation_youth` | StatsCan | Vector 2062843 | Participation rate, 15–24, SA — Table 14-10-0287-01 | Monthly |
+| `lf_employment_youth` | StatsCan | Vector 2062844 | Employment rate, 15–24, SA — Table 14-10-0287-01 | Monthly |
+| `ei_regular_beneficiaries` | StatsCan | Vector 64549350 | EI regular benefits recipients, Canada, SA — Table 14-10-0005-01. Scaled to thousands as `ei_regular_beneficiaries_k` derived series for chart display | Monthly |
+| `capacity_util_total` | StatsCan | Vector 4331081 | Total industrial capacity utilization, Canada, SA (%) — Table 16-10-0359-01 | Quarterly |
+| `capacity_util_mfg` | StatsCan | Vector 4331088 | Manufacturing capacity utilization, Canada, SA (%) — Table 16-10-0359-01 | Quarterly |
+| `trade_exports_us` | StatsCan | Vector 87008898 | Merchandise exports, customs basis, SA, United States, C$ millions — Table 12-10-0119-01 | Monthly |
+| `trade_imports_us` | StatsCan | Vector 87008782 | Merchandise imports, customs basis, SA, United States, C$ millions — Table 12-10-0119-01 | Monthly |
+| `trade_balance_us` | StatsCan | Vector 87008985 | Trade balance, BOP basis, SA, United States, C$ millions — Table 12-10-0119-01 | Monthly |
+| `trade_exports_total` | StatsCan | Vector 87008897 | Merchandise exports, customs basis, SA, all countries, C$ millions — Table 12-10-0119-01 | Monthly |
+| `trade_imports_total` | StatsCan | Vector 87008781 | Merchandise imports, customs basis, SA, all countries, C$ millions — Table 12-10-0119-01 | Monthly |
+| `trade_balance_total` | StatsCan | Vector 87008984 | Trade balance, BOP basis, SA, all countries, C$ millions — Table 12-10-0119-01 | Monthly |
+| `pop_immigrants` | StatsCan | Vector 29850342 | Immigrants, Canada, persons — Table 17-10-0040-01 | Quarterly |
+| `pop_emigrants` | StatsCan | Vector 29850343 | Emigrants, Canada, persons — Table 17-10-0040-01 | Quarterly |
+| `pop_net_emigration` | StatsCan | Vector 1566834788 | Net emigration, Canada — Table 17-10-0040-01 | Quarterly |
+| `pop_net_npr` | StatsCan | Vector 29850346 | Net non-permanent residents, Canada — Table 17-10-0040-01 | Quarterly |
+| `pop_npr_inflows` | StatsCan | Vector 1566834758 | NPR inflows, Canada — Table 17-10-0040-01 | Quarterly |
 | `gdp_monthly` | StatsCan | Vector 65201210 | Monthly real GDP, all industries, chained 2017 $, SAAR — C$ trillions | Monthly |
 | `gdp_industry_goods` | StatsCan | Vector 65201211 | Monthly real GDP, goods-producing industries, chained 2017 $, SAAR — C$ trillions | Monthly |
 | `gdp_industry_services` | StatsCan | Vector 65201212 | Monthly real GDP, services-producing industries, chained 2017 $, SAAR — C$ trillions | Monthly |
@@ -437,7 +487,7 @@ No auth required. Returns ~700 records covering several oil grades. WCS is filte
 | `crea_resales_calgary` | BoC Valet | `FVI_HOUSE_RESALES_12M_CALGARY` | CREA resales, Calgary CMA, 12M; 48 rows | Monthly |
 | `units_under_construction` | StatsCan | Vector 52300170 | Units under construction, Canada total, SAAR — Table 34-10-0158-01; 145 rows. **Tier 2 pending — vector inferred from magnitude; verify with `getSeriesInfoFromVector` before treating as authoritative.** | Monthly |
 
-**Derived series (computed in `_add_derived_series`, not stored as CSVs):** `bocfed_spread`, `can2y_overnight_spread`, `can_us_2y_spread` (yield spreads); `nhpi_yoy` and `crea_mls_hpi_yoy` (Y/Y %); `nhpi_rebased` and `crea_mls_hpi_rebased` (both rebased to Jan 2020 = 100, for the Housing Prices Index toggle); `housing_starts_3m` and `housing_starts_12m` (rolling means, for the Housing Starts legend-as-toggles); `residential_permits_b` (residential_permits / 1e6, i.e. C$ billions); `job_vacancy_rate_12m` (12M rolling mean of monthly NSA job vacancy rate); `job_vacancy_level_12m` (12M rolling mean of monthly NSA job vacancy level, in millions of persons); `yield_10y_2y_spread` (10Y minus 2Y GoC yield spread); `real_overnight_rate` (ex-post real overnight rate: overnight rate target minus trailing CPI Y/Y); `real_2yr_monthly` (ex-post real 2Y yield: 2Y GoC yield minus trailing CPI Y/Y); `mortgage_5yr_goc_5yr_spread` (weekly 5-year conventional mortgage rate minus daily 5Y GoC bond yield, merged via merge_asof — Housing deep-dive chart 2 toggle). Source CSVs are registered in `_DERIVED_SERIES_SOURCES` dict so the data loader knows to load them.
+**Derived series (computed in `_add_derived_series`, not stored as CSVs):** `bocfed_spread`, `can2y_overnight_spread`, `can_us_2y_spread` (yield spreads); `nhpi_yoy` and `crea_mls_hpi_yoy` (Y/Y %); `nhpi_rebased` and `crea_mls_hpi_rebased` (both rebased to Jan 2020 = 100, for the Housing Prices Index toggle); `housing_starts_3m` and `housing_starts_12m` (rolling means, for the Housing Starts legend-as-toggles); `residential_permits_b` (residential_permits / 1e6, i.e. C$ billions); `job_vacancy_rate_12m` (12M rolling mean of monthly NSA job vacancy rate); `job_vacancy_level_12m` (12M rolling mean of monthly NSA job vacancy level, in millions of persons); `yield_10y_2y_spread` (10Y minus 2Y GoC yield spread); `real_overnight_rate` (ex-post real overnight rate: overnight rate target minus trailing CPI Y/Y); `real_2yr_monthly` (ex-post real 2Y yield: 2Y GoC yield minus trailing CPI Y/Y); `mortgage_5yr_goc_5yr_spread` (weekly 5-year conventional mortgage rate minus daily 5Y GoC bond yield, merged via merge_asof — Housing deep-dive chart 2 toggle); `ei_regular_beneficiaries_k` (EI beneficiaries ÷ 1,000 for thousands-display on labour.html); `trade_exports_us_b`, `trade_imports_us_b`, `trade_balance_us_b`, `trade_exports_total_b`, `trade_imports_total_b`, `trade_balance_total_b` (trade C$M source ÷ 1,000 → C$B display on trade.html). Source CSVs are registered in `_DERIVED_SERIES_SOURCES` dict so the data loader knows to load them.
 
 **`fed_funds` construction:** `FEDFUNDS` monthly effective rate (1990–Dec 2008) prepended to `(DFEDTARU + DFEDTARL) / 2` daily midpoint (Dec 2008–present). Built by `fetch_fed_funds_target()`.
 
@@ -622,10 +672,16 @@ PageSpec("Bank of Canada Tracker", sections={0: "policy", 3: "inflation", 8: "gd
   ChartSpec                — USD/CAD (daily, 10Y default)
 
 PageSpec("Labour Market — Deep Dive", is_deep_dive=True, output_file="labour.html", ...)
-  Beveridge Curve (1 live chart — native Plotly, period-coloured scatter, `_build_beveridge_curve_panel`) + 7 placeholder stubs
+  Beveridge Curve (native Plotly, period-coloured scatter, `_build_beveridge_curve_panel`)
+  ChartSpec                — EI Regular Beneficiaries (monthly SA, thousands via `ei_regular_beneficiaries_k`; 10Y default)
+  MultiLineSpec            — Prime-Age Labour Market 25–54 (participation + employment + unemployment rate; monthly SA; 10Y default)
+  MultiLineSpec            — Youth Labour Market 15–24 (participation + employment + unemployment rate; monthly SA; 10Y default)
+  + placeholder stubs remaining
 
 PageSpec("GDP & Activity — Deep Dive", is_deep_dive=True, output_file="gdp.html", ...)
-  Actual vs Potential GDP / Output Gap % (2 live charts — HP filter λ=129,600, numpy fallback) + 4 placeholder stubs
+  Actual vs Potential GDP / Output Gap % (2 live charts — HP filter λ=129,600, numpy fallback)
+  MultiLineSpec            — Industrial Capacity Utilization (total industry + manufacturing; quarterly SA; %)
+  + 4 placeholder stubs remaining
 
 PageSpec("Inflation — Deep Dive", is_deep_dive=True, output_file="inflation.html", ...)
   Individual Core Measures (1 live chart — CpiSpec, trim+median visible by default) + 4 placeholder stubs
@@ -646,10 +702,13 @@ PageSpec("Monetary Policy — Deep Dive", is_deep_dive=True, output_file="policy
   MultiLineSpec            — Peer Central Banks (BoC + Fed live; ECB/BoE/RBA pending FRED retry; hv step)
 
 PageSpec("Trade & External Sector — Deep Dive", is_deep_dive=True, output_file="trade.html", ...)
-  [5 placeholder sections: Goods Exports by Category, Canada–US Bilateral Trade Balance, Goods Exports Excluding Gold, Terms of Trade, Export Shares by Partner]
+  MultiLineSpec            — Canada–US Bilateral Trade (exports + imports + balance; C$B; monthly SA; derived from `trade_*_us_b`)
+  MultiLineSpec            — Total Merchandise Trade (all-countries exports + imports + balance; C$B; monthly SA; derived from `trade_*_total_b`)
+  [3 placeholder sections remaining: Goods Exports by Category, Goods Exports Excluding Gold, Terms of Trade / Export Shares by Partner]
 
 PageSpec("Demographics & Labour Supply — Deep Dive", is_deep_dive=True, output_file="demographics.html", ...)
-  [5 placeholder sections: Population Growth by Component, Net International Migration, Working-Age Population and Dependency Ratio, Labour Force by Age Group, Population Projections vs Actual]
+  MultiLineSpec            — International Migration Components (5 series: immigrants, NPR inflows, emigrants, net emigration, net NPR; quarterly; persons)
+  [4 placeholder sections remaining: Working-Age Population and Dependency Ratio, Labour Force by Age Group, Natural Increase — TODO annual-only, Population by Age Group — TODO annual-only]
 
 PageSpec("Housing Market — Deep Dive", is_deep_dive=True, output_file="housing.html", ...)
   MultiLineSpec            — CREA Sales Activity (SNLR % primary; Resales Index toggle; monthly; 10Y default)
@@ -834,24 +893,20 @@ All six sections (`policy`, `inflation`, `gdp`, `labour`, `housing`, `financial`
 
 ### 3. Flesh out all deep-dive pages (automated)
 
-All 8 deep-dive pages get real charts per `analyses/deep-dive-design-2026-05-09.md`. Current live chart counts per page:
+All 8 deep-dive pages get real charts per `analyses/deep-dive-design-2026-05-09.md`. Current live chart counts per page (updated 2026-05-10 afternoon):
 
 - **Policy** — 7 live charts (complete per design doc)
 - **Housing** — 6 live charts (original 5 + mortgage renewal payment shock)
-- **Labour** — 1 live chart (Beveridge curve, native Plotly)
-- **GDP** — 2 live charts (Actual vs Potential GDP, Output Gap %)
+- **Labour** — 4 live charts (Beveridge curve + EI beneficiaries + Prime-Age MultiLineSpec + Youth MultiLineSpec)
+- **GDP** — 3 live charts (Actual vs Potential GDP + Output Gap % + Industrial Capacity Utilization)
+- **Trade** — 2 live charts (Canada–US Bilateral Trade + Total Merchandise Trade)
+- **Demographics** — 1 live chart (International Migration Components)
 - **Inflation** — 1 live chart (individual core measures, CpiSpec)
 - **Financial** — 1 live chart (WCS–WTI spread)
-- **Trade** — 0 live charts (5 placeholder sections)
-- **Demographics** — 0 live charts (5 placeholder sections)
 
-**Immediate next action:** Run the 4 probe scripts locally to confirm vector IDs, then dispatch a Sonnet agent to add confirmed series to `fetch.py`, run the fetcher, and wire the remaining charts:
-- `python analyses/gdp_deepdive_vectors.py`
-- `python analyses/labour_deepdive_vectors.py`
-- `python analyses/trade_deepdive_vectors.py`
-- `python analyses/demographics_deepdive_vectors.py`
+**StatsCan probe items — DONE (2026-05-10 afternoon):** All 6 tables from the morning's immediate next steps were probed and confirmed. Vectors added to `fetch.py`, CSVs fetched, charts wired. Probe scripts in `analyses/` are now stale (coord endpoint is 404; vectors confirmed via `getDataFromVectorsAndLatestNPeriods` directly).
 
-Each script writes a `.md` results file. Wire charts only after results confirm series availability.
+**Remaining placeholder sections:** Trade (3 sections), Demographics (4 sections), Labour and GDP still have placeholder stubs beyond the newly wired charts, Inflation (4 stubs), Financial (5 stubs).
 
 ### 4. Manual review pass
 
