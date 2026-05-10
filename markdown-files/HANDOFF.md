@@ -41,6 +41,55 @@ A human + Claude session reviewed this branch, confirmed the three regressions a
 
 ---
 
+## Session — 2026-05-10 (Morning)
+
+### 1. Three Gemini regressions fixed (commit 355ee32)
+
+- **`NativeChartSpec` dataclass added to `build.py`** — escape hatch for custom builders that don't fit generic spec types. Signature: `builder(data, chart_idx, include_plotlyjs) -> str`; plus `data_keys: list` declaring which CSV keys the builder needs.
+- **Beveridge curve** (`labour.html`) re-wired via `NativeChartSpec(_build_beveridge_curve_panel)` — restores phase-space scatter with period colouring and `plotly_restyle` autorange hook.
+- **HP-filter GDP potential + output gap** (`gdp.html`) re-wired via `NativeChartSpec` — replaces placeholder `MultiLineSpec` stubs that were rendering raw GDP as a flat line with no filter logic.
+- **WTI−WCS differential** (`financial.html`) re-wired via `NativeChartSpec(_build_wcs_wti_panel)` — restores reference bands ($10–15 normal range, $20 pipeline-constrained dashed line).
+
+### 2. Probe audit findings (sub-agent pass on `analyses/*_results.md`)
+
+Four probe result files from the Gemini session were audited. Key corrections:
+
+- **GDP probe**: Table 36-10-0007 is International Services (wrong). Correct capacity utilization table is **34-10-0035-01**. Vector v3411411 (`avg_actual_hours`, monthly SA) confirmed usable; needs a chart spec.
+- **Labour probe**: Table 14-10-0125 is "reason for leaving" NSA, not current unemployment by reason (wrong). Correct job-loser-share table is **14-10-0048-01**. Youth/prime-age UR already confirmed and in `data/`. EI beneficiaries table 14-10-0005 also wrong — correct is **14-10-0022-01**.
+- **Trade probe**: Table 12-10-0009 is a quarterly price index, not trade values (wrong). Correct bilateral trade table is **12-10-0011-01**. All direct vector probes failed (stale IDs).
+- **Demographics probe**: Population stock table 17-10-0009 partially confirmed. Components table should be **17-10-0040-01** (quarterly), not 17-10-0008 (annual). Labour force by age group (14-10-0027) was not probed at all.
+- **One confirmed addition ready**: `avg_actual_hours` via v3411411 — monthly, SA, April 2026 current.
+
+### 3. Fetch MCP server added (commit a678eb2)
+
+- `.mcp.json` created at project root with `@modelcontextprotocol/server-fetch`.
+- Gives Claude a `fetch` tool for direct HTTP calls to StatsCan/BoC Valet/FRED in-session.
+- Eliminates the probe-script loop: no more write-script → run locally → read results.
+- **Requires a session reload to activate.** After reload, `getCubeMetadata` and `getDataFromVectors` calls can be made directly.
+
+### 4. Fleet framework committed (commit a678eb2)
+
+- `markdown-files/FILE_OWNERSHIP.md`, `coordinator_template.md`, `merge_review_prompt.md` committed (created by Gemini the night before; brought onto the branch).
+
+### 5. Current state and immediate next steps
+
+After session reload (to activate fetch MCP):
+
+1. Confirm fetch MCP is active (test a StatsCan endpoint call).
+2. Use fetch MCP to probe the 6 corrected tables and confirm vector IDs:
+   - Capacity utilization: Table 34-10-0035-01
+   - EI beneficiaries: Table 14-10-0022-01
+   - Merchandise trade (exports/imports/balance, CA–US): Table 12-10-0011-01
+   - Quarterly population components: Table 17-10-0040-01
+   - Population stock: Table 17-10-0009-01
+   - Labour force by age group: Table 14-10-0027-01
+3. Add confirmed vectors to `fetch.py`, run `python fetch.py`.
+4. Wire charts across deep-dive pages (Step 3 of the session priority list).
+
+Longer-term priority order unchanged: (3) flesh out deep-dive pages → (4) manual review pass → (5) framework/blurb work.
+
+---
+
 ## What this project is
 
 A personal data dashboard that tracks the economic indicators the Bank of Canada watches between its quarterly Monetary Policy Reports (MPRs). The output is a single interactive HTML file hosted publicly on GitHub Pages.
