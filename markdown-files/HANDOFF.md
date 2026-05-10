@@ -21,13 +21,13 @@ This section logs a series of structural changes and identified regressions intr
 - **ORPHANED: WTI–WCS Differential:** The native `_build_wcs_wti_panel` was replaced by a standard `MultiLineSpec` in `financial.html`, losing the specialized reference bands and layout.
 - **Broken DEEP_DIVES Loop:** The `DEEP_DIVES` processing loop and `_assemble_deep_dive_page` call were removed from `main()`.
 
-### 3. Regression status (updated 2026-05-10)
+### 3. Regression status — all three resolved (commit 355ee32)
 
 | Regression | Builder | Status |
 |---|---|---|
-| Beveridge Curve (`labour.html`) | `_build_beveridge_curve_panel` | **Being fixed — Charter agent, current session** |
-| WTI–WCS Differential (`financial.html`) | `_build_wcs_wti_panel` | Remaining — fix in a follow-on session |
-| GDP Potential & Output Gap (`gdp.html`) | `_build_gdp_potential_panel`, `_build_output_gap_panel` | Remaining — fix in a follow-on session |
+| Beveridge Curve (`labour.html`) | `_build_beveridge_curve_panel` | **FIXED** — commit 355ee32 |
+| WTI–WCS Differential (`financial.html`) | `_build_wcs_wti_panel` | **FIXED** — commit 355ee32 |
+| GDP Potential & Output Gap (`gdp.html`) | `_build_gdp_potential_panel`, `_build_output_gap_panel` | **FIXED** — commit 355ee32 |
 
 **Do not revert the StatsCan API fix**; it is the only reason data fetching is currently working.
 
