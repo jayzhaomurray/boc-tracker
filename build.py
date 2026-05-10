@@ -727,8 +727,12 @@ def _build_band_panel(chart: "BandSpec", data: dict,
         ))
 
     # Comparator traces
+    # When the chart has no in-band featured line, comparators carry the primary
+    # weight (width=2). When there IS a featured band member, comparators stay
+    # secondary (width=1.5) to avoid two visually-equal "main" lines.
+    comparator_width = 2 if chart.featured is None else 1.5
     for cl, cs in zip(chart.comparators, comp_series):
-        line_style = dict(color=cl.color, width=1.5)
+        line_style = dict(color=cl.color, width=comparator_width)
         if cl.dash:
             line_style["dash"] = "dot"
         fig.add_trace(go.Scatter(
