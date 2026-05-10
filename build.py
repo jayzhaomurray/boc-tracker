@@ -188,6 +188,7 @@ class LineConfig:
     visible: bool = True
     smooth: bool = True  # False = keep raw data in smooth mode (e.g. monthly series on a daily chart)
     secondary_y: bool = False
+    secondary: bool = False  # render at width=1.5 instead of 2 (visual de-emphasis)
     dash: bool = False   # render as dotted/dashed line (used by BandSpec comparators)
     formula: object = None  # Optional[Callable[[dict], pd.Series]]. If set, compute series at build time.
     formula_deps: list = field(default_factory=list)  # raw CSV series names the formula depends on
@@ -1823,7 +1824,7 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
             initial_visible = False
         else:
             initial_visible = True if line.visible else "legendonly"
-        _line_style = dict(color=line.color, width=2)
+        _line_style = dict(color=line.color, width=1.5 if line.secondary else 2)
         if line.dash:
             _line_style["dash"] = "dash"
         fig.add_trace(go.Scatter(
@@ -1850,7 +1851,7 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
             fig.add_trace(go.Scatter(
                 x=df["date"], y=smooth,
                 name=smooth_label,
-                line=dict(color=line.color, width=2),
+                line=dict(color=line.color, width=1.5 if line.secondary else 2),
                 line_shape="linear",
                 visible=False,
                 hovertemplate="%{x|" + chart.date_fmt + "}<br>%{y:" + chart.hoverformat + "}" + chart.ticksuffix + "<extra>" + smooth_label + "</extra>",
@@ -1868,7 +1869,7 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
                 fig.add_trace(go.Scatter(
                     x=[], y=[],
                     name=line.label,
-                    line=dict(color=line.color, width=2),
+                    line=dict(color=line.color, width=1.5 if line.secondary else 2),
                     visible=False,
                     showlegend=False,
                 ))
@@ -1881,7 +1882,7 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
             fig.add_trace(go.Scatter(
                 x=df_alt["date"], y=df_alt["value"],
                 name=line.label,
-                line=dict(color=line.color, width=2),
+                line=dict(color=line.color, width=1.5 if line.secondary else 2),
                 line_shape=chart.line_shape,
                 visible=initial_visible,
                 hovertemplate="%{x|" + chart.date_fmt + "}<br>%{y:" + chart.alt_hoverformat + "}" + chart.alt_ticksuffix + "<extra>" + line.label + "</extra>",
@@ -2988,8 +2989,8 @@ PAGES = [
                 title="Policy Rates",
                 lines=[
                     LineConfig("overnight_rate", "BoC", "#1565c0"),
-                    LineConfig("fed_funds",      "Fed", "#c62828"),
-                    LineConfig("bocfed_spread",  "BoC − Fed", "#7b1fa2", visible=False),
+                    LineConfig("fed_funds",      "Fed", "#c62828", secondary=True),
+                    LineConfig("bocfed_spread",  "BoC − Fed", "#7b1fa2", visible=False, secondary=True),
                 ],
                 default_years=10,
                 line_shape="hv",
