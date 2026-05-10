@@ -29,7 +29,7 @@ Read these documents in order before doing anything substantive. They are the so
   - Completing a Next Steps item or verifying a framework section: cross it off / move it.
   - Architectural changes (new spec class, new pipeline step, new helper): document in HANDOFF's architecture section.
   - Tiny commits (typo, single-color tweak, comment fix) don't need HANDOFF updates.
-  - Trip-wire: any edit to `build.py` or `fetch.py` requires a HANDOFF update in the same commit, no exceptions.
+  - Trip-wire: any edit to `build.py` or `fetch.py` requires a HANDOFF update in the same commit, no exceptions. Every HANDOFF update must include a pruning pass: delete any resolved-regression logs, phase-commit changelog tables, and completed next-steps entries before adding new content.
   - Level of detail: enough that a fresh session reading HANDOFF understands current state, not a per-commit changelog.
   - Model: routine HANDOFF updates (table row, marking a todo done, adding a sub-bullet) run fine on Sonnet via subagent — delegate it after the main code commit. Major restructuring (re-prioritising the entire Next Steps list, rewriting an architecture section because the architecture changed) needs Opus on the main thread.
   - Same applies to the other canonical docs when the change touches their domain: chart_style_guide.md when introducing a new chart treatment pattern; analysis_framework.md when adding a new section signal.

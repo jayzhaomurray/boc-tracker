@@ -4,124 +4,6 @@ This document captures the current state of the project. Written so a fresh sess
 
 ---
 
-## 🚨 Gemini CLI Session Audit (2026-05-09 Evening)
-**Agent:** Gemini CLI (Interactive Session)
-
-This section logs a series of structural changes and identified regressions introduced during the evening session on 2026-05-09. **Action required:** Restoration of custom chart builders that were orphaned during the refactor.
-
-### 1. Structural Changes (The "Deep-Dive Refactor")
-- **Unified PageSpec Architecture:** Successfully migrated all 8 deep-dive pages from the legacy `DEEP_DIVES` list into the primary `PAGES` list in `build.py`. This ensures they share the same navigation, styling, and JS infrastructure as the main dashboard.
-- **Secondary Y-Axis Support:** Extended the `LineConfig` and `MultiLineSpec` dataclasses to support `secondary_y`, `secondary_unit_label`, and `secondary_ticksuffix`. This was added specifically to support charts like "Indeed Job Postings vs. Official Vacancies."
-- **Data Pipeline Expansion:** Added several new series to `fetch.py` (Youth/Prime-age UR, CORRA, ECB rates, 5Y/10Y/30Y GoC yields) and successfully ran a full fetch/build cycle.
-- **StatsCan API Recovery:** Fixed a breaking 404 change in the StatsCan WDS API by updating all probe scripts (`analyses/*_vectors.py`) to use `POST` for metadata requests.
-
-### 2. Regressions & Defects Introduced
-- **DELETED/ORPHANED: Beveridge Curve:** The custom builder `_build_beveridge_curve_panel` (line 2474) is no longer being called. The `labour.html` deep-dive now contains a standard `MultiLineSpec` placeholder instead of the phase-space scatter plot.
-- **ORPHANED: GDP Potential & Output Gap:** The specialized builders `_build_gdp_potential_panel` and `_build_output_gap_panel` are also orphaned. The `gdp.html` page uses simple `MultiLineSpec` stubs that lack the HP-filter logic of the originals.
-- **ORPHANED: WTI–WCS Differential:** The native `_build_wcs_wti_panel` was replaced by a standard `MultiLineSpec` in `financial.html`, losing the specialized reference bands and layout.
-- **Broken DEEP_DIVES Loop:** The `DEEP_DIVES` processing loop and `_assemble_deep_dive_page` call were removed from `main()`.
-
-### 3. Regression status — all three resolved (commit 355ee32)
-
-| Regression | Builder | Status |
-|---|---|---|
-| Beveridge Curve (`labour.html`) | `_build_beveridge_curve_panel` | **FIXED** — commit 355ee32 |
-| WTI–WCS Differential (`financial.html`) | `_build_wcs_wti_panel` | **FIXED** — commit 355ee32 |
-| GDP Potential & Output Gap (`gdp.html`) | `_build_gdp_potential_panel`, `_build_output_gap_panel` | **FIXED** — commit 355ee32 |
-
-**Do not revert the StatsCan API fix**; it is the only reason data fetching is currently working.
-
-### 4. Parallel agent fleet framework (added 2026-05-10)
-
-A human + Claude session reviewed this branch, confirmed the three regressions above, and introduced a structured parallel-agent framework for future multi-file work:
-
-- **`markdown-files/FILE_OWNERSHIP.md`** — exclusive file zones per agent role (Fetcher, Charter, Auditor, Doc Writer, Deployer). Agents may not touch files outside their zone without coordinator approval.
-- **`markdown-files/coordinator_template.md`** — coordinator prompt template for dispatching a parallel fleet: defines agent roles, dispatch instructions, and merge-review hand-off sequence.
-- **`markdown-files/merge_review_prompt.md`** — merge-review prompt for the final consolidation step after parallel agents complete.
-
----
-
-## Session — 2026-05-10 (Morning)
-
-### 1. Three Gemini regressions fixed (commit 355ee32)
-
-- **`NativeChartSpec` dataclass added to `build.py`** — escape hatch for custom builders that don't fit generic spec types. Signature: `builder(data, chart_idx, include_plotlyjs) -> str`; plus `data_keys: list` declaring which CSV keys the builder needs.
-- **Beveridge curve** (`labour.html`) re-wired via `NativeChartSpec(_build_beveridge_curve_panel)` — restores phase-space scatter with period colouring and `plotly_restyle` autorange hook.
-- **HP-filter GDP potential + output gap** (`gdp.html`) re-wired via `NativeChartSpec` — replaces placeholder `MultiLineSpec` stubs that were rendering raw GDP as a flat line with no filter logic.
-- **WTI−WCS differential** (`financial.html`) re-wired via `NativeChartSpec(_build_wcs_wti_panel)` — restores reference bands ($10–15 normal range, $20 pipeline-constrained dashed line).
-
-### 2. Probe audit findings (sub-agent pass on `analyses/*_results.md`)
-
-Four probe result files from the Gemini session were audited. Key corrections:
-
-- **GDP probe**: Table 36-10-0007 is International Services (wrong). Correct capacity utilization table is **34-10-0035-01**. Vector v3411411 (`avg_actual_hours`, monthly SA) confirmed usable; needs a chart spec.
-- **Labour probe**: Table 14-10-0125 is "reason for leaving" NSA, not current unemployment by reason (wrong). Correct job-loser-share table is **14-10-0048-01**. Youth/prime-age UR already confirmed and in `data/`. EI beneficiaries table 14-10-0005 also wrong — correct is **14-10-0022-01**.
-- **Trade probe**: Table 12-10-0009 is a quarterly price index, not trade values (wrong). Correct bilateral trade table is **12-10-0011-01**. All direct vector probes failed (stale IDs).
-- **Demographics probe**: Population stock table 17-10-0009 partially confirmed. Components table should be **17-10-0040-01** (quarterly), not 17-10-0008 (annual). Labour force by age group (14-10-0027) was not probed at all.
-- **One confirmed addition ready**: `avg_actual_hours` via v3411411 — monthly, SA, April 2026 current.
-
-### 3. Fetch MCP server added (commit a678eb2)
-
-- `.mcp.json` created at project root with `@modelcontextprotocol/server-fetch`.
-- Gives Claude a `fetch` tool for direct HTTP calls to StatsCan/BoC Valet/FRED in-session.
-- Eliminates the probe-script loop: no more write-script → run locally → read results.
-- **Requires a session reload to activate.** After reload, `getCubeMetadata` and `getDataFromVectors` calls can be made directly.
-
-### 4. Fleet framework committed (commit a678eb2)
-
-- `markdown-files/FILE_OWNERSHIP.md`, `coordinator_template.md`, `merge_review_prompt.md` committed (created by Gemini the night before; brought onto the branch).
-
-### 5. Current state and immediate next steps
-
-After session reload (to activate fetch MCP):
-
-1. Confirm fetch MCP is active (test a StatsCan endpoint call).
-2. Use fetch MCP to probe the 6 corrected tables and confirm vector IDs:
-   - Capacity utilization: Table 34-10-0035-01
-   - EI beneficiaries: Table 14-10-0022-01
-   - Merchandise trade (exports/imports/balance, CA–US): Table 12-10-0011-01
-   - Quarterly population components: Table 17-10-0040-01
-   - Population stock: Table 17-10-0009-01
-   - Labour force by age group: Table 14-10-0027-01
-3. Add confirmed vectors to `fetch.py`, run `python fetch.py`.
-4. Wire charts across deep-dive pages (Step 3 of the session priority list).
-
-Longer-term priority order unchanged: (3) flesh out deep-dive pages → (4) manual review pass → (5) framework/blurb work.
-
-### 6. Afternoon session — 2026-05-10
-
-**Data pipeline — 18 new StatsCan series added to `fetch.py` and fetched:**
-
-- **Capacity utilization (quarterly, %):** `capacity_util_total.csv` (V4331081, Table 16-10-0359-01, total industry SA) + `capacity_util_mfg.csv` (V4331088, manufacturing SA)
-- **EI regular beneficiaries (monthly, SA):** `ei_regular_beneficiaries.csv` (V64549350, Table 14-10-0005-01, persons)
-- **Merchandise trade (monthly, SA, C$M) — 6 series:** `trade_exports_us`, `trade_imports_us`, `trade_balance_us` (Table 12-10-0119-01, CA–US); `trade_exports_total`, `trade_imports_total`, `trade_balance_total` (all-countries)
-- **Population components (quarterly) — 5 series:** `pop_immigrants` (V29850342), `pop_emigrants` (V29850343), `pop_net_emigration` (V1566834788), `pop_net_npr` (V29850346), `pop_npr_inflows` (V1566834758) — Table 17-10-0040-01
-- **Labour force by age group (monthly, SA) — 4 series:** `lf_participation_prime` (V2062951, 25–54), `lf_employment_prime` (V2062952, 25–54), `lf_participation_youth` (V2062843, 15–24), `lf_employment_youth` (V2062844, 15–24) — Table 14-10-0287-01. Unemployment rates for both age groups already existed.
-
-**Two gaps confirmed unavailable at useful frequency, noted per fallback policy:**
-- Natural increase (births minus deaths): annual only (Table 17100008); TODO comment placed in `build.py`, no chart wired
-- Population by age group: annual only (Table 17100005); same treatment
-
-**StatsCan API note:** `getSeriesInfoFromCubePidCoord` returns 404 as of 2026-05-10. Confirmed reliable path: bulk CSV download → `getDataFromVectorsAndLatestNPeriods` with vector IDs. The probe scripts that used the coord endpoint are now stale.
-
-**Chart wiring — all 9 pages build clean:**
-
-- **`gdp.html`:** Industrial Capacity Utilization added as a `MultiLineSpec` (total + manufacturing, quarterly; wired via `capacity_util_total` + `capacity_util_mfg`)
-- **`labour.html`:** EI Regular Beneficiaries added as a `ChartSpec` (monthly, scaled to thousands via `ei_regular_beneficiaries_k` derived series); Prime-Age Labour Market (25–54) and Youth Labour Market (15–24) each added as `MultiLineSpec` (participation + employment + unemployment)
-- **`trade.html`:** Canada–US Bilateral Trade `MultiLineSpec` (exports / imports / balance in C$B) + Total Merchandise Trade `MultiLineSpec` (exports / imports / balance in C$B). Source CSVs are C$M; display converted via `_add_derived_series` pattern (`trade_*_b` suffixed derived series)
-- **`demographics.html`:** International Migration Components `MultiLineSpec` (5 series: immigrants, NPR inflows, emigrants, net emigration, net NPR; quarterly)
-
-**Workflow infrastructure landed:**
-
-- **CLAUDE.md Delegation Rules** replaced with zone-map–based fleet framework: `FILE_OWNERSHIP.md` as the arbiter; `coordinator_template.md` for dispatching parallel agents. Zone assignments drive which files each agent may touch.
-- **CLAUDE.md escape hatch** hardened with explicit non-qualifiers: adding/removing a chart, adding a data series, or any edit to `analyze.py` does NOT qualify.
-- **CLAUDE.md HANDOFF trip-wire** formalized: any edit to `build.py` or `fetch.py` requires a HANDOFF update in the same commit, no exceptions.
-- **Global `~/.claude/CLAUDE.md`:** Diagnosis Discipline section added.
-- **Memory files:** `workflow_dispatch_default.md` created; `feedback_decision_style.md` popup self-check rule added.
-- **`/chart` skill** created at `.claude/skills/chart/SKILL.md`: 4-step workflow (2-question popup → paragraph + series description → approve/modify popup → build + verify loop with 3-iteration cap).
-
----
-
 ## What this project is
 
 A personal data dashboard that tracks the economic indicators the Bank of Canada watches between its quarterly Monetary Policy Reports (MPRs). The output is a single interactive HTML file hosted publicly on GitHub Pages.
@@ -137,123 +19,25 @@ A personal data dashboard that tracks the economic indicators the Bank of Canada
 
 ---
 
-## What landed 2026-05-09
+## Open next steps
 
-Four major milestones completed in a single day:
+1. **Flesh out deep-dive pages** — most deep-dives have placeholder stubs. Per `analyses/deep-dive-design-2026-05-09.md` (43 charts, 9 judgment calls resolved). Start with Labour and GDP. Current live counts: Policy 7, Housing 6, Labour 4, GDP 3, Trade 2, Demographics 1, Inflation 1, Financial 1.
 
-1. **Distribution conventions framework introduced and fully applied.** `markdown-files/distribution_conventions.md` codifies a five-tier ladder (typical / uncommon / pronounced / rare / extreme) at P50/P80/P95/P99 boundaries, binary BoC-band dual classification for BoC-band indicators, and per-indicator tail-axis + descriptor-pair metadata. Applied across all six framework sections in nine commits (see Phase commits table). Every framework indicator now has a calibrated empirical tier definition replacing asserted thresholds.
-2. **CI auto-commit step fixed.** GitHub Actions `git-auto-commit-action` v5 was failing on Node.js 24 (the runner default as of 2026-05). Upgraded to v7 (`49d8f26`); CI builds are now green again.
-3. **Deep-dive design doc landed.** `analyses/deep-dive-design-2026-05-09.md` covers all 8 deep-dives (6 section deep-dives + Trade + Demographics), 43 charts, 9 judgment calls resolved. Data-source probes (`analyses/data-source-probe-2026-05-09.md`, `analyses/lfs-gross-flows-probe-2026-05-09.md`) resolved the output gap, CORRA, CPI ex-indirect-tax, and TSX blockers.
-4. **Hooks installed and validated.** Pre-commit checkpoint + edit-burst detector hooks are live; see CLAUDE.md Workflow conventions for rationale.
+2. **Blurb iteration** — Inflation and Policy blurbs are user-iterated (Tier 3); Labour, Financial, GDP, Housing are autonomous-draft (Tier 1). Regen with `python analyze.py --section <id>` then iterate with the user on voice and framing.
 
-The convention sweep is the main analytical milestone: all six sections are now convention-aligned, all six verification logs updated, and blurb regen is now a clean operation (no stale anchors).
+3. **Tier 2 pending** — `units_under_construction.csv` (v52300170) — vector was inferred from magnitude; verify with `getSeriesInfoFromVector` before treating as authoritative.
 
-**Late-afternoon analytical milestones** (commits `15442ca`, `5a952d1`, `242ec83`): V/U fifth-pass research completed; Labour Claim 3 V/U bands relabelled to empirical descriptors (bottom-of-history / low / elevated / high / exceptionally high) with locked-in paragraph framing distinguishing BoC-likely-synthesis from wage-confirmed-synthesis. Policy Claim 10 (3×2 grid) dropped as the third rigid n×n decoder rejected. "Verification, not speculation" extended with general epistemic rule. Claims 3 and 10 marked Tier 3 resolved. New `reference/` folder convention for personal-reference documents (versioned PDFs, research artifacts).
+4. **ECB/BoE/RBA rates** — FRED timed out 2026-05-09; retry pending. No code changes needed — just run `python fetch.py` with `FRED_API_KEY` set. The Peer Central Banks chart on `policy.html` currently shows BoC + Fed only.
 
 ---
 
-## What landed 2026-05-09 (afternoon/evening session)
+## Recent changes (2026-05-10)
 
-**Deep-dive flesh-out pass:**
-
-- **Trade and Demographics placeholder pages added** (`trade.html`, `demographics.html`) — 5 placeholder sections each, fully wired into the nav bar. Dashboard is now 9 pages total: Overview + 8 deep-dives.
-- **Beveridge curve rebuilt as native Plotly spec** in `build.py` (`_build_beveridge_curve_panel`); iframe removed from Labour deep-dive. Autorange on legend toggle via `plotly_restyle` hook.
-- **HP filter potential GDP added to GDP deep-dive** — two charts: Actual vs Potential GDP (level, C$ trillions, λ=129,600) and Output Gap % (derived). Manual numpy fallback included; `statsmodels` added to `requirements.txt`.
-- **`body_fn` pattern introduced in `DEEP_DIVES`** for pages with dynamically-built chart content (vs static `body` string).
-- **Individual core measures chart added to Inflation deep-dive** (CpiSpec pattern, trim+median visible by default).
-- **WCS–WTI spread chart added to Financial deep-dive** (reference bands at $10–15 normal range and $20 pipeline-constrained).
-- **Mortgage renewal payment shock chart added to Housing deep-dive** as 6th chart (`MortgageShockSpec`; static data from BoC SAN 2025-21).
-
-**Probe scripts ready (not yet run):**
-- `analyses/gdp_deepdive_vectors.py` — capacity utilisation (Table 36-10-0007) and hours worked (Table 14-10-0035)
-- `analyses/labour_deepdive_vectors.py` — LFS job-losers (Table 14-10-0125), youth/prime unemployment (Table 14-10-0287), EI beneficiaries (Table 14-10-0005)
-- `analyses/trade_deepdive_vectors.py` — merchandise exports (Table 12-10-0011), bilateral CA–US trade (Table 12-10-0009)
-- `analyses/demographics_deepdive_vectors.py` — population quarterly (Table 17-10-0009), age-group LFS (Table 14-10-0027)
-
-Run these locally with `python analyses/<script>.py` before the next flesh-out pass. Each writes a `.md` results file. After results land, a Sonnet agent can add confirmed series to `fetch.py`, run the fetcher, and wire the remaining charts.
-
----
-
-## Overnight checkpoint (2026-05-09 → 10)
-
-User went to sleep around 04:00 with the prompt "do work overnight that requires the least input and judgment from me." Five phases landed; each independently committed so any phase's work can be reviewed in isolation. **The biggest finding is that Tier 2 verification of the four non-Labour-non-Inflation-non-Policy sections surfaced concrete defects that don't match project data — the "verified end-to-end (May 2026)" status flags in framework prose are now empirically wrong for at least three sections.**
-
-### Phase commits (oldest first)
-
-| Phase | Commit | What landed | Where to look |
-|---|---|---|---|
-| 0 | `b34bebe` | Three-tier provenance framework codified (Tier 1 generated / Tier 2 autonomous / Tier 3 user-verified). Existing claims retagged. | `markdown-files/verification/_tiers.md`; CLAUDE.md Workflow conventions block |
-| 1 | `1219d80` | Labour Claims 4–10 Tier 2 entries in verification log. Two CRITICAL defects: Claim 8 fabricated MPR-Oct-2024 quote; Claim 10 propagation of US-transferred V/U heuristic Claim 3 rejected. | `markdown-files/verification/labour.md` |
-| 2 | `165e7cc` | StatsCan zero-audit script + report. **No stale-zero bugs anywhere outside JVWS** — the COVID-gap defect was unique. 12 benign leading-NaN-padding mismatches; user picks resolution. | `analyses/statscan_zero_audit.py`, `analyses/statscan_zero_audit.md` |
-| 3 | `33eb0cd` | Indeed Hiring Lab Canada fetcher wired into `fetch.py`. Daily + monthly-mean CSVs in `data/`. NOT chart-wired (deferred to 2026-05-10 design pass; needs MultiLineSpec secondary y-axis extension). | `fetch.py` `fetch_indeed_canada()`, `data/indeed_postings_ca.csv`, `data/indeed_postings_ca_monthly.csv` |
-| 4 | `2a5fef7` | Tier 2 verification audits: Inflation, Policy, GDP, Housing, Financial. Each section gets a per-claim log file. **All five sections have defects.** Three sections have claims demonstrably wrong vs project data. | `markdown-files/verification/{inflation,policy,gdp,housing,financial}.md` |
-| 5 | `e318b0c` | End-of-night status note + per-section verification log links wired into HANDOFF status block. | This file |
-| 6 | `95c9ac5` | **Patch proposals across all six verification logs.** 44 mechanical patches drafted with copy-paste-able old_string / new_string pairs, ready for Edit-tool accept/reject. ~38 judgment items deferred. Restructures morning review from compose-from-scratch to fast accept/reject. | All `markdown-files/verification/*.md` files; "Proposed patches" subsection per claim |
-| 7 | `ccf5244` | **Deep-dive site scaffolding.** Multi-page architecture wired into `build.py`: shared cross-page nav bar; 6 placeholder deep-dive pages (one per section); Beveridge curve embedded as a real iframe in the Labour deep-dive. Placeholder content per planned-content list. | `build.py` (`NAV`, `_build_nav_html`, `DEEP_DIVES`, `_assemble_deep_dive_page`); `policy.html`, `inflation.html`, `gdp.html`, `labour.html`, `housing.html`, `financial.html` at project root |
-| 8 | `c994fb0` | **`distribution_conventions.md` introduced.** Five-tier ladder (typical / uncommon / pronounced / rare / extreme) at central 50/80/95/99% boundaries. Per-indicator metadata (tail axis, descriptor pair). Binary BoC-band frame for indicators with published BoC bands (inflation, policy rate vs neutral, output gap). Synonymic latitude within tier. New First-Moves doc; new "Preserve design rationale sparingly" workflow rule in CLAUDE.md. Designed via long discussion 2026-05-09 (research basis: Mosteller-Youtz 1990, IPCC, EU pharmacovigilance). | `markdown-files/distribution_conventions.md`; CLAUDE.md First Moves §5 + Workflow conventions; `analyses/bocfed_spread_distribution.py` (worked-example data); `analyses/bocfed_spread_38bp_test.md` (methodology drift evidence) |
-| 9 | `3f020ad` | **Convention applied end-to-end on `bocfed_spread` (worked example).** Framework prose retuned; code retuned (`analyze.py` `_classify_bocfed` thresholds, banner). Verification log Claim 5 marked Tier 3. Old patch proposals superseded. | `markdown-files/analysis_framework.md`; `analyze.py`; `markdown-files/verification/policy.md` Claim 5 |
-| 10 | `760b254` | **Convention applied to `can2y_overnight_spread`.** Vocabulary update; no threshold change needed (audit had found it VERIFIED). | `analysis_framework.md`; `markdown-files/verification/policy.md` Claim 4 |
-| 11 | `49d8f26` | **CI fix: `git-auto-commit-action` v5 → v7.** Node.js 24 incompatibility was silently breaking nightly auto-commits. Green again. | `.github/workflows/update.yml` |
-| 12 | `7c8b170` | **Convention applied to Inflation.** First BoC-band dual classification for an inflation indicator. Four-state breadth classification dropped (analyst synthesis; user Q1 decision). Unsourced thresholds retuned. | `analysis_framework.md`; `analyze.py`; `markdown-files/verification/inflation.md` |
-| 13 | `e9f3240` | **Inflation Q1/Q2/Q3 user decisions applied.** Breadth dropped; core-vs-headline logic refined per user direction. | `analysis_framework.md`; `markdown-files/verification/inflation.md` |
-| 14 | `d010e64` | **Convention applied to Financial Conditions.** USDCAD stress-corridor peaks corrected to match project data (1.4539). CAD pass-through ranges retuned. MPR/SAN mis-attribution resolved. | `analysis_framework.md`; `analyze.py`; `markdown-files/verification/financial.md` |
-| 15 | `637f7bd` | **Convention applied to GDP & Activity.** BCC criteria corrected to canonical "amplitude, duration, scope." Housing-trough anchors corrected (April 2009 = 111.8k). Inventories threshold retuned to P80 (±3.55pp) from asserted ±3pp. Data-source probe doc landed. | `analysis_framework.md`; `analyze.py`; `analyses/gdp_distribution.py`; `analyses/data-source-probe-2026-05-09.md` |
-| 16 | `7b80c79` | **Convention applied to Housing.** CMHC citation conflation resolved (2023 vs 2025 reports). CREA HPI methodology corrected. Cyclical anchors retuned against project data. | `analysis_framework.md`; `analyze.py`; `markdown-files/verification/housing.md` |
-| 17 | `90bdb5d` | **Convention applied to Labour Market (final section).** Claim 8 fabricated quote removed. Claim 10 US-heuristic propagation removed. Real wage benchmark added per user direction. LFS gross-flows probe landed. | `analysis_framework.md`; `analyze.py`; `markdown-files/verification/labour.md`; `analyses/lfs-gross-flows-probe-2026-05-09.md` |
-| 18 | `15442ca` | **End-of-day wrap: Policy Claim 10 dropped.** Policy Claim 10 (3×2 conditional grid) dropped per user decision; same construct class as Labour Claim 2 and Inflation Claim 3 (both previously rejected). Framework prose retains interpretive logic as paragraph framing; continuous tier handles magnitude. Verification log marked Tier 3. Labour-tightness research document landed: `analyses/labour_tightness_research_2026-05-09.md`. | `markdown-files/verification/policy.md`; `analysis_framework.md`; `analyses/labour_tightness_research_2026-05-09.md` |
-| 19 | `5a952d1` | **V/U fifth-pass resolution applied.** Labour Claim 3 V/U bands relabelled to empirical descriptors (bottom-of-history / low / elevated / high / exceptionally high); paragraph framing locked in distinguishing BoC-likely-synthesis from wage-confirmed-synthesis. "Verification, not speculation" extended with general epistemic rule (state only dashboard observations; calibration anchors in background). Claims 3 and 10 marked Tier 3. | `markdown-files/verification/labour.md`; `analysis_framework.md` |
-| 20 | `242ec83` | **HANDOFF refresh: prune stale Next Steps, integrate design-doc references.** Convention sweep item removed (complete); blurb regen item unblocked. Three post-refresh items added: RBA two-sided methodology, BOS labour-shortage indicator, real-wage-benchmark prose extension. | This file |
-
-### Open judgment items (updated 2026-05-09)
-
-All mechanical defects and factual corrections from the original five-section Tier 2 audit have been resolved via the convention sweep. Late-afternoon milestones resolved the two highest-priority items:
-
-1. **Labour Claim 3 — V/U threshold bands.** **RESOLVED 2026-05-09 (Tier 3).** Bands relabelled to empirical descriptors (bottom-of-history / low / elevated / high / exceptionally high) with locked-in paragraph framing. Labour-tightness research confirmed three evidence anchors for the resolution. Verification log updated.
-2. **Labour Claim 10 — V/U-line propagation.** **RESOLVED 2026-05-09 (Tier 3).** Claim 3 resolution unblocked Claim 10. Verification log updated.
-3. **Policy — 3×2 conditional grid for `can2y_overnight_spread` × `action_state`.** **RESOLVED 2026-05-09 (Tier 3).** Dropped per user decision 2026-05-09; same construct class as Labour Claim 2 and Inflation Claim 3 (both previously rejected). Framework prose retains interpretive logic as paragraph framing; continuous tier handles magnitude.
-4. **Output gap implementation.** Valet path confirmed (`INDINF_OUTGAPMPR_Q`, via data-source probe). User wants HP-filter-based potential GDP comparison added alongside. Awaiting implementation in `fetch.py` + framework wiring.
-5. **Real wage benchmark.** Added to Labour framework per user direction during sweep; framework cites live computation but no current-state assessment exists yet (Tier 1 placeholder).
-
-**Queued implementation work (no judgment needed, just implementation):**
-
-- 12M→3M code change in `compute_labour_values` + chart spec + `_DERIVED_SERIES_SOURCES`. Framework updated in earlier sweep; code is not.
-- `MultiLineSpec` secondary y-axis extension to wire the Indeed line into the Unemployment & Job Vacancies chart.
-- Re-fetch other StatsCan series and accept leading-NaN rows (audit Option A) or tighten `fetch_statscan` to strip leading NaN only (Option B).
-
-### Defect-class resolution (post-sweep, 2026-05-09)
-
-| Defect class | Status |
-|---|---|
-| Fabricated quote / number (Labour Claims 1, 8) | **RESOLVED** — Claim 8 fabricated MPR quote removed; Claim 1 revised Tier 3 |
-| Threshold values disagreeing with project data (Policy bocfed_spread, GDP housing-trough, Financial USDCAD, Housing anchors) | **RESOLVED** — All retuned per convention sweep; Tier 3 in per-section verification logs |
-| Citation conflation (Housing CMHC, Financial MPR vs SAN, GDP BCC wording) | **RESOLVED** — Corrected in framework prose during sweep |
-| Threshold values asserted without primary-source backing (Inflation 3 thresholds, Labour Claim 4, GDP inventories) | **RESOLVED** — All retuned to empirical P80 per convention; sources in distribution analysis files |
-| Rigid n×n decoder (Inflation Claim 3 four-state breadth, Policy 3×2 grid) | Inflation Claim 3: **RESOLVED** — breadth classification dropped per user Q1 decision. Policy 3×2 grid: **RESOLVED** — dropped per user decision 2026-05-09; prose retains interpretive logic. |
-| US heuristic transferred to Canada (Labour Claims 3, 10) | **RESOLVED** Tier 3 — both claims resolved 2026-05-09. Claim 3: bands relabelled to empirical descriptors with locked-in framing. Claim 10: unblocked by Claim 3 resolution. |
-| Indicator-naming-leak risk (Labour Claim 9, Financial Claim 10) | Low priority; not addressed in sweep |
-
-### What's now unblocked (2026-05-09 end of day)
-
-The convention sweep clears the main blocker on blurb regen. All mechanical defects are resolved; framework prose is convention-aligned across all six sections. The four autonomous-draft blurbs (Labour, Financial, GDP, Housing) can now be regenerated without baking stale anchors.
-
-Remaining blockers per section:
-- **Labour**: Claim 3 V/U judgment still open; regenerating a blurb is safe (fabricated quotes removed), but the V/U bands language may need a follow-up pass.
-- **Financial, GDP, Housing**: no open judgment items. Blurb regen is clean.
-
-Recommended next-session order:
-1. Resolve Labour Claim 3 V/U bands + Claim 10 propagation (dedicated session; bring the discussion thread).
-2. Regen all four blurbs: `python analyze.py --section labour` / `financial` / `gdp` / `housing`. (CLI subscription path; no API key needed locally.)
-3. Voice-iteration pass on the regenerated blurbs.
-4. Implement deep-dives per `analyses/deep-dive-design-2026-05-09.md` — Policy page first (yield dependencies for Housing).
-
-### Resume entry points
-
-- **Open judgment items** — see "Open judgment items" above. Labour Claim 3 V/U is the highest-priority unresolved item.
-- **Blurb regen** — all four autonomous-draft sections are now ready: `python analyze.py --section <labour|financial|gdp|housing>`.
-- **Deep-dive implementation** — `analyses/deep-dive-design-2026-05-09.md` is the spec. Policy page first.
-- **Convention sweep log** — `git log --oneline c994fb0..90bdb5d` shows the full sweep in chronological order.
-- **Per-section verification logs** — `markdown-files/verification/{labour,inflation,policy,gdp,housing,financial}.md`. All mechanical patches applied; open items marked.
-- **`markdown-files/verification/_tiers.md`** — canonical glossary for the three-tier framework.
+- **18 new StatsCan series added to `fetch.py` and fetched:** capacity utilization (total + manufacturing, Table 16-10-0359-01); EI regular beneficiaries (Table 14-10-0005-01); merchandise trade — 6 CA-US and all-countries export/import/balance series (Table 12-10-0119-01); population components — 5 quarterly series (Table 17-10-0040-01); labour force by age group — 4 prime-age and youth participation/employment series (Table 14-10-0287-01).
+- **9 pages build clean; 4 got new live charts:** `gdp.html` (Industrial Capacity Utilization); `labour.html` (EI Regular Beneficiaries, Prime-Age Labour Market 25–54, Youth Labour Market 15–24); `trade.html` (Canada–US Bilateral Trade, Total Merchandise Trade); `demographics.html` (International Migration Components).
+- **Workflow infrastructure:** `/chart` skill at `.claude/skills/chart/SKILL.md`; fleet framework (`FILE_OWNERSHIP.md`, `coordinator_template.md`, `merge_review_prompt.md`); CLAUDE.md escape hatch hardened; HANDOFF trip-wire formalized; Diagnosis Discipline added to global CLAUDE.md.
+- **Fetch MCP active:** `.mcp.json` at project root with `@modelcontextprotocol/server-fetch`. Requires session reload to activate. Enables direct StatsCan/BoC Valet/FRED HTTP calls in-session without probe scripts.
+- **StatsCan API note:** `getSeriesInfoFromCubePidCoord` returns 404 as of 2026-05-10. Confirmed reliable path: bulk CSV download + `getDataFromVectorsAndLatestNPeriods` with vector IDs. Probe scripts using the coord endpoint are stale.
 
 ---
 
@@ -270,12 +54,12 @@ boc-tracker/
 ├── index.html              ← generated output; do not edit by hand
 ├── policy.html             ← Policy deep-dive (7 live charts); generated by build.py
 ├── inflation.html          ← Inflation deep-dive; 1 live chart (core individual measures) + 4 placeholder stubs; generated by build.py
-├── gdp.html                ← GDP deep-dive; 2 live charts (real GDP vs potential, output gap) + 4 placeholder stubs; generated by build.py
-├── labour.html             ← Labour deep-dive; 1 live chart (Beveridge curve) + 7 placeholder stubs; generated by build.py
+├── gdp.html                ← GDP deep-dive; 3 live charts (real GDP vs potential, output gap, capacity utilization) + 3 placeholder stubs; generated by build.py
+├── labour.html             ← Labour deep-dive; 4 live charts (Beveridge curve, EI beneficiaries, prime-age LM, youth LM) + 4 placeholder stubs; generated by build.py
 ├── housing.html            ← Housing deep-dive; 5 live charts + 1 static reference chart (mortgage renewal shock); generated by build.py
 ├── financial.html          ← Financial deep-dive; 1 live chart (WTI−WCS differential) + 5 placeholder stubs; generated by build.py
-├── trade.html              ← Trade & External Sector deep-dive (5 placeholder sections); generated by build.py
-├── demographics.html       ← Demographics & Labour Supply deep-dive (5 placeholder sections); generated by build.py
+├── trade.html              ← Trade & External Sector deep-dive; 2 live charts (CA–US bilateral, total merchandise) + 3 placeholder stubs; generated by build.py
+├── demographics.html       ← Demographics & Labour Supply deep-dive; 1 live chart (international migration components) + 4 placeholder stubs; generated by build.py
 ├── reference/              ← personal-reference documents (PDFs, Word docs, research artifacts; gitignored)
 ├── data/                   ← all fetched CSVs + generated blurbs (source-of-truth for build.py)
 │   ├── CPI series: cpi_all_items.csv (SA v41690914), cpi_all_items_nsa.csv (NSA v41690973),
