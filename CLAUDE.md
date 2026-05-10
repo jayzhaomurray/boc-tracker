@@ -33,6 +33,11 @@ Read these documents in order before doing anything substantive. They are the so
   - Model: routine HANDOFF updates (table row, marking a todo done, adding a sub-bullet) run fine on Sonnet via subagent — delegate it after the main code commit. Major restructuring (re-prioritising the entire Next Steps list, rewriting an architecture section because the architecture changed) needs Opus on the main thread.
   - Same applies to the other canonical docs when the change touches their domain: chart_style_guide.md when introducing a new chart treatment pattern; analysis_framework.md when adding a new section signal.
 
+## Delegation Rules
+
+- For HANDOFF refreshes, deep-dive flesh-outs, and multi-file research/audit tasks, ALWAYS delegate to a subagent rather than doing the work inline.
+- Batch script-execution approvals: present the full plan once and ask for blanket approval rather than re-prompting for each similar command.
+
 ## Analytical bar
 
 Concrete project anchors (the practitioner-level expectation is in memory):
@@ -54,6 +59,11 @@ Concrete project anchors (the practitioner-level expectation is in memory):
 - Don't generalize from a single chart's behavior; verify against multiple charts before codifying.
 - Don't write probe scripts at the project root — gitignored as `probe_*.py`. New probes go in `analyses/`.
 - Don't write CSVs that aren't part of the pipeline into `data/`. That folder is the build's source of truth.
+
+## BoC Tracker Conventions
+
+- Deep-dive pages: when removing a page, also remove its entry from `DEEP_DIVES` to avoid double-builds.
+- StatsCan API: confirm endpoint shape with a small probe before writing fetcher logic; metadata API is unreliable, prefer cube-based fetches.
 
 ## Model allocation — project-specific examples
 

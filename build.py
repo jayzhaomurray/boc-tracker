@@ -256,6 +256,20 @@ class MortgageShockSpec:
     footnote: str = ""
 
 
+@dataclass
+class NativeChartSpec:
+    """Escape hatch for custom builders that don't fit any generic spec type.
+
+    `builder` must have the signature:
+        builder(data: dict, chart_idx: int, include_plotlyjs: bool) -> str
+
+    `data_keys` lists the CSV series names the builder needs; the data-loading
+    loop in main() will ensure those CSVs are loaded before build_page() runs.
+    """
+    builder: object          # callable: (data, chart_idx, include_plotlyjs) -> str
+    data_keys: list          # list[str] — CSV series names required by the builder
+
+
 # ── Transform system ──────────────────────────────────────────────────────────
 
 FREQ_TRANSFORMS: dict[str, list[str]] = {
@@ -3750,16 +3764,10 @@ PAGES = [
                 default_years=10,
                 footnote="StatsCan Table 14-10-0287, monthly SA. Youth unemployment is highly cyclical and has risen faster than prime-age during the 2024–2025 cooling. Tracking the gap identifies where slack is most acute.",
             ),
-            # Chart 2: Beveridge Curve - handled via body_fn or we convert it to a Spec
-            # For simplicity, we'll keep it as a custom section or add a new Spec type
-            MultiLineSpec(
-                title="LFS Reason for Unemployment — Job-Loser Share",
-                lines=[
-                    LineConfig("unemployment_rate", "Total UR (reference)", "#90a4ae"),
-                ],
-                ticksuffix="%",
-                default_years=10,
-                footnote="[Coming soon] StatsCan Table 14-10-0125. Share of unemployed citing job loss vs. leaving or re-entering. Rising job-loser share is the cleanest layoff signal.",
+            # Chart 2: Beveridge Curve — phase-space scatter, custom builder
+            NativeChartSpec(
+                builder=_build_beveridge_curve_panel,
+                data_keys=["unemployment_rate", "job_vacancy_rate"],
             ),
             MultiLineSpec(
                 title="LFS R-Indicators",
@@ -3802,27 +3810,13 @@ PAGES = [
             5: "gdp_dd_hours",
         },
         charts=[
-            # Note: GDP potential and gap panels are currently using native builders.
-            # I'll keep them as ChartSpecs or MultiLineSpecs if possible, or add them as native.
-            # For now, I'll use placeholders that mention they are coming.
-            MultiLineSpec(
-                title="Real GDP vs Potential (HP Filter)",
-                lines=[
-                    LineConfig("gdp_monthly", "Real GDP", "#1565c0"),
-                ],
-                ticksuffix="",
-                unit_label="C$ trillions",
-                default_years=10,
-                footnote="Potential GDP estimated via HP filter (λ=129,600). Trend-only estimate; does not incorporate structural model inputs. Level view in C$ trillions.",
+            NativeChartSpec(
+                builder=_build_gdp_potential_panel,
+                data_keys=["gdp_monthly"],
             ),
-            MultiLineSpec(
-                title="Output Gap (HP Filter Estimate)",
-                lines=[
-                    LineConfig("gdp_monthly", "Gap (%)", "#1565c0"),
-                ],
-                ticksuffix="%",
-                default_years=10,
-                footnote="Mechanical HP-filter estimate. BoC publishes official range quarterly in MPR; typically -1.5% to +0.5% in recent cycles.",
+            NativeChartSpec(
+                builder=_build_output_gap_panel,
+                data_keys=["gdp_monthly"],
             ),
             MultiLineSpec(
                 title="Productivity Decomposition",
@@ -3858,18 +3852,9 @@ PAGES = [
                 lines=[], # Placeholder
                 footnote="[Coming soon] BoC's Canadian-Dollar Effective Exchange Rate. Methodologically better for inflation pass-through than bilateral USDCAD.",
             ),
-            MultiLineSpec(
-                title="WTI − WCS Differential",
-                lines=[
-                    LineConfig("wti", "WTI (ref)", "#90a4ae"),
-                    LineConfig("wcs", "WCS",      "#7b1fa2"),
-                ],
-                ticksuffix="",
-                hoverformat=".2f",
-                default_years=10,
-                ymin=0,
-                unit_label="USD/barrel",
-                footnote="Differential between US and Canadian crude benchmarks. Spread compression since May 2024 reflects TMX capacity additions.",
+            NativeChartSpec(
+                builder=_build_wcs_wti_panel,
+                data_keys=["wcs", "wti"],
             ),
         ],
     ),
@@ -4129,6 +4114,8 @@ def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
             panels.append(_build_stackedbar_panel(chart, data, i, i == 0))
         elif isinstance(chart, MortgageShockSpec):
             panels.append(_build_mortgage_shock_panel(chart, i, i == 0))
+        elif isinstance(chart, NativeChartSpec):
+            panels.append(chart.builder(data, i, i == 0))
         else:
             df = data[chart.series]
             panels.append(_chart_panel_html(chart, df, i, include_plotlyjs=(i == 0), data=data))
@@ -4182,6 +4169,8 @@ def main():
                         print(f"  Warning: {line.series}.csv missing — run fetch.py. Line will be skipped.")
             elif isinstance(chart, MortgageShockSpec):
                 pass  # hardcoded data — no CSV needed
+            elif isinstance(chart, NativeChartSpec):
+                all_series.update(chart.data_keys)
             else:
                 # ChartSpec: series may be raw (CSV exists) or derived.
                 if (DATA_DIR / f"{chart.series}.csv").exists():

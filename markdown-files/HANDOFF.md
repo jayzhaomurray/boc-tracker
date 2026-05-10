@@ -21,10 +21,23 @@ This section logs a series of structural changes and identified regressions intr
 - **ORPHANED: WTI–WCS Differential:** The native `_build_wcs_wti_panel` was replaced by a standard `MultiLineSpec` in `financial.html`, losing the specialized reference bands and layout.
 - **Broken DEEP_DIVES Loop:** The `DEEP_DIVES` processing loop and `_assemble_deep_dive_page` call were removed from `main()`.
 
-### 3. Immediate Recommendation for Next Agent (Claude Code)
-The project is currently in a state where the infrastructure is cleaner (unified `PageSpec`), but the analytical "soul" of the deep-dives (the custom Plotly builders) has been accidentally swapped for placeholders. 
-- **Task:** Update `build_page` or create a new `CustomChartSpec` that can invoke the orphaned `_build_*_panel` functions so they can be re-inserted into the `PAGES` definition.
-- **Do not revert the StatsCan API fix**; it is the only reason data fetching is currently working.
+### 3. Regression status (updated 2026-05-10)
+
+| Regression | Builder | Status |
+|---|---|---|
+| Beveridge Curve (`labour.html`) | `_build_beveridge_curve_panel` | **Being fixed — Charter agent, current session** |
+| WTI–WCS Differential (`financial.html`) | `_build_wcs_wti_panel` | Remaining — fix in a follow-on session |
+| GDP Potential & Output Gap (`gdp.html`) | `_build_gdp_potential_panel`, `_build_output_gap_panel` | Remaining — fix in a follow-on session |
+
+**Do not revert the StatsCan API fix**; it is the only reason data fetching is currently working.
+
+### 4. Parallel agent fleet framework (added 2026-05-10)
+
+A human + Claude session reviewed this branch, confirmed the three regressions above, and introduced a structured parallel-agent framework for future multi-file work:
+
+- **`markdown-files/FILE_OWNERSHIP.md`** — exclusive file zones per agent role (Fetcher, Charter, Auditor, Doc Writer, Deployer). Agents may not touch files outside their zone without coordinator approval.
+- **`markdown-files/coordinator_template.md`** — coordinator prompt template for dispatching a parallel fleet: defines agent roles, dispatch instructions, and merge-review hand-off sequence.
+- **`markdown-files/merge_review_prompt.md`** — merge-review prompt for the final consolidation step after parallel agents complete.
 
 ---
 
