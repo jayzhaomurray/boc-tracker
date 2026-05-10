@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Wordmark · Monogram</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 24px 32px; background: var(--paper); display: grid; grid-template-columns: 1.5fr 1fr; gap: 22px; align-items: center; }
+  .frame { border: 1px solid var(--rule); background: var(--card); border-radius: var(--r-md); padding: 22px; display: flex; align-items: center; justify-content: center; min-height: 132px; }
+  .frame.dark { background: oklch(14% 0.018 265); color: oklch(95% 0.012 85); border-color: oklch(28% 0.022 265); }
+  .label { font: 600 10px/1 var(--font-sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-quiet); margin-bottom: 8px; }
+  .frame img { display: block; }
+</style>
+</head>
+<body>
+  <div>
+    <div class="label">Wordmark · cream</div>
+    <div class="frame"><img src="../assets/wordmark.svg" alt="BoC Tracker wordmark"></div>
+  </div>
+  <div>
+    <div class="label">Monogram · vault</div>
+    <div class="frame dark"><img src="../assets/monogram.svg" alt="BoC Tracker monogram" width="64" height="64" style="filter: invert(1)"></div>
+  </div>
+</body>
+</html>

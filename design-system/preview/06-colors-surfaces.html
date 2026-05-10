@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Surfaces · Paper mode</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 24px 32px; background: var(--paper); }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .sw { border: 1px solid var(--rule); border-radius: var(--r-md); padding: 14px; aspect-ratio: 1.4 / 1; display: flex; flex-direction: column; justify-content: space-between; }
+  .sw .name { font: 600 10px/1 var(--font-sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-quiet); }
+  .sw .val  { font: 500 11px/1.3 var(--font-mono); color: var(--ink-sub); }
+  .paper      { background: var(--paper);       }
+  .vellum     { background: var(--vellum);      }
+  .card       { background: var(--card);        }
+  .card-strong{ background: var(--card-strong); }
+  .ink       { background: var(--ink);          color: var(--paper) !important; }
+  .ink-sub   { background: var(--ink-sub);      color: var(--paper) !important; }
+  .ink-quiet { background: var(--ink-quiet);    color: var(--paper) !important; }
+  .ink-faint { background: var(--ink-faint);    color: var(--paper) !important; }
+  .ink .name, .ink-sub .name, .ink-quiet .name, .ink-faint .name { color: oklch(95% 0.01 85 / 0.7); }
+  .ink .val,  .ink-sub .val,  .ink-quiet .val,  .ink-faint .val  { color: oklch(95% 0.01 85 / 0.85); }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="sw paper"><div class="name">Paper</div><div class="val">--paper<br>96.5% 0.012 85</div></div>
+    <div class="sw vellum"><div class="name">Vellum</div><div class="val">--vellum<br>94% 0.016 85</div></div>
+    <div class="sw card"><div class="name">Card</div><div class="val">--card<br>98% 0.008 85</div></div>
+    <div class="sw card-strong"><div class="name">Card·str</div><div class="val">--card-strong<br>99.5%</div></div>
+    <div class="sw ink"><div class="name">Ink</div><div class="val">--ink<br>20% 0.025 265</div></div>
+    <div class="sw ink-sub"><div class="name">Ink sub</div><div class="val">--ink-sub<br>40%</div></div>
+    <div class="sw ink-quiet"><div class="name">Ink quiet</div><div class="val">--ink-quiet<br>58%</div></div>
+    <div class="sw ink-faint"><div class="name">Ink faint</div><div class="val">--ink-faint<br>72%</div></div>
+  </div>
+</body>
+</html>

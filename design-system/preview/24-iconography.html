@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Iconography rules</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+  body { margin: 0; padding: 24px 32px; background: var(--paper); }
+  .row { display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px; margin-bottom: 14px; }
+  .ico { aspect-ratio: 1/1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--rule); border-radius: var(--r-sm); background: var(--card); color: var(--ink); }
+  .ico svg { width: 20px; height: 20px; stroke-width: 1.5; }
+  .ico .n { font: 500 9px/1 var(--font-mono); color: var(--ink-quiet); }
+  .note { font: 400 11px/1.5 var(--font-sans); color: var(--ink-quiet); border-top: 1px solid var(--rule); padding-top: 10px; margin-top: 4px; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="ico"><i data-lucide="chevron-down"></i><span class="n">chevron-down</span></div>
+    <div class="ico"><i data-lucide="arrow-up-right"></i><span class="n">arrow-up-right</span></div>
+    <div class="ico"><i data-lucide="info"></i><span class="n">info</span></div>
+    <div class="ico"><i data-lucide="external-link"></i><span class="n">external</span></div>
+    <div class="ico"><i data-lucide="moon"></i><span class="n">moon</span></div>
+    <div class="ico"><i data-lucide="sun"></i><span class="n">sun</span></div>
+    <div class="ico"><i data-lucide="refresh-cw"></i><span class="n">refresh</span></div>
+    <div class="ico"><i data-lucide="download"></i><span class="n">download</span></div>
+  </div>
+  <div class="row">
+    <div class="ico"><i data-lucide="search"></i><span class="n">search</span></div>
+    <div class="ico"><i data-lucide="filter"></i><span class="n">filter</span></div>
+    <div class="ico"><i data-lucide="settings"></i><span class="n">settings</span></div>
+    <div class="ico"><i data-lucide="github"></i><span class="n">github</span></div>
+    <div class="ico"><i data-lucide="bookmark"></i><span class="n">bookmark</span></div>
+    <div class="ico"><i data-lucide="calendar"></i><span class="n">calendar</span></div>
+    <div class="ico"><i data-lucide="trending-up"></i><span class="n">trending</span></div>
+    <div class="ico"><i data-lucide="copy"></i><span class="n">copy</span></div>
+  </div>
+  <div class="note">Lucide · 1.5px stroke · 20px nominal · inherits currentColor. Substituted in absence of a custom icon set — flag in README. No emoji, no two-tone, no filled icons.</div>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

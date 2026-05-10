@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chart toolbar pills</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 28px 32px; background: var(--paper); display: grid; gap: 22px; }
+  .row { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+  .label { font: 600 10px/1 var(--font-sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-quiet); flex: none; width: 110px; }
+  .group { display: inline-flex; border: 1px solid var(--rule-strong); border-radius: var(--r-sm); overflow: hidden; background: var(--card); }
+  .pill { font: 500 12px/1 var(--font-mono); padding: 7px 12px; color: var(--ink-sub); cursor: pointer; border: 0; background: transparent; border-right: 1px solid var(--rule); position: relative; }
+  .pill:last-child { border-right: 0; }
+  .pill:hover { color: var(--ink); }
+  .pill.active { background: var(--cobalt-tint); color: var(--cobalt); }
+  .pill.active::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: 0; height: 2px; background: var(--foil); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="label">Transform</div>
+    <div class="group">
+      <button class="pill">Level</button>
+      <button class="pill">M/M</button>
+      <button class="pill">3M AR</button>
+      <button class="pill active">Y/Y</button>
+    </div>
+  </div>
+  <div class="row">
+    <div class="label">Range</div>
+    <div class="group">
+      <button class="pill">2Y</button>
+      <button class="pill">5Y</button>
+      <button class="pill active">10Y</button>
+      <button class="pill">Max</button>
+    </div>
+  </div>
+  <div class="row">
+    <div class="label">Smooth</div>
+    <div class="group">
+      <button class="pill active">Level</button>
+      <button class="pill">20d Avg</button>
+    </div>
+  </div>
+</body>
+</html>

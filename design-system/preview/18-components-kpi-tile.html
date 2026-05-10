@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>KPI tiles</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 24px 32px; background: var(--paper); }
+  .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .tile { background: var(--card); border: 1px solid var(--rule); border-radius: var(--r-md); padding: 14px 16px; box-shadow: var(--shadow-card); position: relative; }
+  .eyebrow { display: flex; align-items: center; justify-content: space-between; }
+  .stamp { font: 500 10px/1 var(--font-mono); color: var(--ink-quiet); }
+  .label { font: 600 10px/1 var(--font-sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-quiet); }
+  .value { font: 500 32px/1 var(--font-mono); color: var(--ink); margin: 12px 0 6px; letter-spacing: -0.01em; }
+  .value .unit { font-size: 14px; color: var(--ink-quiet); margin-left: 3px; letter-spacing: 0; }
+  .delta { font: 500 11px/1 var(--font-mono); color: var(--vermillion); }
+  .delta.down { color: var(--cat-pine); }
+  .sub { font: 400 11px/1.4 var(--font-sans); color: var(--ink-sub); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--rule); }
+  .pill { font: 600 10px/1 var(--font-sans); letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 7px; border-radius: var(--r-pill); border: 1px solid currentColor; }
+  .pill.on { color: var(--cobalt); background: var(--cobalt-tint); }
+  .pill.above { color: var(--vermillion); background: var(--vermillion-tint); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="tile">
+      <div class="eyebrow"><span class="label">Policy rate</span><span class="stamp">Apr 30</span></div>
+      <div class="value">2.75<span class="unit">%</span></div>
+      <div class="delta">0 bp · 3 mtgs flat</div>
+      <div class="sub"><span class="pill on">In band</span> &nbsp; Upper edge of 2.25–3.25%.</div>
+    </div>
+    <div class="tile">
+      <div class="eyebrow"><span class="label">Headline CPI Y/Y</span><span class="stamp">Mar</span></div>
+      <div class="value">2.3<span class="unit">%</span></div>
+      <div class="delta">↑ 0.1 pp m/m</div>
+      <div class="sub"><span class="pill above">Above 2%</span> &nbsp; Trim 2.1 · Median 2.2.</div>
+    </div>
+    <div class="tile">
+      <div class="eyebrow"><span class="label">Unemployment</span><span class="stamp">Apr</span></div>
+      <div class="value">6.4<span class="unit">%</span></div>
+      <div class="delta down">↓ 0.1 pp m/m</div>
+      <div class="sub"><span class="pill on">Slack</span> &nbsp; 78th pct of 24-month range.</div>
+    </div>
+  </div>
+</body>
+</html>

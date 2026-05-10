@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Elevation system</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 32px; background: var(--paper); }
+  .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .cell { text-align: center; }
+  .box { height: 96px; background: var(--card); border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; font: 600 16px/1 var(--font-display); color: var(--ink); margin-bottom: 12px; }
+  .rule { box-shadow: var(--shadow-rule); border: 1px solid var(--rule); }
+  .card { box-shadow: var(--shadow-card); }
+  .pop  { box-shadow: var(--shadow-pop); }
+  .name { font: 500 11px/1.2 var(--font-mono); color: var(--ink-sub); }
+  .role { font: 400 11px/1.4 var(--font-sans); color: var(--ink-quiet); margin-top: 2px; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="cell"><div class="box rule">Hairline</div><div class="name">--shadow-rule</div><div class="role">section dividers, table rows</div></div>
+    <div class="cell"><div class="box card">Card</div><div class="name">--shadow-card</div><div class="role">chart panels, KPI tiles</div></div>
+    <div class="cell"><div class="box pop">Pop</div><div class="name">--shadow-pop</div><div class="role">tooltips, menus, only</div></div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Background motifs · audition</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 22px 26px 24px; background: var(--paper); }
+  .lead { font: 600 10px/1 var(--font-sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-quiet); margin-bottom: 14px; display: flex; gap: 12px; align-items: baseline; }
+  .lead .ask { color: var(--ink-sub); letter-spacing: 0; text-transform: none; font-weight: 500; font-size: 11px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .swatch { position: relative; height: 240px; border: 1px solid var(--rule); border-radius: var(--r-md); overflow: hidden; isolation: isolate; }
+  .swatch .name { position: absolute; top: 10px; left: 12px; z-index: 3; font: 600 10px/1.2 var(--font-sans); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-sub); }
+  .swatch .meta { position: absolute; bottom: 10px; left: 12px; right: 12px; z-index: 3; font: 500 11px/1.4 var(--font-sans); color: var(--ink-quiet); }
+  .swatch .card-demo { position: absolute; z-index: 3; left: 16px; right: 16px; top: 60px; padding: 14px 16px; background: var(--card); border: 1px solid var(--rule); border-radius: var(--r-md); }
+  .card-demo .v { font: 500 22px/1 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink); letter-spacing: -0.01em; }
+  .card-demo .l { font: 600 9px/1 var(--font-sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-quiet); margin-bottom: 6px; }
+  .card-demo .d { font: 500 11px/1 var(--font-mono); color: var(--cobalt); margin-top: 4px; }
+
+  /* ----- A · Aurora bloom — soft radials drifting in foil hues ----- */
+  .bg-aurora::before, .bg-aurora::after {
+    content: ""; position: absolute; inset: -25%; z-index: 1; filter: blur(60px); opacity: 0.55;
+    background:
+      radial-gradient(ellipse 45% 35% at 25% 30%, oklch(70% 0.20 320 / 0.55), transparent 70%),
+      radial-gradient(ellipse 40% 30% at 75% 70%, oklch(70% 0.20 220 / 0.55), transparent 70%),
+      radial-gradient(ellipse 30% 25% at 60% 20%, oklch(72% 0.18 30  / 0.45), transparent 70%);
+    animation: drift 24s ease-in-out infinite alternate;
+  }
+  .bg-aurora::after { animation-duration: 36s; animation-direction: alternate-reverse; opacity: 0.35; filter: blur(80px); }
+  @keyframes drift {
+    0%   { transform: translate3d(0,0,0) rotate(0deg); }
+    100% { transform: translate3d(8%,-6%,0) rotate(8deg); }
+  }
+
+  /* ----- B · Spectral mesh — denser foil mesh, heavier blur ----- */
+  .bg-mesh::before {
+    content: ""; position: absolute; inset: -30%; z-index: 1; filter: blur(80px); opacity: 0.6;
+    background:
+      radial-gradient(circle at 18% 22%, oklch(60% 0.22 30)  0%, transparent 35%),
+      radial-gradient(circle at 82% 28%, oklch(60% 0.22 285) 0%, transparent 35%),
+      radial-gradient(circle at 22% 78%, oklch(58% 0.20 220) 0%, transparent 35%),
+      radial-gradient(circle at 78% 82%, oklch(62% 0.20 110) 0%, transparent 35%),
+      radial-gradient(circle at 50% 50%, oklch(55% 0.18 350) 0%, transparent 40%);
+    animation: meshShift 30s ease-in-out infinite alternate;
+  }
+  @keyframes meshShift {
+    0%   { transform: scale(1)   rotate(0deg); }
+    100% { transform: scale(1.1) rotate(6deg); }
+  }
+
+  /* ----- C · Banknote moiré — interference pattern, very subtle ----- */
+  .bg-moire { background: var(--card); }
+  .bg-moire::before {
+    content: ""; position: absolute; inset: 0; z-index: 1; opacity: 0.45;
+    background:
+      repeating-linear-gradient(115deg, transparent 0 6px, oklch(60% 0.20 285 / 0.10) 6px 7px),
+      repeating-linear-gradient( 65deg, transparent 0 6px, oklch(55% 0.20  30 / 0.10) 6px 7px),
+      radial-gradient(ellipse 60% 50% at 50% 50%, transparent 0%, var(--card) 75%);
+  }
+  .bg-moire::after {
+    content: ""; position: absolute; inset: -50%; z-index: 2; opacity: 0.35; filter: blur(50px);
+    background:
+      radial-gradient(ellipse 35% 25% at 30% 35%, oklch(62% 0.22 285 / 0.6), transparent 70%),
+      radial-gradient(ellipse 30% 22% at 75% 65%, oklch(62% 0.22 200 / 0.6), transparent 70%);
+    animation: drift 40s ease-in-out infinite alternate;
+  }
+</style>
+</head>
+<body>
+  <div class="lead">
+    <span>Background motifs</span>
+    <span class="ask">Trippy lives behind the data. Cards stay clean white. Which feels right?</span>
+  </div>
+  <div class="grid">
+    <div class="swatch bg-aurora">
+      <div class="name">A · Aurora bloom</div>
+      <div class="card-demo">
+        <div class="l">Overnight</div>
+        <div class="v">2.75<span style="color:var(--ink-quiet);font-size:0.55em">%</span></div>
+        <div class="d">↓ 0 bp · 3 mtgs flat</div>
+      </div>
+      <div class="meta">Three soft radials in foil hues, blurred 60px, drifting on a 24s loop.</div>
+    </div>
+    <div class="swatch bg-mesh">
+      <div class="name">B · Spectral mesh</div>
+      <div class="card-demo">
+        <div class="l">Overnight</div>
+        <div class="v">2.75<span style="color:var(--ink-quiet);font-size:0.55em">%</span></div>
+        <div class="d">↓ 0 bp · 3 mtgs flat</div>
+      </div>
+      <div class="meta">Five-point CSS mesh, blurred 80px, slowly rotating and scaling.</div>
+    </div>
+    <div class="swatch bg-moire">
+      <div class="name">C · Moiré + glow</div>
+      <div class="card-demo">
+        <div class="l">Overnight</div>
+        <div class="v">2.75<span style="color:var(--ink-quiet);font-size:0.55em">%</span></div>
+        <div class="d">↓ 0 bp · 3 mtgs flat</div>
+      </div>
+      <div class="meta">Crossed 6px line patterns at 10% opacity (banknote guilloché) + two drifting blooms.</div>
+    </div>
+  </div>
+</body>
+</html>

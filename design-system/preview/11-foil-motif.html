@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Iridian Foil</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 26px 32px; background: var(--paper); }
+  .stack { display: grid; gap: 18px; }
+  .row { display: grid; grid-template-columns: 110px 1fr; gap: 24px; align-items: center; }
+  .label { font: 600 10px/1.2 var(--font-sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-quiet); }
+  .sample-rule    { height: 2px; background: var(--foil); width: 100%; }
+  .sample-thin    { height: 1px; background: var(--foil); width: 100%; }
+  .sample-soft    { height: 14px; background: var(--foil-soft); border-radius: var(--r-sm); }
+  .sample-dot     { width: 12px; height: 12px; border-radius: 50%; background: var(--foil); display: inline-block; }
+  .sample-text    { font: 600 28px/1 var(--font-display); letter-spacing: -0.012em; background: var(--foil); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .text-with-dot  { font: 600 20px/1 var(--font-display); display: inline-flex; align-items: center; gap: 10px; color: var(--ink); }
+  .note { font: 400 11px/1.5 var(--font-sans); color: var(--ink-quiet); border-top: 1px solid var(--rule); padding-top: 10px; margin-top: 6px; }
+</style>
+</head>
+<body>
+  <div class="stack">
+    <div class="row"><div class="label">Thick rule&nbsp;·&nbsp;2px</div><div class="sample-rule"></div></div>
+    <div class="row"><div class="label">Hairline&nbsp;·&nbsp;1px</div><div class="sample-thin"></div></div>
+    <div class="row"><div class="label">Soft wash</div><div class="sample-soft"></div></div>
+    <div class="row"><div class="label">Foil dot</div><div class="text-with-dot"><span class="sample-dot"></span>Live · refreshed 04:12 ET</div></div>
+    <div class="row"><div class="label">Glyph clip</div><div class="sample-text">BoC Tracker</div></div>
+  </div>
+  <div class="note">The brand's single decorative motif. Used as a strip, dot, or text-clipped glyph — never as a fill behind text and never twice in the same eyefield.</div>
+</body>
+</html>

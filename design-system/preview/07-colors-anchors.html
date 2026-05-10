@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Anchor accents</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 26px 32px; background: var(--paper); }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .anchor { border: 1px solid var(--rule); border-radius: var(--r-md); background: var(--card); padding: 16px; }
+  .head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+  .label { font: 600 10px/1 var(--font-sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-quiet); }
+  .name { font: 600 22px/1 var(--font-display); letter-spacing: -0.012em; }
+  .swatches { display: flex; gap: 8px; align-items: stretch; }
+  .swatches .a { flex: 1; height: 40px; border-radius: var(--r-sm); }
+  .meta { font: 500 11px/1.4 var(--font-mono); color: var(--ink-sub); margin-top: 10px; }
+  .role { font: 400 13px/1.4 var(--font-sans); color: var(--ink-sub); margin-top: 6px; }
+  .cobalt-fg     { color: var(--cobalt); }
+  .vermillion-fg { color: var(--vermillion); }
+  .c1 { background: var(--cobalt); }
+  .c2 { background: var(--cobalt-tint); border: 1px solid var(--rule); }
+  .v1 { background: var(--vermillion); }
+  .v2 { background: var(--vermillion-tint); border: 1px solid var(--rule); }
+</style>
+</head>
+<body>
+  <div class="pair">
+    <div class="anchor">
+      <div class="head"><div class="name cobalt-fg">Cobalt</div><div class="label">Canada · BoC</div></div>
+      <div class="swatches"><div class="a c1"></div><div class="a c2"></div></div>
+      <div class="meta">--cobalt &nbsp; oklch(45% .155 260)<br>--cobalt-tint &nbsp; selected-button fill</div>
+      <div class="role">Anchor: the primary domestic series. Same hue on every chart.</div>
+    </div>
+    <div class="anchor">
+      <div class="head"><div class="name vermillion-fg">Vermillion</div><div class="label">US · Fed · editorial</div></div>
+      <div class="swatches"><div class="a v1"></div><div class="a v2"></div></div>
+      <div class="meta">--vermillion &nbsp; oklch(52% .165 30)<br>--vermillion-tint &nbsp; alert / overlay fill</div>
+      <div class="role">Anchor: foreign comparator, editorial overlay (e.g. Services CPI on the wage chart).</div>
+    </div>
+  </div>
+</body>
+</html>

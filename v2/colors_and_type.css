@@ -1,0 +1,310 @@
+/* =============================================================================
+   BoC Tracker — Foundations
+   Colors, type, spacing, radii, hairlines, motion.
+   Light "Paper" mode + Dark "Vault" mode. OKLCH throughout.
+   ========================================================================== */
+
+/* --- Webfonts (Google Fonts CDN). Swap to self-hosted /fonts when shipping. -- */
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600;700&family=Cascadia+Mono:wght@400;500;600&family=Cascadia+Code:wght@400;500;600&display=swap");
+
+/* =============================================================================
+   1 · Color tokens — Paper (light) mode
+   ========================================================================== */
+:root {
+  /* Surfaces — cool off-white "ice", neutral with a faint blue cast. */
+  --paper:            oklch(97.5% 0.004 250);  /* page background */
+  --vellum:           oklch(95%   0.005 250);  /* recessed wells, table-zebra */
+  --card:             oklch(100%  0     0);    /* raised surfaces — pure white */
+  --card-strong:      oklch(100%  0     0);    /* tooltip / overlay */
+
+  /* Ink — deep navy with a hint of warmth so it sits in the cream. */
+  --ink:              oklch(20%   0.025 265);  /* primary text */
+  --ink-sub:          oklch(40%   0.020 265);  /* secondary text, axis labels */
+  --ink-quiet:        oklch(58%   0.015 265);  /* tertiary, footnotes, meta */
+  --ink-faint:        oklch(72%   0.010 265);  /* disabled */
+
+  /* Hairlines — closer to ink than to paper so they actually read. */
+  --rule:             oklch(88%   0.006 250);
+  --rule-strong:      oklch(77%   0.008 250);
+  --rule-emphasis:    oklch(40%   0.020 265);
+
+  /* Anchor accents — promoted from the chart style guide
+     (Canada / BoC = cobalt; US / Fed / editorial = vermillion). */
+  --cobalt:           oklch(45%   0.155 260); /* anchor: Canada / BoC */
+  --cobalt-tint:      oklch(94%   0.025 260); /* selected-button bg */
+  --vermillion:       oklch(52%   0.165 30);  /* anchor: US / Fed / editorial */
+  --vermillion-tint:  oklch(95%   0.022 30);
+
+  /* Categorical palette — independent series (CPI components, etc). */
+  --cat-amber:        oklch(68%   0.155 65);
+  --cat-teal:         oklch(55%   0.100 195);
+  --cat-plum:         oklch(45%   0.155 320);
+  --cat-pine:         oklch(55%   0.130 145);
+  --cat-walnut:       oklch(40%   0.045 50);  /* 5th, if needed */
+
+  /* Semantic — read off the analytical framework. */
+  --above-target:     var(--vermillion);      /* inflation above 2%, restrictive zone */
+  --on-target:        var(--cobalt);          /* in band, at potential */
+  --below-target:     var(--cat-teal);        /* below band, slack */
+  --easing:           var(--cat-pine);        /* cutting / easing */
+  --tightening:       var(--cat-amber);       /* hiking / tightening */
+
+  /* Range-band fill (chart convention from the style guide). */
+  --band-fill:        oklch(75% 0.005 265 / 0.30);
+  --band-fill-strong: oklch(60% 0.010 265 / 0.20);
+
+  /* Iridian foil — the brand's single decorative motif.
+     Evokes the security-foil engraving on a polymer banknote.
+     Use as a 1–2px strip, dot, or low-opacity wash. Never as a fill behind text. */
+  --foil:
+    linear-gradient(115deg,
+      oklch(70% 0.16 30)  0%,
+      oklch(72% 0.16 350) 18%,
+      oklch(66% 0.18 285) 38%,
+      oklch(64% 0.16 220) 58%,
+      oklch(70% 0.14 175) 78%,
+      oklch(74% 0.13 110) 100%);
+  --foil-soft:
+    linear-gradient(115deg,
+      oklch(70% 0.16 30  / 0.55),
+      oklch(66% 0.18 285 / 0.55),
+      oklch(64% 0.16 220 / 0.55),
+      oklch(74% 0.13 110 / 0.55));
+
+  /* Focus ring — practitioner-restrained, not iOS-blue glow. */
+  --focus:            oklch(45% 0.155 260 / 0.45);
+
+  /* Selection */
+  --selection-bg:     oklch(88% 0.035 250);
+  --selection-fg:     var(--ink);
+}
+
+/* =============================================================================
+   2 · Color tokens — Vault (dark) mode
+   ========================================================================== */
+[data-theme="vault"], .vault {
+  --paper:            oklch(14%   0.018 265);
+  --vellum:           oklch(17%   0.020 265);
+  --card:             oklch(19%   0.022 265);
+  --card-strong:      oklch(23%   0.024 265);
+
+  --ink:              oklch(95%   0.012 85);
+  --ink-sub:          oklch(78%   0.015 85);
+  --ink-quiet:        oklch(58%   0.018 85);
+  --ink-faint:        oklch(42%   0.020 265);
+
+  --rule:             oklch(28%   0.022 265);
+  --rule-strong:      oklch(38%   0.025 265);
+  --rule-emphasis:    oklch(70%   0.015 85);
+
+  --cobalt:           oklch(72%   0.155 245);
+  --cobalt-tint:      oklch(28%   0.060 250);
+  --vermillion:       oklch(72%   0.175 35);
+  --vermillion-tint:  oklch(28%   0.060 30);
+
+  --cat-amber:        oklch(78%   0.155 70);
+  --cat-teal:         oklch(70%   0.110 195);
+  --cat-plum:         oklch(70%   0.150 320);
+  --cat-pine:         oklch(72%   0.135 145);
+  --cat-walnut:       oklch(60%   0.050 50);
+
+  --band-fill:        oklch(80% 0.005 265 / 0.10);
+  --band-fill-strong: oklch(80% 0.010 265 / 0.18);
+
+  --focus:            oklch(72% 0.155 245 / 0.55);
+
+  --selection-bg:     oklch(35% 0.10 265);
+  --selection-fg:     oklch(98% 0.005 85);
+}
+
+/* =============================================================================
+   3 · Type tokens
+   ========================================================================== */
+:root {
+  --font-display: "Bricolage Grotesque", "Instrument Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-sans:    "Instrument Sans", "Söhne", "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono:    "Cascadia Mono", "Cascadia Code", "Consolas", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Display sits in Bricolage Grotesque — a confident, slightly
+     editorial grotesque. Body uses Instrument Sans for a modern-fintech sans pairing. */
+
+  /* — Scale (px, line-height in unitless) — */
+  --t-display-1: 56px;   --lh-display-1: 1.05;
+  --t-display-2: 40px;   --lh-display-2: 1.10;
+  --t-h1:        32px;   --lh-h1:        1.15;
+  --t-h2:        24px;   --lh-h2:        1.22;
+  --t-h3:        19px;   --lh-h3:        1.30;
+  --t-lede:      19px;   --lh-lede:      1.50;
+  --t-body:      15px;   --lh-body:      1.55;
+  --t-small:     13px;   --lh-small:     1.45;
+  --t-caption:   11px;   --lh-caption:   1.40;
+  --t-eyebrow:   11px;   --lh-eyebrow:   1.20; /* tracked uppercase */
+
+  --t-data-xl:   36px;   --lh-data-xl:   1.05;
+  --t-data-l:    24px;   --lh-data-l:    1.10;
+  --t-data-m:    15px;   --lh-data-m:    1.30;
+  --t-data-s:    12px;   --lh-data-s:    1.30;
+
+  --tracking-eyebrow:   0.14em;
+  --tracking-tight:    -0.012em;
+  --tracking-tighter:  -0.02em;
+  --tracking-loose:     0.02em;
+}
+
+/* =============================================================================
+   4 · Spacing, radii, shadow, motion
+   ========================================================================== */
+:root {
+  /* Spacing — 4-based, magazine-tight. */
+  --s-1:  4px;
+  --s-2:  8px;
+  --s-3:  12px;
+  --s-4:  16px;
+  --s-5:  20px;
+  --s-6:  24px;
+  --s-7:  32px;
+  --s-8:  40px;
+  --s-9:  48px;
+  --s-10: 64px;
+  --s-11: 80px;
+  --s-12: 96px;
+
+  /* Radii — small. This is a document, not an app icon. */
+  --r-xs: 2px;
+  --r-sm: 3px;
+  --r-md: 4px;
+  --r-lg: 6px;
+  --r-xl: 8px;
+  --r-pill: 999px;
+
+  /* Elevation — hairlines first, then one soft elevation. */
+  --shadow-rule:     inset 0 -1px 0 var(--rule);
+  --shadow-card:     0 1px 0 oklch(20% 0.025 265 / 0.04),
+                     0 0 0 1px oklch(20% 0.025 265 / 0.05);
+  --shadow-pop:      0 12px 28px -16px oklch(20% 0.025 265 / 0.18),
+                     0 0 0 1px oklch(20% 0.025 265 / 0.06);
+  --shadow-foil:     0 0 0 1px var(--rule),
+                     0 1px 0 oklch(20% 0.025 265 / 0.04);
+
+  /* Motion — small, fast, restrained. No bounce. */
+  --ease-out: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --ease-in:  cubic-bezier(0.6, 0, 0.8, 0.4);
+  --dur-1:    80ms;
+  --dur-2:    140ms;
+  --dur-3:    220ms;
+  --dur-4:    400ms;
+}
+
+/* =============================================================================
+   5 · Element defaults — semantic CSS vars applied to real tags
+   ========================================================================== */
+html, body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--t-body);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "ss01", "cv11";
+  font-variant-numeric: tabular-nums;
+}
+
+::selection { background: var(--selection-bg); color: var(--selection-fg); }
+
+/* Headings — grotesque display, semibold. */
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-style: normal;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: var(--tracking-tight);
+  margin: 0;
+  text-wrap: balance;
+}
+h1 { font-size: var(--t-h1); line-height: var(--lh-h1); letter-spacing: var(--tracking-tighter); }
+h2 { font-size: var(--t-h2); line-height: var(--lh-h2); }
+h3 { font-size: var(--t-h3); line-height: var(--lh-h3); font-weight: 600; }
+h4 { font-size: var(--t-body); line-height: var(--lh-body); font-weight: 600; font-family: var(--font-sans); letter-spacing: 0; }
+
+.display-1 { font-family: var(--font-display); font-style: normal; font-weight: 600; font-size: var(--t-display-1); line-height: var(--lh-display-1); letter-spacing: var(--tracking-tighter); }
+.display-2 { font-family: var(--font-display); font-style: normal; font-weight: 600; font-size: var(--t-display-2); line-height: var(--lh-display-2); letter-spacing: var(--tracking-tighter); }
+
+.roman { font-style: normal; }
+.italic { font-style: italic; }
+
+/* Eyebrow */
+.eyebrow {
+  font-family: var(--font-sans);
+  font-size: var(--t-eyebrow);
+  line-height: var(--lh-eyebrow);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--ink-quiet);
+  font-weight: 600;
+}
+
+/* Lede — sans intro paragraph beneath an h1/display. */
+.lede {
+  font-family: var(--font-sans);
+  font-style: normal;
+  font-weight: 400;
+  font-size: var(--t-lede);
+  line-height: var(--lh-lede);
+  color: var(--ink-sub);
+  text-wrap: pretty;
+}
+
+/* Body */
+p { margin: 0 0 var(--s-3); font-size: var(--t-body); line-height: var(--lh-body); text-wrap: pretty; }
+p.small { font-size: var(--t-small); line-height: var(--lh-small); color: var(--ink-sub); }
+p.caption, .caption { font-size: var(--t-caption); line-height: var(--lh-caption); color: var(--ink-quiet); }
+
+/* Footnotes */
+.footnote { font-size: var(--t-caption); line-height: 1.55; color: var(--ink-quiet); }
+
+/* Mono / data readouts */
+code, kbd, samp, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.data-xl { font-family: var(--font-mono); font-size: var(--t-data-xl); line-height: var(--lh-data-xl); font-weight: 500; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.data-l  { font-family: var(--font-mono); font-size: var(--t-data-l);  line-height: var(--lh-data-l);  font-weight: 500; font-variant-numeric: tabular-nums; }
+.data-m  { font-family: var(--font-mono); font-size: var(--t-data-m);  line-height: var(--lh-data-m);  font-weight: 500; font-variant-numeric: tabular-nums; }
+.data-s  { font-family: var(--font-mono); font-size: var(--t-data-s);  line-height: var(--lh-data-s);  font-weight: 500; font-variant-numeric: tabular-nums; }
+
+/* Links */
+a { color: inherit; text-decoration: underline; text-decoration-color: var(--rule-strong); text-underline-offset: 3px; text-decoration-thickness: 1px; transition: text-decoration-color var(--dur-1) var(--ease-out); }
+a:hover { text-decoration-color: var(--ink); }
+a.link-quiet { text-decoration: none; color: var(--ink-sub); }
+a.link-quiet:hover { color: var(--ink); }
+a.link-foil { text-decoration: none; position: relative; padding-bottom: 2px; }
+a.link-foil::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--rule-strong); transition: opacity var(--dur-2) var(--ease-out), background var(--dur-2); }
+a.link-foil:hover::after { background: var(--foil); }
+
+hr { border: 0; border-top: 1px solid var(--rule); margin: var(--s-7) 0; }
+
+/* Focus */
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--r-sm); }
+
+/* Tables */
+table.data { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+table.data th, table.data td { padding: var(--s-2) var(--s-3); text-align: left; border-bottom: 1px solid var(--rule); font-size: var(--t-small); line-height: var(--lh-small); }
+table.data th { color: var(--ink-quiet); font-weight: 600; font-size: var(--t-caption); letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; }
+table.data td.num, table.data th.num { text-align: right; font-family: var(--font-mono); }
+table.data tr:hover td { background: var(--vellum); }
+
+/* Utility */
+.ink        { color: var(--ink); }
+.ink-sub    { color: var(--ink-sub); }
+.ink-quiet  { color: var(--ink-quiet); }
+.accent-cobalt     { color: var(--cobalt); }
+.accent-vermillion { color: var(--vermillion); }
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* Foil hairline — the one decorative element. */
+.foil-rule { height: 1px; background: var(--foil); width: 100%; }
+.foil-rule-thick { height: 2px; background: var(--foil); width: 100%; }
+.foil-dot { display: inline-block; width: 0.6em; height: 0.6em; border-radius: 50%; background: var(--foil); vertical-align: 0.05em; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; }
+}

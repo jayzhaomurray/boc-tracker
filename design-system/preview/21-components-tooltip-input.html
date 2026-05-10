@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tooltip &amp; inputs</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 24px 32px; background: var(--paper); display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; align-items: start; }
+  /* Tooltip */
+  .tt { background: var(--card-strong); border: 1px solid var(--rule-strong); border-radius: var(--r-sm); padding: 10px 12px; box-shadow: var(--shadow-pop); display: inline-block; min-width: 220px; }
+  .tt .date { font: 500 11px/1.2 var(--font-mono); color: var(--ink-quiet); margin-bottom: 6px; }
+  .tt .row  { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 3px 0; font: 500 12px/1.2 var(--font-mono); color: var(--ink); }
+  .tt .row .name { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-sans); font-weight: 500; color: var(--ink-sub); }
+  .tt .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .d-can { background: var(--cobalt); }
+  .d-us  { background: var(--vermillion); }
+  .d-srv { background: var(--vermillion); border: 1px dashed oklch(80% 0.06 30); background: transparent; }
+  /* Inputs */
+  .field { display: block; margin-bottom: 12px; }
+  .field label { display: block; font: 600 10px/1 var(--font-sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-quiet); margin-bottom: 5px; }
+  .field input, .field select { width: 100%; box-sizing: border-box; font: 500 13px/1 var(--font-mono); padding: 8px 10px; border: 1px solid var(--rule-strong); background: var(--card); color: var(--ink); border-radius: var(--r-sm); }
+  .field input:focus, .field select:focus { outline: 2px solid var(--focus); outline-offset: 1px; border-color: var(--cobalt); }
+  .field .hint { font: 400 11px/1.4 var(--font-sans); color: var(--ink-quiet); margin-top: 4px; }
+  .heading { font: 600 10px/1 var(--font-sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-quiet); margin-bottom: 10px; }
+</style>
+</head>
+<body>
+  <div>
+    <div class="heading">Hover tooltip</div>
+    <div class="tt">
+      <div class="date">Apr 30, 2026</div>
+      <div class="row"><span class="name"><span class="dot d-can"></span>BoC overnight</span><span>2.75 %</span></div>
+      <div class="row"><span class="name"><span class="dot d-us"></span>Fed funds (upper)</span><span>4.25 %</span></div>
+      <div class="row"><span class="name"><span class="dot d-srv"></span>2Y GoC</span><span>2.42 %</span></div>
+    </div>
+  </div>
+  <div>
+    <div class="heading">Form inputs</div>
+    <div class="field">
+      <label>Start date</label>
+      <input type="text" value="2016-04-30">
+    </div>
+    <div class="field">
+      <label>Series</label>
+      <select><option>BoC overnight (V39079)</option><option>2Y GoC</option></select>
+      <div class="hint">From the BoC Valet API.</div>
+    </div>
+  </div>
+</body>
+</html>

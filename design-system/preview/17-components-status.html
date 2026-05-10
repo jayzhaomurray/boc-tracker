@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Status pills &amp; tier tags</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 28px 32px; background: var(--paper); display: grid; gap: 18px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .label { font: 600 10px/1 var(--font-sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-quiet); width: 110px; flex: none; }
+  /* Status pills — outline + tint, never solid fill */
+  .pill { font: 600 11px/1 var(--font-sans); letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 9px; border-radius: var(--r-pill); border: 1px solid currentColor; display: inline-flex; align-items: center; gap: 6px; }
+  .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .above   { color: var(--above-target); background: var(--vermillion-tint); }
+  .on      { color: var(--on-target);    background: var(--cobalt-tint); }
+  .below   { color: var(--cat-teal);     background: oklch(94% 0.03 195); }
+  .easing  { color: var(--cat-pine);     background: oklch(94% 0.03 145); }
+  .tighten { color: var(--cat-amber);    background: oklch(94% 0.04 70); }
+  /* Tier tags */
+  .tier { font: 600 10px/1 var(--font-mono); letter-spacing: 0.04em; padding: 4px 7px; border-radius: var(--r-xs); }
+  .t1 { background: oklch(94% 0.005 85);  color: var(--ink-quiet);  border: 1px solid var(--rule); }
+  .t2 { background: var(--cobalt-tint);    color: var(--cobalt);     border: 1px solid oklch(80% 0.06 260); }
+  .t3 { background: oklch(94% 0.03 145);   color: var(--cat-pine);   border: 1px solid oklch(78% 0.08 145); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="label">Stance</div>
+    <span class="pill above"><span class="dot"></span>Above 2%</span>
+    <span class="pill on"><span class="dot"></span>On hold · 3 mtgs</span>
+    <span class="pill below"><span class="dot"></span>Below band</span>
+    <span class="pill tighten"><span class="dot"></span>Tightening</span>
+    <span class="pill easing"><span class="dot"></span>Cutting</span>
+  </div>
+  <div class="row">
+    <div class="label">Provenance</div>
+    <span class="tier t1">TIER 1 · GENERATED</span>
+    <span class="tier t2">TIER 2 · AUTO-VERIFIED</span>
+    <span class="tier t3">TIER 3 · USER-VERIFIED</span>
+  </div>
+</body>
+</html>

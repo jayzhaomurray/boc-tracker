@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Buttons</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 28px 32px; background: var(--paper); display: grid; gap: 18px; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .label { font: 600 10px/1 var(--font-sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-quiet); width: 90px; flex: none; }
+  /* Buttons */
+  .btn { font: 500 13px/1 var(--font-sans); padding: 9px 14px; border-radius: var(--r-sm); border: 1px solid var(--rule-strong); background: var(--card); color: var(--ink); cursor: pointer; transition: background var(--dur-1) var(--ease-out); display: inline-flex; align-items: center; gap: 8px; }
+  .btn:hover { background: var(--vellum); }
+  .btn.primary { background: var(--ink); color: oklch(96% 0.01 85); border-color: var(--ink); }
+  .btn.primary:hover { background: oklch(28% 0.025 265); }
+  .btn.ghost { background: transparent; border-color: transparent; color: var(--ink-sub); }
+  .btn.ghost:hover { color: var(--ink); background: var(--vellum); }
+  .btn.danger { background: var(--card); color: var(--vermillion); border-color: oklch(80% 0.06 30); }
+  .btn.small  { font-size: 11px; padding: 6px 10px; }
+  .btn .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="label">Default</div>
+    <button class="btn primary">Apply window</button>
+    <button class="btn">Reset</button>
+    <button class="btn ghost">Cancel</button>
+    <button class="btn danger">Clear cache</button>
+  </div>
+  <div class="row">
+    <div class="label">Small</div>
+    <button class="btn primary small">Save tier</button>
+    <button class="btn small">Open source</button>
+    <button class="btn ghost small">Copy CSV</button>
+  </div>
+  <div class="row">
+    <div class="label">Disabled</div>
+    <button class="btn primary" disabled style="opacity:.45;cursor:not-allowed">Pending refresh</button>
+    <button class="btn" disabled style="opacity:.45;cursor:not-allowed">Re-run build</button>
+  </div>
+</body>
+</html>

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Legend chips</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 26px 32px; background: var(--paper); }
+  .frame { border-top: 1px solid var(--rule); padding-top: 12px; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; font: 500 12px/1 var(--font-sans); color: var(--ink-sub); padding: 6px 8px; border-radius: var(--r-sm); cursor: pointer; user-select: none; transition: color var(--dur-1); }
+  .chip:hover { color: var(--ink); background: var(--vellum); }
+  .chip.off  { opacity: 0.4; }
+  .swatch { width: 10px; height: 10px; border-radius: 2px; }
+  .swatch.line { height: 2px; }
+  .swatch.band { background: var(--band-fill); height: 14px; width: 14px; border: 1px solid var(--rule-strong); }
+  .s-can { background: var(--cobalt); }
+  .s-us  { background: var(--vermillion); }
+  .s-trim{ background: oklch(60% 0.018 265); }
+  .s-med { background: oklch(70% 0.014 265); }
+  .meta { margin-top: 14px; font: 400 11px/1.4 var(--font-sans); color: var(--ink-quiet); }
+</style>
+</head>
+<body>
+  <div class="meta">Click to toggle. Active items full opacity; inactive faded.</div>
+  <div class="frame">
+    <span class="chip"><span class="swatch s-can"></span>Headline CPI</span>
+    <span class="chip"><span class="swatch band"></span>Core range</span>
+    <span class="chip off"><span class="swatch s-trim"></span>CPI-trim</span>
+    <span class="chip off"><span class="swatch s-med"></span>CPI-median</span>
+    <span class="chip"><span class="swatch s-us"></span>Services CPI (overlay)</span>
+    <span class="chip off"><span class="swatch line s-can"></span>Headline NSA</span>
+  </div>
+</body>
+</html>
