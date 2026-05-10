@@ -10,8 +10,8 @@ Read these documents in order before doing anything substantive. They are the so
 2. **`markdown-files/HANDOFF.md`** — current state, open next steps, parked/blocked items. Orient here.
    - **`markdown-files/ARCHITECTURE.md`** — read on demand (not at startup): spec dataclasses, PAGES definition, series table, API docs, transform reference. Read when adding charts, adding series, or debugging the build.
 3. **`markdown-files/chart_style_guide.md`** — formatting principles + workflow rules (§8 governs how to break or revise a principle).
-4. **`markdown-files/analysis_framework.md`** — internal analytical brief for blurb generation. Per-section questions, signals, thresholds.
-5. **`markdown-files/distribution_conventions.md`** — how to label indicator readings on the typical / uncommon / pronounced / rare / extreme ladder. Tail-axis and descriptor metadata per indicator; BoC-band binary frame.
+
+**For blurb or framework work only:** also read `markdown-files/analysis_framework.md` (per-section signals, thresholds) and `markdown-files/distribution_conventions.md` (tier-ladder labelling) before touching `analyze.py` or writing blurb prose.
 
 **Escape hatch:** for genuinely trivial edits — typo fix, single comment edit, single color tweak, one-line text change — skip the canonical reading. Does NOT qualify: adding or removing a chart, adding a data series, any edit to analyze.py, any change to thresholds or blurb logic. Anything that touches logic, data, analytical framing, or chart structure still earns the full first-moves pass.
 
@@ -37,12 +37,7 @@ Read these documents in order before doing anything substantive. They are the so
 
 ## Delegation Rules
 
-**Zone map:** `markdown-files/FILE_OWNERSHIP.md` defines 5 agent zones (Fetcher, Charter, Auditor, Doc Writer, Deployer). Consult it before dispatching any non-trivial task to determine the right agent(s).
-
-- **Any delegated work:** assign to the agent whose zone covers the required files. Pass each agent its zone's file list explicitly so it doesn't stray. No agent commits — agents stage or edit only.
-- **Multi-zone work that can run in parallel:** dispatch a fleet using `markdown-files/coordinator_template.md`. Send all non-conflicting agents in a single message. After all complete, run merge-review via `markdown-files/merge_review_prompt.md`.
-- **Main-thread only:** design decisions, blurb voice/judgment calls, and single Read/Edit/Grep calls where dispatch overhead exceeds the work itself.
-- **Batch script-execution approvals:** present the full plan once and ask for blanket approval rather than re-prompting for each similar command.
+For parallel multi-file work, dispatch agents with explicit file scopes and send non-conflicting agents in a single message. No agent commits — stage or edit only. Keep design decisions and judgment calls on the main thread.
 
 ## Analytical bar
 
