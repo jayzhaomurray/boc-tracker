@@ -88,6 +88,9 @@ STATSCAN_SERIES = {
     # Housing deep-dive (added May 2026). Vector v52300170 for units_under_construction is Tier 2 pending:
     # inferred from value magnitude ~246k matching CMHC published counts; getSeriesInfoFromVector API unavailable.
     "units_under_construction": 52300170,  # Table 34-10-0158-01: Units under construction, Canada total, SAAR (thousands) — Tier 2
+    # Labour deep-dive additions
+    "youth_unemployment_rate": 2062842,    # Table 14-10-0287-01: Unemployment rate, Total Gender, 15-24, SA
+    "prime_age_unemployment_rate": 2062950, # Table 14-10-0287-01: Unemployment rate, Total Gender, 25-54, SA
 }
 
 # Note: housing_starts units are thousands of SAAR units (e.g. 236 = 236,000 annualized starts)

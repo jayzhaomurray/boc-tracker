@@ -234,15 +234,461 @@
 </style>
 </head>
 <body>
-<div class="site-header"><h1>Trade & External Sector — Deep Dive</h1><p class="tagline">Canada's trade exposure, bilateral flows, and terms-of-trade conditions</p><p class="updated">Last updated: May 10, 2026 at 01:22 UTC</p></div>
+<div class="site-header"><h1>Trade & External Sector — Deep Dive</h1><p class="tagline">Canada's trade exposure, bilateral flows, and terms-of-trade conditions</p><p class="updated">Last updated: May 10, 2026 at 03:03 UTC</p></div>
 <nav class="site-nav"><a class="nav-item" href="index.html">Overview</a><a class="nav-item" href="policy.html">Monetary Policy</a><a class="nav-item" href="inflation.html">Inflation</a><a class="nav-item" href="gdp.html">GDP & Activity</a><a class="nav-item" href="labour.html">Labour Market</a><a class="nav-item" href="housing.html">Housing</a><a class="nav-item" href="financial.html">Financial Conditions</a><a class="nav-item active" href="trade.html">Trade</a><a class="nav-item" href="demographics.html">Demographics</a></nav>
-<div class="dd-banner"><strong>Draft / under construction.</strong> Most content here is placeholder scaffolding. The page exists so the multi-page architecture works end-to-end; real charts and analysis migrate in over time. See the labour Beveridge curve for an example of a real chart in this layout.</div>
-<p class="dd-intro">What is Canada's trade exposure — by commodity, sector, and bilaterally to the US — and what do terms-of-trade and tariff-shock indicators say about current risk?</p>
-<div class="dd-section"><h2>Goods Exports by Category<span class="dd-tag dd-tag-stub">stub</span></h2><p>Breakdown of merchandise exports by commodity category.</p><div class="dd-stub">[Coming soon] StatsCan Table 12-10-0011 — goods exports by category (energy, autos, agricultural, industrial goods, etc.). Concentration in energy and automotive is the structural vulnerability; the tariff-shock exposure differs materially by category.</div></div>
-<div class="dd-section"><h2>Canada–US Bilateral Trade Balance<span class="dd-tag dd-tag-stub">stub</span></h2><p>Monthly goods trade balance with the United States.</p><div class="dd-stub">[Coming soon] StatsCan Table 12-10-0011 — Canada-US bilateral goods exports and imports. The US accounts for roughly three-quarters of Canadian goods exports; bilateral balance shifts are the primary channel for tariff-shock transmission.</div></div>
-<div class="dd-section"><h2>Goods Exports Excluding Gold<span class="dd-tag dd-tag-stub">stub</span></h2><p>Export volumes stripped of gold-flow distortions.</p><div class="dd-stub">[Coming soon] Non-monetary gold shipments can swing the headline export figure by several billion dollars in a single month without reflecting underlying trade conditions. Excluding gold gives a cleaner read on real export momentum.</div></div>
-<div class="dd-section"><h2>Terms of Trade<span class="dd-tag dd-tag-stub">stub</span></h2><p>Export price index relative to import price index.</p><div class="dd-stub">[Coming soon] Terms of trade (export price index ÷ import price index) is a real-income signal partially distinct from FX. Improving terms of trade = real-income transfer to Canada from rest of world; deteriorating = transfer out. Commodity-price cycles are the dominant driver for Canada.</div></div>
-<div class="dd-section"><h2>Export Shares by Partner<span class="dd-tag dd-tag-stub">stub</span></h2><p>Geographic concentration of Canadian goods exports.</p><div class="dd-stub">[Coming soon] US share of Canadian exports has exceeded 75% in recent years; EU, UK, China, and other Asian markets make up most of the remainder. Partner-concentration risk is central to the tariff-shock narrative; any trade-diversion story needs the baseline share picture.</div></div>
-<div class="about"><strong>About this dashboard</strong> &mdash; Built by <a href="https://github.com/jayzhaomurray">jayzhaomurray</a> using public data from <a href="https://www150.statcan.gc.ca">Statistics Canada</a>, the <a href="https://www.bankofcanada.ca/valet/docs">Bank of Canada Valet API</a>, the <a href="https://fred.stlouisfed.org">Federal Reserve (FRED)</a>, and the <a href="https://economicdashboard.alberta.ca">Alberta Economic Dashboard</a>. <em>Deep-dive pages are work-in-progress scaffolding.</em></div>
+<div class="dd-banner"><strong>Deep dive — work in progress.</strong> Charts are being built out over time. See the <a href="index.html">overview page</a> for the complete dashboard.</div>
+<div class="global-controls"><span class="gc-label">All charts &mdash;</span><div class="btn-group" id="gc-range"><button class="ctrl-btn" onclick="gcRange(2,this)">2Y</button><button class="ctrl-btn" onclick="gcRange(5,this)">5Y</button><button class="ctrl-btn active" onclick="gcRange(10,this)">10Y</button><button class="ctrl-btn" onclick="gcRange(null,this)">Max</button></div></div>
+<div class="chart-panel"><div class="chart-header"><div class="chart-title-block"><div class="chart-title">Goods Exports by Category</div><div class="chart-subtitle" id="unit-chart-0">%</div></div><div class="chart-controls"><div class="btn-group" id="rb-chart-0"><button class="ctrl-btn" onclick="rangeClick(this,'chart-0',2)">2Y</button><button class="ctrl-btn" onclick="rangeClick(this,'chart-0',5)">5Y</button><button class="ctrl-btn" onclick="rangeClick(this,'chart-0',10)">10Y</button><button class="ctrl-btn active" onclick="rangeClick(this,'chart-0',null)">Max</button></div></div></div><div>                        <script>window.PlotlyConfig = {MathJaxConfig: 'local'};</script>
+        <script charset="utf-8" src="https://cdn.plot.ly/plotly-3.5.0.min.js" integrity="sha256-fHbNLP+GlIXN+efbQec78UkemUz3NJp7UmfGxC1tNxs=" crossorigin="anonymous"></script>                <div id="chart-0" class="plotly-graph-div" style="height:260px; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("chart-0")) {                    Plotly.newPlot(                        "chart-0",                        [],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"margin":{"l":48,"r":16,"t":8,"b":32},"font":{"family":"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"},"height":260,"showlegend":false,"paper_bgcolor":"#ffffff","plot_bgcolor":"#fafafa","xaxis":{"showgrid":false,"zeroline":false},"yaxis":{"showgrid":true,"gridcolor":"#ebebeb","zeroline":false,"tickformat":".0f","tick0":0,"dtick":1.0,"rangemode":"normal"}},                        {"displayModeBar": false, "responsive": true}                    )                };            </script>        </div><div class="chart-legend" id="leg-chart-0"></div><div class="chart-footnote">[Coming soon] StatsCan Table 12-10-0011 — goods exports by category. Concentration in energy and automotive is the structural vulnerability.</div></div>
+<div class="chart-panel"><div class="chart-header"><div class="chart-title-block"><div class="chart-title">Canada–US Bilateral Trade Balance</div><div class="chart-subtitle" id="unit-chart-1">%</div></div><div class="chart-controls"><div class="btn-group" id="rb-chart-1"><button class="ctrl-btn" onclick="rangeClick(this,'chart-1',2)">2Y</button><button class="ctrl-btn" onclick="rangeClick(this,'chart-1',5)">5Y</button><button class="ctrl-btn" onclick="rangeClick(this,'chart-1',10)">10Y</button><button class="ctrl-btn active" onclick="rangeClick(this,'chart-1',null)">Max</button></div></div></div><div>                            <div id="chart-1" class="plotly-graph-div" style="height:260px; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("chart-1")) {                    Plotly.newPlot(                        "chart-1",                        [],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"margin":{"l":48,"r":16,"t":8,"b":32},"font":{"family":"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"},"height":260,"showlegend":false,"paper_bgcolor":"#ffffff","plot_bgcolor":"#fafafa","xaxis":{"showgrid":false,"zeroline":false},"yaxis":{"showgrid":true,"gridcolor":"#ebebeb","zeroline":false,"tickformat":".0f","tick0":0,"dtick":1.0,"rangemode":"normal"}},                        {"displayModeBar": false, "responsive": true}                    )                };            </script>        </div><div class="chart-legend" id="leg-chart-1"></div><div class="chart-footnote">[Coming soon] Monthly goods trade balance with the United States. Primary channel for tariff-shock transmission.</div></div>
+<div class="about"><strong>About this dashboard</strong> &mdash; Built by <a href="https://github.com/jayzhaomurray">jayzhaomurray</a> using public data from <a href="https://www150.statcan.gc.ca">Statistics Canada</a>, the <a href="https://www.bankofcanada.ca/valet/docs">Bank of Canada Valet API</a>, the <a href="https://fred.stlouisfed.org">Federal Reserve (FRED)</a>, and the <a href="https://economicdashboard.alberta.ca">Alberta Economic Dashboard</a>. Raw data available as CSV in the <a href="https://github.com/jayzhaomurray/boc-tracker/tree/main/data">GitHub repository</a>. <em>Section blurbs are AI-generated from public data using a fixed analytical framework verified against primary sources. Not investment advice.</em></div>
+<script>
+var ALL_CHARTS = ["chart-0","chart-1"];
+var DEFAULT_RANGES = {};
+var Y_FLOORS = {};
+document.addEventListener("DOMContentLoaded", function() {
+  Object.keys(DEFAULT_RANGES).forEach(function(id) {
+    applyRange(id, DEFAULT_RANGES[id]);
+  });
+});
+
+function _toMillis(x) {
+  if (x instanceof Date) return x.getTime();
+  return new Date(x).getTime();
+}
+
+// Plotly may serialize numeric trace arrays as typed-array objects
+// {dtype: "f8", bdata: "<base64>"} for efficiency. _decodeY normalises
+// either format to an indexable array. Decoded result is cached on the trace.
+function _decodeY(trace) {
+  if (trace._decodedY) return trace._decodedY;
+  var y = trace.y;
+  if (y == null) return null;
+  if (typeof y.length === "number" && !y.bdata) {
+    trace._decodedY = y;
+    return y;
+  }
+  if (y.bdata && y.dtype) {
+    try {
+      var bin = atob(y.bdata);
+      var buf = new ArrayBuffer(bin.length);
+      var bytes = new Uint8Array(buf);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      var arr;
+      switch (y.dtype) {
+        case "f8": arr = new Float64Array(buf); break;
+        case "f4": arr = new Float32Array(buf); break;
+        case "i4": arr = new Int32Array(buf);   break;
+        case "i2": arr = new Int16Array(buf);   break;
+        case "i1": arr = new Int8Array(buf);    break;
+        case "u4": arr = new Uint32Array(buf);  break;
+        case "u2": arr = new Uint16Array(buf);  break;
+        case "u1": arr = new Uint8Array(buf);   break;
+        default: return null;
+      }
+      trace._decodedY = arr;
+      return arr;
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+}
+
+function _niceDtick(ymin, ymax, target) {
+  target = target || 5;
+  var span = ymax - ymin;
+  if (span <= 0) return 1;
+  var rough = span / target;
+  var mag = Math.pow(10, Math.floor(Math.log10(rough)));
+  var norm = rough / mag;
+  var nice;
+  // norm is in [1, 10) by construction; final branch is `else`, not `>= 1`.
+  if (norm >= 5) nice = 5;
+  else if (norm >= 2.5) nice = 2.5;
+  else if (norm >= 2) nice = 2;
+  else nice = 1;
+  return nice * mag;
+}
+
+function _dtickFormat(dt) {
+  var s = dt.toString();
+  var dotIdx = s.indexOf('.');
+  if (dotIdx === -1) return '.0f';
+  var decimals = s.length - dotIdx - 1;
+  return '.' + Math.min(decimals, 2) + 'f';
+}
+
+function _computeYRange(div, xStartMs, xEndMs) {
+  var ymin = Infinity, ymax = -Infinity, found = false;
+  for (var i = 0; i < div.data.length; i++) {
+    var v = div.data[i].visible;
+    // Plotly's visible can be true/false/undefined/'legendonly'; only count drawn traces.
+    if (v === false || v === 'legendonly') continue;
+    var trace = div.data[i];
+    var xs = trace.x;
+    var ys = _decodeY(trace);
+    if (!xs || !ys) continue;
+    var n = Math.min(xs.length, ys.length);
+    for (var j = 0; j < n; j++) {
+      if (xStartMs != null) {
+        var xt = _toMillis(xs[j]);
+        if (xt < xStartMs || xt > xEndMs) continue;
+      }
+      var y = ys[j];
+      if (y === null || y === undefined || isNaN(y)) continue;
+      if (y < ymin) ymin = y;
+      if (y > ymax) ymax = y;
+      found = true;
+    }
+  }
+  if (!found) return null;
+  // Pad is a small fraction of the visible span so tight-range series like
+  // USD/CAD don't get drowned in whitespace. No absolute minimum: zoom in.
+  var span = ymax - ymin;
+  var pad = span > 0 ? span * 0.05 : 0.001;
+  var floor = (Y_FLOORS && typeof Y_FLOORS[div.id] === "number") ? Y_FLOORS[div.id] : null;
+  var lo = ymin - pad;
+  if (floor !== null) lo = Math.max(lo, floor);
+  return [lo, ymax + pad];
+}
+
+function _applyComputedYAxis(div, update, yr) {
+  update["yaxis.range"] = yr;
+  update["yaxis.autorange"] = false;
+  var dt = _niceDtick(yr[0], yr[1]);
+  update["yaxis.tick0"] = 0;
+  update["yaxis.dtick"] = dt;
+  update["yaxis.tickformat"] = _dtickFormat(dt);
+}
+
+function applyRange(chartId, years) {
+  var div = document.getElementById(chartId);
+  if (!div) return;
+  var update = {};
+  var yr;
+  if (years === null) {
+    update["xaxis.autorange"] = true;
+    yr = _computeYRange(div, null, null);
+  } else {
+    var e = new Date(), s = new Date(e);
+    s.setFullYear(s.getFullYear() - years);
+    update["xaxis.range"] = [s.toISOString().slice(0, 10), e.toISOString().slice(0, 10)];
+    update["xaxis.autorange"] = false;
+    yr = _computeYRange(div, s.getTime(), e.getTime());
+  }
+  if (yr) _applyComputedYAxis(div, update, yr);
+  else update["yaxis.autorange"] = true;
+  Plotly.relayout(div, update);
+}
+
+function _refreshYAxis(chartId) {
+  var rb = document.getElementById("rb-" + chartId);
+  if (!rb) {
+    applyRange(chartId, null);
+    return;
+  }
+  var ab = rb.querySelector(".ctrl-btn.active");
+  if (!ab) { applyRange(chartId, null); return; }
+  var m = ab.getAttribute("onclick").match(/,(\w+)\)$/);
+  if (!m) { applyRange(chartId, null); return; }
+  var years = m[1] === "null" ? null : parseInt(m[1]);
+  applyRange(chartId, years);
+}
+
+function rangeClick(btn, chartId, years) {
+  btn.closest(".btn-group").querySelectorAll(".ctrl-btn").forEach(function(b) {
+    b.classList.remove("active");
+  });
+  btn.classList.add("active");
+  applyRange(chartId, years);
+}
+
+function xformClick(btn, chartId, idx, unitLabel) {
+  var div = document.getElementById(chartId);
+  btn.closest(".btn-group").querySelectorAll(".ctrl-btn").forEach(function(b) {
+    b.classList.remove("active");
+  });
+  btn.classList.add("active");
+  Plotly.restyle(div, {visible: div.data.map(function(_, i) { return i === idx; })});
+  if (unitLabel !== undefined) {
+    var subtitleDiv = document.getElementById("unit-" + chartId);
+    if (subtitleDiv) subtitleDiv.textContent = unitLabel;
+  }
+  var rb = document.getElementById("rb-" + chartId);
+  if (rb) {
+    var activeRangeBtn = rb.querySelector(".ctrl-btn.active");
+    if (activeRangeBtn) {
+      var m = activeRangeBtn.getAttribute("onclick").match(/,(\w+)\)$/);
+      if (m && m[1] !== "null") applyRange(chartId, parseInt(m[1]));
+    }
+  }
+}
+
+function toggleTrace(btn, chartId, indices) {
+  var div = document.getElementById(chartId);
+  if (!div) return;
+  var isActive = btn.classList.contains("active");
+  btn.classList.toggle("active");
+  // Treat "legendonly" as off — only an explicit true counts as visible.
+  // Otherwise lines spec'd visible=False (which Plotly stores as "legendonly")
+  // would be promoted to true by restyle as a side effect of any toggle.
+  var vis = div.data.map(function(t) { return t.visible === true; });
+  indices.forEach(function(i) { vis[i] = !isActive; });
+  Plotly.restyle(div, {visible: vis});
+  _refreshYAxis(chartId);
+}
+
+function mlXformClick(btn, chartId, mode, lineCount, unitLabel) {
+  var div = document.getElementById(chartId);
+  btn.closest(".btn-group").querySelectorAll(".ctrl-btn").forEach(function(b) {
+    b.classList.remove("active");
+  });
+  btn.classList.add("active");
+  div._mlMode = mode;
+  var vis = div.data.map(function() { return false; });
+  var leg = document.getElementById("leg-" + chartId);
+  if (leg) {
+    leg.querySelectorAll(".legend-item").forEach(function(item, i) {
+      if (item.classList.contains("active")) {
+        if (mode === "raw") vis[i] = true;
+        else vis[lineCount + i] = true;
+      }
+    });
+  }
+  Plotly.restyle(div, {visible: vis});
+  if (unitLabel !== undefined) {
+    var subtitleDiv = document.getElementById("unit-" + chartId);
+    if (subtitleDiv) subtitleDiv.textContent = unitLabel;
+  }
+  var rb = document.getElementById("rb-" + chartId);
+  if (rb) {
+    var ab = rb.querySelector(".ctrl-btn.active");
+    if (ab) {
+      var m = ab.getAttribute("onclick").match(/,(\w+)\)$/);
+      if (m && m[1] !== "null") applyRange(chartId, parseInt(m[1]));
+    }
+  }
+}
+
+function mlToggle(btn, chartId, lineIdx, lineCount) {
+  var div = document.getElementById(chartId);
+  var isActive = btn.classList.contains("active");
+  btn.classList.toggle("active");
+  // Mode is whichever xform button is currently active. Without this fallback, charts
+  // that default to alt-mode (e.g. Housing Prices defaulting to Y/Y) would have
+  // _mlMode unset until first xform-click, and legend toggles would target the
+  // wrong trace group.
+  var mode = div._mlMode;
+  if (!mode) {
+    var xb = document.getElementById("xb-" + chartId);
+    if (xb) {
+      var ab = xb.querySelector(".ctrl-btn.active");
+      if (ab) {
+        var m = ab.getAttribute("onclick").match(/'(raw|smooth)'/);
+        if (m) { mode = m[1]; div._mlMode = mode; }
+      }
+    }
+    if (!mode) mode = "raw";
+  }
+  // Treat "legendonly" as off — only an explicit true counts as visible.
+  // See toggleTrace for the same fix; without this, lines spec'd visible=False
+  // (Plotly stores them as "legendonly") get promoted to true by restyle when
+  // any other line on the chart is toggled.
+  var vis = div.data.map(function(t) { return t.visible === true; });
+  vis[lineIdx] = !isActive && mode === "raw";
+  vis[lineCount + lineIdx] = !isActive && mode === "smooth";
+  Plotly.restyle(div, {visible: vis});
+  _refreshYAxis(chartId);
+}
+
+// ── Overlay-aware transform and toggle helpers ────────────────────────────────
+//
+// Used by ChartSpec charts that carry overlay lines (e.g. GDP monthly industry overlays).
+//
+// Trace layout:
+//   Indices 0..nT-1              : main series (one per transform)
+//   Indices nT..2nT-1            : overlay 0 (one per transform)
+//   Indices 2nT..3nT-1           : overlay 1, etc.
+//
+// xformClickOverlay: switch active transform while preserving overlay on/off state.
+function xformClickOverlay(btn, chartId, idx, nTransforms, nOverlays, unitLabel) {
+  var div = document.getElementById(chartId);
+  btn.closest(".btn-group").querySelectorAll(".ctrl-btn").forEach(function(b) {
+    b.classList.remove("active");
+  });
+  btn.classList.add("active");
+  if (unitLabel !== undefined) {
+    var subtitleDiv = document.getElementById("unit-" + chartId);
+    if (subtitleDiv) subtitleDiv.textContent = unitLabel;
+  }
+  // Build visibility array: main trace at idx=true; for each overlay, show the
+  // transform-matching trace only if that overlay is currently active.
+  var vis = div.data.map(function() { return false; });
+  vis[idx] = true;
+  // Determine which overlays are active by inspecting their current visibility.
+  // An overlay is "active" if any of its nT traces is currently visible (=true).
+  for (var k = 0; k < nOverlays; k++) {
+    var base = nTransforms + k * nTransforms;
+    var isOn = false;
+    for (var t = 0; t < nTransforms; t++) {
+      if (div.data[base + t].visible === true) { isOn = true; break; }
+    }
+    if (isOn) vis[base + idx] = true;
+  }
+  Plotly.restyle(div, {visible: vis});
+  _maybeSwapAltUnit(div, chartId, nTransforms);
+  var rb = document.getElementById("rb-" + chartId);
+  if (rb) {
+    var activeRangeBtn = rb.querySelector(".ctrl-btn.active");
+    if (activeRangeBtn) {
+      var m = activeRangeBtn.getAttribute("onclick").match(/,(\w+)\)$/);
+      if (m && m[1] !== "null") applyRange(chartId, parseInt(m[1]));
+    }
+  }
+}
+
+// _maybeSwapAltUnit: for charts configured with overlay_level_alt_unit_label,
+// switch overlay y-values + subtitle between primary and alt scale based on whether
+// the main series is currently visible (level transform only).
+function _maybeSwapAltUnit(div, chartId, nTransforms) {
+  var cfg = (window._chartConfig || {})[chartId];
+  if (!cfg || !cfg.altUnitLabel) return;
+  var xb = document.getElementById("xb-" + chartId);
+  var activeTform = 0;
+  if (xb) xb.querySelectorAll(".ctrl-btn").forEach(function(b, i) {
+    if (b.classList.contains("active")) activeTform = i;
+  });
+  if (activeTform !== cfg.levelTformIdx) return;
+
+  var mainOff = (div.data[cfg.levelTformIdx].visible !== true);
+  var nOverlays = (div.data.length / nTransforms) - 1;
+  var subtitleDiv = document.getElementById("unit-" + chartId);
+
+  var traceIdxs = [];
+  var newYs = [];
+  for (var k = 0; k < nOverlays; k++) {
+    var overlayLevelIdx = (k + 1) * nTransforms + cfg.levelTformIdx;
+    var origY = cfg.origY[String(overlayLevelIdx)];
+    if (!origY) continue;
+    var newY = mainOff ? origY.map(function(v) { return v === null ? null : v * cfg.altScale; }) : origY.slice();
+    newYs.push(newY);
+    traceIdxs.push(overlayLevelIdx);
+  }
+  if (traceIdxs.length > 0) Plotly.restyle(div, {y: newYs}, traceIdxs);
+  if (subtitleDiv) subtitleDiv.textContent = mainOff ? cfg.altUnitLabel : cfg.primaryUnitLabel;
+}
+
+// toggleOverlayTrace: turn an overlay (or the main series) on or off.
+// overlayIdx=-1 means the main series (traces 0..nT-1).
+// For overlays, only the currently-active transform trace is toggled on; all
+// other transform traces for that overlay are set to false.
+function toggleOverlayTrace(btn, chartId, overlayIdx, nTransforms) {
+  var div = document.getElementById(chartId);
+  if (!div) return;
+  var isActive = btn.classList.contains("active");
+  btn.classList.toggle("active");
+  // Determine the current active transform index from the xform button group.
+  var xb = document.getElementById("xb-" + chartId);
+  var activeTform = 0;
+  if (xb) {
+    xb.querySelectorAll(".ctrl-btn").forEach(function(b, i) {
+      if (b.classList.contains("active")) activeTform = i;
+    });
+  }
+  var vis = div.data.map(function(t) { return t.visible === true; });
+  if (overlayIdx === -1) {
+    // Main series: toggle trace at activeTform
+    vis[activeTform] = !isActive;
+  } else {
+    var base = nTransforms + overlayIdx * nTransforms;
+    // Turn all transform variants for this overlay off first, then enable only
+    // the currently-active transform if toggling on.
+    for (var t = 0; t < nTransforms; t++) vis[base + t] = false;
+    if (!isActive) vis[base + activeTform] = true;
+  }
+  Plotly.restyle(div, {visible: vis});
+  if (overlayIdx === -1) _maybeSwapAltUnit(div, chartId, nTransforms);
+  _refreshYAxis(chartId);
+}
+
+function gcRange(years, btn) {
+  btn.closest(".btn-group").querySelectorAll(".ctrl-btn").forEach(function(b) {
+    b.classList.remove("active");
+  });
+  btn.classList.add("active");
+  ALL_CHARTS.forEach(function(id) {
+    var rb = document.getElementById("rb-" + id);
+    if (rb) {
+      rb.querySelectorAll(".ctrl-btn").forEach(function(b) { b.classList.remove("active"); });
+      rb.querySelectorAll(".ctrl-btn").forEach(function(b) {
+        var m = b.getAttribute("onclick").match(/,(\w+)\)$/);
+        if (m && (years === null ? m[1] === "null" : m[1] === String(years))) {
+          b.classList.add("active");
+        }
+      });
+    }
+    applyRange(id, years);
+  });
+}
+
+function _cpiInitVisible(div) {
+  if (div._cpiVisible) return;
+  var nT = 4;
+  var nLines = div.data.length / nT;
+  div._cpiVisible = [];
+  for (var k = 0; k < nLines; k++) {
+    var anyOn = false;
+    for (var t = 0; t < nT; t++) {
+      if (div.data[k * nT + t].visible !== false) { anyOn = true; break; }
+    }
+    div._cpiVisible.push(anyOn);
+  }
+}
+
+function _cpiApplyVisibility(div) {
+  _cpiInitVisible(div);
+  var nT = 4;
+  var t = (div._cpiTransform === undefined) ? 3 : div._cpiTransform;
+  var v = div._cpiVisible;
+  var vis = [];
+  for (var i = 0; i < div.data.length; i++) {
+    var tIdx = i % nT;
+    var vIdx = Math.floor(i / nT);
+    vis.push(tIdx === t && v[vIdx]);
+  }
+  Plotly.restyle(div, {visible: vis});
+}
+
+function cpiXformClick(btn, chartId, transformIdx, unitLabel) {
+  var div = document.getElementById(chartId);
+  btn.closest(".btn-group").querySelectorAll(".ctrl-btn").forEach(function(b) {
+    b.classList.remove("active");
+  });
+  btn.classList.add("active");
+  div._cpiTransform = transformIdx;
+  _cpiApplyVisibility(div);
+  var subtitleDiv = document.getElementById("unit-" + chartId);
+  if (subtitleDiv) subtitleDiv.textContent = unitLabel;
+  var rb = document.getElementById("rb-" + chartId);
+  if (rb) {
+    var ab = rb.querySelector(".ctrl-btn.active");
+    if (ab) {
+      var m = ab.getAttribute("onclick").match(/,(\w+)\)$/);
+      if (m && m[1] !== "null") applyRange(chartId, parseInt(m[1]));
+    }
+  }
+}
+
+function cpiLineToggle(btn, chartId, lineIdx) {
+  var div = document.getElementById(chartId);
+  _cpiInitVisible(div);
+  var isActive = btn.classList.contains("active");
+  btn.classList.toggle("active");
+  div._cpiVisible[lineIdx] = !isActive;
+  _cpiApplyVisibility(div);
+  _refreshYAxis(chartId);
+}
+</script>
 </body>
 </html>

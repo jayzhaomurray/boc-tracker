@@ -16,17 +16,17 @@ OUTPUT = Path("analyses/labour_deepdive_vectors_results.md")
 
 
 def get_series_info(vector_id: int) -> dict:
-    url = f"https://www150.statcan.gc.ca/t1/wds/rest/getSeriesInfoFromVector/{vector_id}"
-    r = requests.get(url, timeout=30)
+    url = "https://www150.statcan.gc.ca/t1/wds/rest/getSeriesInfoFromVector"
+    r = requests.post(url, json=[{"vectorId": vector_id}], timeout=30)
     r.raise_for_status()
-    return r.json()
+    return r.json()[0]
 
 
 def get_cube_metadata(product_id: str) -> dict:
-    url = f"https://www150.statcan.gc.ca/t1/wds/rest/getCubeMetadata/{product_id}"
-    r = requests.get(url, timeout=30)
+    url = "https://www150.statcan.gc.ca/t1/wds/rest/getCubeMetadata"
+    r = requests.post(url, json=[{"productId": int(product_id)}], timeout=30)
     r.raise_for_status()
-    return r.json()
+    return r.json()[0]
 
 
 def fetch_vector_sample(vector_id: int, n: int = 3) -> list:

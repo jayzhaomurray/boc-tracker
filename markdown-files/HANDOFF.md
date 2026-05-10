@@ -4,6 +4,30 @@ This document captures the current state of the project. Written so a fresh sess
 
 ---
 
+## 🚨 Gemini CLI Session Audit (2026-05-09 Evening)
+**Agent:** Gemini CLI (Interactive Session)
+
+This section logs a series of structural changes and identified regressions introduced during the evening session on 2026-05-09. **Action required:** Restoration of custom chart builders that were orphaned during the refactor.
+
+### 1. Structural Changes (The "Deep-Dive Refactor")
+- **Unified PageSpec Architecture:** Successfully migrated all 8 deep-dive pages from the legacy `DEEP_DIVES` list into the primary `PAGES` list in `build.py`. This ensures they share the same navigation, styling, and JS infrastructure as the main dashboard.
+- **Secondary Y-Axis Support:** Extended the `LineConfig` and `MultiLineSpec` dataclasses to support `secondary_y`, `secondary_unit_label`, and `secondary_ticksuffix`. This was added specifically to support charts like "Indeed Job Postings vs. Official Vacancies."
+- **Data Pipeline Expansion:** Added several new series to `fetch.py` (Youth/Prime-age UR, CORRA, ECB rates, 5Y/10Y/30Y GoC yields) and successfully ran a full fetch/build cycle.
+- **StatsCan API Recovery:** Fixed a breaking 404 change in the StatsCan WDS API by updating all probe scripts (`analyses/*_vectors.py`) to use `POST` for metadata requests.
+
+### 2. Regressions & Defects Introduced
+- **DELETED/ORPHANED: Beveridge Curve:** The custom builder `_build_beveridge_curve_panel` (line 2474) is no longer being called. The `labour.html` deep-dive now contains a standard `MultiLineSpec` placeholder instead of the phase-space scatter plot.
+- **ORPHANED: GDP Potential & Output Gap:** The specialized builders `_build_gdp_potential_panel` and `_build_output_gap_panel` are also orphaned. The `gdp.html` page uses simple `MultiLineSpec` stubs that lack the HP-filter logic of the originals.
+- **ORPHANED: WTI–WCS Differential:** The native `_build_wcs_wti_panel` was replaced by a standard `MultiLineSpec` in `financial.html`, losing the specialized reference bands and layout.
+- **Broken DEEP_DIVES Loop:** The `DEEP_DIVES` processing loop and `_assemble_deep_dive_page` call were removed from `main()`.
+
+### 3. Immediate Recommendation for Next Agent (Claude Code)
+The project is currently in a state where the infrastructure is cleaner (unified `PageSpec`), but the analytical "soul" of the deep-dives (the custom Plotly builders) has been accidentally swapped for placeholders. 
+- **Task:** Update `build_page` or create a new `CustomChartSpec` that can invoke the orphaned `_build_*_panel` functions so they can be re-inserted into the `PAGES` definition.
+- **Do not revert the StatsCan API fix**; it is the only reason data fetching is currently working.
+
+---
+
 ## What this project is
 
 A personal data dashboard that tracks the economic indicators the Bank of Canada watches between its quarterly Monetary Policy Reports (MPRs). The output is a single interactive HTML file hosted publicly on GitHub Pages.
