@@ -484,6 +484,19 @@ def _build_chart_fig(chart: ChartSpec, df: pd.DataFrame,
     return fig
 
 
+# ── HTML helpers ─────────────────────────────────────────────────────────────
+
+def _swatch_line(color: str, dash: bool = False) -> str:
+    """Inline coloured swatch used in chart legends."""
+    border = "border-top: 2px dashed " + color + ";" if dash else ""
+    bg = "" if dash else "background:" + color + ";"
+    return (
+        '<span style="display:inline-block;width:22px;height:2.5px;'
+        + bg + border +
+        'border-radius:1px;vertical-align:middle;margin-right:5px"></span>'
+    )
+
+
 # ── HTML button helpers ───────────────────────────────────────────────────────
 
 def _range_buttons_html(div_id: str, default_years=None) -> str:
@@ -569,12 +582,6 @@ def _chart_panel_html(chart: ChartSpec, df: pd.DataFrame, chart_idx: int,
     # Legend for overlay lines (only when overlays are defined)
     legend_html = ""
     if chart.overlays:
-        def _swatch_line(color: str) -> str:
-            return (
-                '<span style="display:inline-block;width:22px;height:2.5px;'
-                'background:' + color + ';border-radius:1px;vertical-align:middle;'
-                'margin-right:5px"></span>'
-            )
         legend_html = '<div class="chart-legend">'
         # Primary series legend button (always active, overlayIdx=-1 means main series)
         primary_label = chart.title.split("(")[0].strip() if "(" in chart.title else chart.title
@@ -752,13 +759,6 @@ def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
     controls = (
         '<div class="chart-controls">' + _range_buttons_html(div_id, default_years=chart.default_years) + '</div>'
     )
-
-    def _swatch_line(color: str) -> str:
-        return (
-            '<span style="display:inline-block;width:22px;height:2.5px;'
-            'background:' + color + ';border-radius:1px;vertical-align:middle;'
-            'margin-right:5px"></span>'
-        )
 
     swatch_range = (
         '<span style="display:inline-block;width:22px;height:11px;'
@@ -1031,15 +1031,6 @@ def _build_wage_panel(chart: "WageSpec", data: dict,
     )
 
     controls = '<div class="chart-controls">' + _range_buttons_html(div_id, default_years=chart.default_years) + '</div>'
-
-    def _swatch_line(color: str, dash: bool = False) -> str:
-        border = "border-top: 2px dashed " + color + ";" if dash else ""
-        bg = "" if dash else "background:" + color + ";"
-        return (
-            '<span style="display:inline-block;width:22px;height:2.5px;'
-            + bg + border +
-            'border-radius:1px;vertical-align:middle;margin-right:5px"></span>'
-        )
 
     swatch_range = (
         '<span style="display:inline-block;width:22px;height:11px;'
@@ -2436,60 +2427,6 @@ def _dd_section(heading: str, intro: str, stub: str, real: bool = False) -> str:
     )
 
 
-def _dd_iframe_section(heading: str, intro: str, src: str) -> str:
-    tag = '<span class="dd-tag dd-tag-real">live</span>'
-    intro_html = ('<p>' + intro + '</p>') if intro else ''
-    return (
-        '<div class="dd-section">'
-        '<h2>' + heading + tag + '</h2>'
-        + intro_html +
-        '<div class="dd-iframe-wrap"><iframe src="' + src + '" loading="lazy"></iframe></div>'
-        '</div>\n'
-    )
-
-
-def _assemble_deep_dive_page(title: str, tagline: str, output_file: str,
-                              intro: str, body_html: str, last_updated: str) -> str:
-    nav = _build_nav_html(output_file)
-    header = (
-        '<div class="site-header">'
-        "<h1>" + title + "</h1>"
-        '<p class="tagline">' + tagline + "</p>"
-        '<p class="updated">Last updated: ' + last_updated + "</p>"
-        "</div>\n"
-    )
-    banner = (
-        '<div class="dd-banner">'
-        '<strong>Draft / under construction.</strong> '
-        'Most content here is placeholder scaffolding. The page exists so the multi-page architecture works end-to-end; '
-        'real charts and analysis migrate in over time. See the labour Beveridge curve for an example of a real chart in this layout.'
-        '</div>\n'
-    )
-    intro_html = '<p class="dd-intro">' + intro + '</p>\n'
-    about = (
-        '<div class="about">'
-        "<strong>About this dashboard</strong> &mdash; "
-        'Built by <a href="https://github.com/' + AUTHOR_DISPLAY_NAME + '">'
-        + AUTHOR_DISPLAY_NAME + "</a> using public data from "
-        '<a href="https://www150.statcan.gc.ca">Statistics Canada</a>, the '
-        '<a href="https://www.bankofcanada.ca/valet/docs">Bank of Canada Valet API</a>, '
-        'the <a href="https://fred.stlouisfed.org">Federal Reserve (FRED)</a>, '
-        'and the <a href="https://economicdashboard.alberta.ca">Alberta Economic Dashboard</a>. '
-        '<em>Deep-dive pages are work-in-progress scaffolding.</em>'
-        "</div>\n"
-    )
-    return (
-        "<!DOCTYPE html>\n<html>\n<head>\n"
-        '<meta charset="utf-8">\n'
-        '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
-        "<title>" + title + "</title>\n"
-        "<style>\n" + _CSS + "</style>\n"
-        "</head>\n<body>\n"
-        + header + nav + banner + intro_html + body_html + about
-        + "</body>\n</html>\n"
-    )
-
-
 # ── Native deep-dive chart builders ─────────────────────────────────────────
 #
 # These generate self-contained Plotly chart HTML for embedding in the
@@ -2960,13 +2897,6 @@ def _build_core_inflation_individual_panel(data: dict, chart_idx: int,
         '<div class="chart-title">Core Inflation — Individual Measures</div>'
         '</div>'
     )
-
-    def _swatch_line(color: str) -> str:
-        return (
-            '<span style="display:inline-block;width:22px;height:2.5px;'
-            'background:' + color + ';border-radius:1px;vertical-align:middle;'
-            'margin-right:5px"></span>'
-        )
 
     legend_html = (
         '<div class="chart-legend">'

@@ -29,7 +29,7 @@ DATA = Path("data")
 FRAMEWORK = Path("markdown-files/analysis_framework.md")
 OUT = DATA / "blurbs.json"
 
-MODEL = "claude-opus-4-7"
+MODEL = "claude-opus-4-7"  # update when this model is deprecated
 
 
 # ── Data helpers ─────────────────────────────────────────────────────────────
