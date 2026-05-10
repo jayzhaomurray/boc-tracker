@@ -35,15 +35,15 @@ Live chart counts per page (updated 2026-05-10):
 
 | Page | Live charts | Placeholder stubs |
 |---|---|---|
-| `index.html` (main dashboard) | 20 charts, 6 section headings, 6 blurbs | — |
+| `index.html` (main dashboard) | 5 charts, no sections, 6 blurbs | — |
 | `policy.html` | 7 | 0 (complete per design doc) |
-| `housing.html` | 6 | 0 |
-| `labour.html` | 4 | 4 |
-| `gdp.html` | 3 | 4 |
+| `housing.html` | 9 | 0 |
+| `labour.html` | 5 | 4 |
+| `gdp.html` | 5 | 4 |
 | `trade.html` | 2 | 3 |
 | `demographics.html` | 1 | 4 |
-| `inflation.html` | 1 | 4 |
-| `financial.html` | 1 | 5 |
+| `inflation.html` | 5 | 4 |
+| `financial.html` | 3 | 5 |
 
 For the full PAGES definition (spec dataclasses, series table, API docs) see `markdown-files/ARCHITECTURE.md`.
 
