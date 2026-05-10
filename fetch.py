@@ -143,6 +143,15 @@ BOC_VALET_SERIES = {
     "boc_total_assets":         ("V36610", "2000-01-01", 0.001),  # Total assets, weekly
     "boc_goc_bonds":            ("V36613", "2000-01-01", 0.001),  # GoC bonds held outright, weekly
     "boc_settlement_balances":  ("V36636", "2000-01-01", 0.001),  # Members of Payments Canada deposits (settlement balances), weekly
+    # BoC SFP asset detail (added May 2026)
+    "boc_tbills":               ("V36612",     "2000-01-01", 0.001),  # Treasury bills (asset side), weekly; same V366xx cluster as boc_total_assets
+    "boc_repos":                ("V44201362",  "2000-01-01", 0.001),  # Securities purchased under resale agreements (BoC lending cash), weekly; V44201362 has weekly data from 2007-10-03 to current (971 obs); V36670 is monthly/older
+    "boc_advances":             ("V36634",     "2000-01-01", 0.001),  # Advances (Standing Liquidity Facility etc.), weekly; same V366xx cluster
+    # BoC SFP liability detail (added May 2026)
+    "boc_total_liabilities":    ("V36624",     "2000-01-01", 0.001),  # Total liabilities and equity, weekly; same V366xx cluster
+    "boc_banknotes":            ("V36625",     "2000-01-01", 0.001),  # Notes in circulation, weekly; same V366xx cluster
+    "boc_goc_deposits":         ("V36628",     "2000-01-01", 0.001),  # Government of Canada deposits, weekly; same V366xx cluster
+    "boc_reverse_repos":        ("V1203435186","2000-01-01", 0.001),  # Securities sold under repurchase agreements (BoC borrowing cash), weekly; QE-era only — starts 2020-07-29
     # Inflation expectations (added May 2026; quarterly cadence, persistent Valet keys)
     "infl_exp_consumer_1y": ("CES_C1_SHORT_TERM", "2014-01-01"),  # CSCE 1-year-ahead consumer inflation expectation, % (mean)
     "infl_exp_consumer_5y": ("CES_C1_LONG_TERM",  "2014-01-01"),  # CSCE 5-year-ahead consumer inflation expectation, % (mean)

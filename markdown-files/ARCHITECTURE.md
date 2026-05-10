@@ -39,8 +39,14 @@ boc-tracker/
 │   │     yield_2yr.csv, yield_5yr.csv, yield_10yr.csv, yield_30yr.csv, us_2yr.csv,
 │   │     corra_daily.csv, usdcad.csv, wti.csv, brent.csv, wcs.csv,
 │   │     indeed_postings_ca.csv (daily SA), indeed_postings_ca_monthly.csv (monthly mean derived)
-│   │     [pending FRED retry: ecb_rate.csv, boe_rate.csv, rba_rate.csv — FRED timed out 2026-05-09]
-│   ├── BoC Balance Sheet: boc_total_assets.csv, boc_goc_bonds.csv, boc_settlement_balances.csv
+│   │     [boe_rate/rba_rate: FRED series IDs IRSTCB01GBM156N/IRSTCB01AUM156N return 400 "series does not exist" — likely discontinued; replacement IDs needed]
+│   ├── BoC Balance Sheet (assets): boc_total_assets.csv (V36610), boc_goc_bonds.csv (V36613),
+│   │     boc_tbills.csv (V36612), boc_repos.csv (V44201362), boc_advances.csv (V36634)
+│   │     — all weekly, C$ billions (scale 0.001), start 2000-01-01 except boc_repos (2007-10-03)
+│   ├── BoC Balance Sheet (liabilities): boc_settlement_balances.csv (V36636),
+│   │     boc_total_liabilities.csv (V36624), boc_banknotes.csv (V36625),
+│   │     boc_goc_deposits.csv (V36628), boc_reverse_repos.csv (V1203435186)
+│   │     — all weekly, C$ billions (scale 0.001); boc_reverse_repos starts 2020-07-29 (QE era)
 │   ├── Inflation expectations: infl_exp_consumer_1y.csv, infl_exp_consumer_5y.csv,
 │   │     bos_dist_below1.csv, bos_dist_1to2.csv, bos_dist_2to3.csv, bos_dist_above3.csv,
 │   │     infl_exp_above3.csv

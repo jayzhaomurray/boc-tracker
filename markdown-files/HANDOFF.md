@@ -23,7 +23,7 @@ A personal data dashboard tracking Bank of Canada indicators between MPRs. Outpu
 
 3. **Tier 2 pending** — `units_under_construction.csv` (v52300170) — vector inferred from magnitude; verify with `getSeriesInfoFromVector` before treating as authoritative.
 
-4. **ECB/BoE/RBA rates** — FRED timed out 2026-05-09; retry pending. No code changes needed — run `python fetch.py` with `FRED_API_KEY` set. Peer Central Banks chart currently shows BoC + Fed only.
+4. **BoE/RBA rates** — FRED series `IRSTCB01GBM156N` (BoE) and `IRSTCB01AUM156N` (RBA) return HTTP 400 "series does not exist" as of 2026-05-10; CSVs missing. These series IDs are likely discontinued or renamed. Peer Central Banks chart currently shows BoC + Fed + ECB only until replacement IDs are found.
 
 5. **Wishlist charts** — Headline CPI + CPI ex-indirect-taxes overlay; Employment by sector reliant on US exports (LFS Table 14-10-0023); Goods exports excluding gold (Table 12-10-0011); BOS hiring intentions / pass-through.
 
@@ -33,17 +33,17 @@ A personal data dashboard tracking Bank of Canada indicators between MPRs. Outpu
 
 Live chart counts per page (updated 2026-05-10):
 
-| Page | Live charts | Placeholder stubs |
-|---|---|---|
-| `index.html` (main dashboard) | 5 charts, no sections, 6 blurbs | — |
-| `policy.html` | 7 | 0 (complete per design doc) |
-| `housing.html` | 9 | 0 |
-| `labour.html` | 5 | 4 |
-| `gdp.html` | 5 | 4 |
-| `trade.html` | 2 | 3 |
-| `demographics.html` | 1 | 4 |
-| `inflation.html` | 5 | 4 |
-| `financial.html` | 3 | 5 |
+| Page | Live charts | Placeholder stubs | Notes |
+|---|---|---|---|
+| `index.html` (main dashboard) | 5 charts, no sections, 6 blurbs | — | |
+| `policy.html` | 5 | 0 | Order: Peer Central Banks, BoC Assets (5 lines), BoC Liabilities (5 lines), CORRA (spread default), Real Policy Rate (1 line). GoC Yield Curve + 2Y–10Y Spread moved to financial.html (2026-05-10). |
+| `housing.html` | 9 | 0 | |
+| `labour.html` | 5 | 4 | |
+| `gdp.html` | 5 | 4 | |
+| `trade.html` | 2 | 3 | |
+| `demographics.html` | 1 | 4 | |
+| `inflation.html` | 5 | 4 | |
+| `financial.html` | 7 | 3 | Charts 5–6 (0-indexed): GoC Yield Curve, 2Y–10Y Spread (moved from policy.html 2026-05-10). |
 
 For the full PAGES definition (spec dataclasses, series table, API docs) see `markdown-files/ARCHITECTURE.md`.
 

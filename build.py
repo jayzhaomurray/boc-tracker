@@ -50,12 +50,11 @@ SECTION_HEADINGS = {
     "labour":    "Labour Market",
     "financial": "Financial Conditions",
     # Policy deep-dive section headings
-    "policy_dd_yield_curve":  "GoC Yield Curve",
-    "policy_dd_real_rates":   "Real Rates",
-    "policy_dd_corra":        "CORRA vs Target",
+    "policy_dd_peers":        "Peer Central Banks",
     "policy_dd_assets":       "BoC Assets",
     "policy_dd_liabilities":  "BoC Liabilities",
-    "policy_dd_peers":        "Peer Central Banks",
+    "policy_dd_corra":        "CORRA vs Target",
+    "policy_dd_real_rates":   "Real Rates",
     # Housing deep-dive section headings
     "housing_dd_activity":      "Demand and Market Tightness",
     "housing_dd_mortgage":      "Mortgage Rates",
@@ -1840,16 +1839,23 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
     # Smooth traces (indices n..2n-1), hidden by default
     if has_smooth:
         for line in lines:
-            df = data[line.series]
+            if line.formula is not None:
+                _s = line.formula(data)
+                _raw_x = _s.index.strftime("%Y-%m-%d").tolist() if hasattr(_s.index, "strftime") else _s.index.tolist()
+                _raw_vals = _s
+            else:
+                df = data[line.series]
+                _raw_x = df["date"]
+                _raw_vals = df["value"]
             if line.smooth:
-                smooth = df["value"].rolling(chart.smooth_window, min_periods=chart.smooth_window // 2).mean()
+                smooth = _raw_vals.rolling(chart.smooth_window, min_periods=chart.smooth_window // 2).mean()
                 _sl = chart.smooth_label if chart.smooth_label is not None else str(chart.smooth_window) + "d avg"
                 smooth_label = line.label + " (" + _sl + ")"
             else:
-                smooth = df["value"]  # already low-frequency; show raw in smooth mode
+                smooth = _raw_vals  # already low-frequency; show raw in smooth mode
                 smooth_label = line.label
             fig.add_trace(go.Scatter(
-                x=df["date"], y=smooth,
+                x=_raw_x, y=smooth,
                 name=smooth_label,
                 line=dict(color=line.color, width=1.5 if line.secondary else 2),
                 line_shape="linear",
@@ -3097,83 +3103,18 @@ PAGES = [
     ),
     PageSpec(
         title="Monetary Policy — Deep Dive",
-        tagline="Term structure, real rates, balance-sheet detail, peer comparison",
+        tagline="Balance-sheet detail, overnight market, real rates, peer comparison",
         output_file="policy.html",
         is_deep_dive=True,
         sections={
-            0: "policy_dd_yield_curve",
-            2: "policy_dd_real_rates",
+            0: "policy_dd_peers",
+            1: "policy_dd_assets",
+            2: "policy_dd_liabilities",
             3: "policy_dd_corra",
-            4: "policy_dd_assets",
-            5: "policy_dd_liabilities",
-            6: "policy_dd_peers",
+            4: "policy_dd_real_rates",
         },
         charts=[
-            MultiLineSpec(
-                title="GoC Yield Curve",
-                lines=[
-                    LineConfig("yield_2yr",  "2Y",  "#1565c0"),
-                    LineConfig("yield_5yr",  "5Y",  "#2e7d32"),
-                    LineConfig("yield_10yr", "10Y", "#e65100"),
-                    LineConfig("yield_30yr", "30Y", "#6a1b9a"),
-                ],
-                ticksuffix="%",
-                smooth_window=20,
-                default_years=10,
-                footnote="Source: Bank of Canada. GoC benchmark bond yields, daily.",
-            ),
-            MultiLineSpec(
-                title="2Y–10Y Spread",
-                lines=[
-                    LineConfig("yield_10y_2y_spread", "10Y − 2Y", "#e65100"),
-                ],
-                ticksuffix="%",
-                smooth_window=20,
-                default_years=10,
-                footnote="Source: Bank of Canada. 10-year minus 2-year GoC benchmark yield spread, daily.",
-            ),
-            MultiLineSpec(
-                title="Real Policy Rates (ex-post)",
-                lines=[
-                    LineConfig("real_overnight_rate", "Real overnight", "#1565c0"),
-                    LineConfig("real_2yr_monthly",    "Real 2Y (month-end)", "#2e7d32"),
-                ],
-                ticksuffix="%",
-                default_years=10,
-                footnote="Source: Bank of Canada; Statistics Canada. Overnight rate and 2-year GoC yield minus trailing headline CPI Y/Y, monthly. Ex-post real rates.",
-            ),
-            MultiLineSpec(
-                title="CORRA vs Overnight Rate Target",
-                lines=[
-                    LineConfig("corra_daily",         "CORRA",         "#1565c0"),
-                    LineConfig("overnight_rate_daily", "Target (daily)", "#c62828"),
-                ],
-                ticksuffix="%",
-                smooth_window=20,
-                default_years=2,
-                footnote="Source: Bank of Canada. CORRA (Canadian Overnight Repo Rate Average) vs overnight rate target, daily. Floor system in effect since April 2022.",
-            ),
-            MultiLineSpec(
-                title="BoC Assets",
-                lines=[
-                    LineConfig("boc_total_assets", "Total assets",     "#1565c0"),
-                    LineConfig("boc_goc_bonds",    "GoC bonds (held)", "#42a5f5"),
-                ],
-                ticksuffix="",
-                hoverformat=".0f",
-                default_years=10,
-                footnote="Source: Bank of Canada. Total assets and GoC bonds held, weekly, C$ billions.",
-            ),
-            MultiLineSpec(
-                title="BoC Liabilities — Settlement Balances",
-                lines=[
-                    LineConfig("boc_settlement_balances", "Settlement balances", "#6a1b9a"),
-                ],
-                ticksuffix="",
-                hoverformat=".0f",
-                default_years=10,
-                footnote="Source: Bank of Canada. Settlement balances held overnight at the BoC, weekly, C$ billions.",
-            ),
+            # Chart 0: Peer Central Bank Policy Rates
             MultiLineSpec(
                 title="Peer Central Bank Policy Rates",
                 lines=[
@@ -3188,6 +3129,74 @@ PAGES = [
                 default_years=10,
                 date_fmt="%b %Y",
                 footnote="Source: Bank of Canada; Federal Reserve; ECB; Bank of England; RBA (via FRED/OECD). Policy rates: BoC overnight, Fed funds midpoint, ECB deposit facility, BoE Bank Rate, RBA cash rate. Monthly.",
+            ),
+            # Chart 1: BoC Assets (expanded)
+            MultiLineSpec(
+                title="BoC Assets",
+                lines=[
+                    LineConfig("boc_total_assets", "Total assets", "#1565c0"),
+                    LineConfig("boc_goc_bonds",    "GoC bonds",    "#00897b"),
+                    LineConfig("boc_tbills",       "T-bills",      "#7b1fa2", visible=False, secondary=True),
+                    LineConfig("boc_repos",        "Repos",        "#e65100", visible=False, secondary=True),
+                    LineConfig("boc_advances",     "Advances",     "#c62828", visible=False, secondary=True),
+                ],
+                ticksuffix="",
+                hoverformat=".0f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %d, %Y",
+                unit_label="C$ billions",
+                footnote="Source: Bank of Canada Statement of Financial Position. Weekly.",
+            ),
+            # Chart 2: BoC Liabilities (expanded)
+            MultiLineSpec(
+                title="BoC Liabilities",
+                lines=[
+                    LineConfig("boc_total_liabilities",   "Total liabilities",   "#1565c0"),
+                    LineConfig("boc_settlement_balances", "Settlement balances", "#6a1b9a"),
+                    LineConfig("boc_banknotes",           "Banknotes",           "#00897b", visible=False, secondary=True),
+                    LineConfig("boc_goc_deposits",        "GoC deposits",        "#e65100", visible=False, secondary=True),
+                    LineConfig("boc_reverse_repos",       "Reverse repos",       "#c62828", visible=False, secondary=True),
+                ],
+                ticksuffix="",
+                hoverformat=".0f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %d, %Y",
+                unit_label="C$ billions",
+                footnote="Source: Bank of Canada Statement of Financial Position. Weekly.",
+            ),
+            # Chart 3: CORRA vs target — default-visible: spread only
+            MultiLineSpec(
+                title="CORRA vs Overnight Rate Target",
+                lines=[
+                    LineConfig(
+                        "corra_target_spread",
+                        "CORRA − Target",
+                        "#7b1fa2",
+                        formula=lambda d: (
+                            d["corra_daily"].set_index("date")["value"]
+                            - d["overnight_rate_daily"].set_index("date")["value"]
+                        ),
+                        formula_deps=["corra_daily", "overnight_rate_daily"],
+                    ),
+                    LineConfig("corra_daily",          "CORRA",          "#1565c0", visible=False, secondary=True),
+                    LineConfig("overnight_rate_daily", "Target (daily)", "#c62828", visible=False, secondary=True),
+                ],
+                ticksuffix="%",
+                smooth_window=20,
+                default_years=2,
+                footnote="Source: Bank of Canada. CORRA is the Canadian Overnight Repo Rate Average; target is the BoC overnight rate target.",
+            ),
+            # Chart 4: Real Policy Rate (single line)
+            MultiLineSpec(
+                title="Real Policy Rate",
+                lines=[
+                    LineConfig("real_overnight_rate", "Real overnight", "#1565c0"),
+                ],
+                ticksuffix="%",
+                default_years=10,
+                footnote="Source: Bank of Canada / Statistics Canada. Overnight rate minus headline CPI Y/Y (ex-post).",
             ),
         ],
     ),
@@ -3706,6 +3715,30 @@ PAGES = [
                 ymin=0,
                 unit_label="USD/barrel",
                 footnote="Source: FRED; CAPP. Crude oil prices, USD per barrel. WTI and Brent daily; WCS monthly.",
+            ),
+            # Charts moved from policy.html (May 2026): yield curve and spread belong with financial conditions
+            MultiLineSpec(
+                title="GoC Yield Curve",
+                lines=[
+                    LineConfig("yield_2yr",  "2Y",  "#1565c0"),
+                    LineConfig("yield_5yr",  "5Y",  "#2e7d32"),
+                    LineConfig("yield_10yr", "10Y", "#e65100"),
+                    LineConfig("yield_30yr", "30Y", "#6a1b9a"),
+                ],
+                ticksuffix="%",
+                smooth_window=20,
+                default_years=10,
+                footnote="Source: Bank of Canada. GoC benchmark bond yields, daily.",
+            ),
+            MultiLineSpec(
+                title="2Y–10Y Spread",
+                lines=[
+                    LineConfig("yield_10y_2y_spread", "10Y − 2Y", "#e65100"),
+                ],
+                ticksuffix="%",
+                smooth_window=20,
+                default_years=10,
+                footnote="Source: Bank of Canada. 10-year minus 2-year GoC benchmark yield spread, daily.",
             ),
         ],
     ),
