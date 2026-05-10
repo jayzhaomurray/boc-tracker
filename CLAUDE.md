@@ -7,12 +7,13 @@ A real, in-use personal data dashboard tracking Bank of Canada indicators. Live 
 Read these documents in order before doing anything substantive. They are the source of truth.
 
 1. **`markdown-files/dashboard_purpose.md`** — what the dashboard exists to answer. Six sub-questions across six sections. Every chart and blurb earns its place against this filter.
-2. **`markdown-files/HANDOFF.md`** — current state, file structure, ordered next-steps. Orient here.
+2. **`markdown-files/HANDOFF.md`** — current state, open next steps, parked/blocked items. Orient here.
+   - **`markdown-files/ARCHITECTURE.md`** — read on demand (not at startup): spec dataclasses, PAGES definition, series table, API docs, transform reference. Read when adding charts, adding series, or debugging the build.
 3. **`markdown-files/chart_style_guide.md`** — formatting principles + workflow rules (§8 governs how to break or revise a principle).
-4. **`markdown-files/analysis_framework.md`** — internal analytical brief for blurb generation. Per-section questions, signals, thresholds.
-5. **`markdown-files/distribution_conventions.md`** — how to label indicator readings on the typical / uncommon / pronounced / rare / extreme ladder. Tail-axis and descriptor metadata per indicator; BoC-band binary frame.
 
-**Escape hatch:** for genuinely trivial edits — typo fix, single comment edit, single color tweak, one-line text change — skip the canonical reading. Anything that touches logic, data, analytical framing, or chart structure still earns the full first-moves pass.
+**For blurb or framework work only:** also read `markdown-files/analysis_framework.md` (per-section signals, thresholds) and `markdown-files/distribution_conventions.md` (tier-ladder labelling) before touching `analyze.py` or writing blurb prose.
+
+**Escape hatch:** for genuinely trivial edits — typo fix, single comment edit, single color tweak, one-line text change — skip the canonical reading. Does NOT qualify: adding or removing a chart, adding a data series, any edit to analyze.py, any change to thresholds or blurb logic. Anything that touches logic, data, analytical framing, or chart structure still earns the full first-moves pass.
 
 **One-source-of-truth rule:** these docs reference each other rather than duplicate. If a fact lives in the style guide, HANDOFF should link to it not copy it. Drift between docs has been a real risk; treat it seriously.
 
@@ -29,9 +30,14 @@ Read these documents in order before doing anything substantive. They are the so
   - Completing a Next Steps item or verifying a framework section: cross it off / move it.
   - Architectural changes (new spec class, new pipeline step, new helper): document in HANDOFF's architecture section.
   - Tiny commits (typo, single-color tweak, comment fix) don't need HANDOFF updates.
+  - Trip-wire: any edit to `build.py` or `fetch.py` requires a HANDOFF update in the same commit, no exceptions. Every HANDOFF update must include a pruning pass: delete any resolved-regression logs, phase-commit changelog tables, and completed next-steps entries before adding new content.
   - Level of detail: enough that a fresh session reading HANDOFF understands current state, not a per-commit changelog.
   - Model: routine HANDOFF updates (table row, marking a todo done, adding a sub-bullet) run fine on Sonnet via subagent — delegate it after the main code commit. Major restructuring (re-prioritising the entire Next Steps list, rewriting an architecture section because the architecture changed) needs Opus on the main thread.
   - Same applies to the other canonical docs when the change touches their domain: chart_style_guide.md when introducing a new chart treatment pattern; analysis_framework.md when adding a new section signal.
+
+## Delegation Rules
+
+For parallel multi-file work, dispatch agents with explicit file scopes and send non-conflicting agents in a single message. No agent commits — stage or edit only. Keep design decisions and judgment calls on the main thread.
 
 ## Analytical bar
 
@@ -54,6 +60,11 @@ Concrete project anchors (the practitioner-level expectation is in memory):
 - Don't generalize from a single chart's behavior; verify against multiple charts before codifying.
 - Don't write probe scripts at the project root — gitignored as `probe_*.py`. New probes go in `analyses/`.
 - Don't write CSVs that aren't part of the pipeline into `data/`. That folder is the build's source of truth.
+
+## BoC Tracker Conventions
+
+- Deep-dive pages: when removing a page, also remove its entry from `DEEP_DIVES` to avoid double-builds.
+- StatsCan API: confirm endpoint shape with a small probe before writing fetcher logic; metadata API is unreliable, prefer cube-based fetches.
 
 ## Model allocation — project-specific examples
 

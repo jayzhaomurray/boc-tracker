@@ -62,6 +62,24 @@ SECTION_HEADINGS = {
     "housing_dd_pipeline":      "Construction Pipeline",
     "housing_dd_affordability": "Starts vs Supply Target",
     "housing_dd_renewal":       "Mortgage Renewal Shock",
+    # GDP deep-dive section headings
+    "gdp_dd_gap":          "Output Gap",
+    "gdp_dd_productivity": "Productivity",
+    "gdp_dd_capacity":     "Capacity Utilization",
+    "gdp_dd_hours":        "Hours Worked",
+    # Labour deep-dive section headings
+    "labour_dd_tightness":    "Labour Market Tightness",
+    "labour_dd_layoffs":      "Layoffs and Separations",
+    "labour_dd_r_indicators": "R-Indicators",
+    "labour_dd_ei":           "EI Recipients",
+    "labour_dd_demographics": "Demographic Decomposition",
+    "labour_dd_postings":     "Online Job Postings",
+    # Trade deep-dive section headings
+    "trade_dd_us":    "Canada–US Bilateral Trade",
+    "trade_dd_total": "Total Merchandise Trade",
+    # Demographics deep-dive section headings
+    "demographics_dd_migration": "International Migration",
+    "demographics_dd_age":       "Labour Force by Age Group",
 }
 
 DATA_DIR = Path("data")
@@ -162,6 +180,7 @@ class LineConfig:
     color: str           # hex color
     visible: bool = True
     smooth: bool = True  # False = keep raw data in smooth mode (e.g. monthly series on a daily chart)
+    secondary_y: bool = False
 
 
 @dataclass
@@ -222,6 +241,11 @@ class MultiLineSpec:
     alt_ticksuffix: str = ""                        # ticksuffix used in HOVER for alt-mode traces
     alt_hoverformat: str = ".1f"                    # hoverformat for alt-mode traces
     default_alt: bool = False                       # if True, alt mode is the default view
+    # Secondary Y-axis support (added May 2026)
+    secondary_unit_label: str = ""
+    secondary_ticksuffix: str = ""
+    secondary_hoverformat: str = ".2f"
+    secondary_ymin: float | None = None
 
 
 @dataclass
@@ -248,6 +272,20 @@ class MortgageShockSpec:
     No transforms, no date range buttons — this is a static reference chart."""
     title: str
     footnote: str = ""
+
+
+@dataclass
+class NativeChartSpec:
+    """Escape hatch for custom builders that don't fit any generic spec type.
+
+    `builder` must have the signature:
+        builder(data: dict, chart_idx: int, include_plotlyjs: bool) -> str
+
+    `data_keys` lists the CSV series names the builder needs; the data-loading
+    loop in main() will ensure those CSVs are loaded before build_page() runs.
+    """
+    builder: object          # callable: (data, chart_idx, include_plotlyjs) -> str
+    data_keys: list          # list[str] — CSV series names required by the builder
 
 
 # ── Transform system ──────────────────────────────────────────────────────────
@@ -446,6 +484,19 @@ def _build_chart_fig(chart: ChartSpec, df: pd.DataFrame,
     return fig
 
 
+# ── HTML helpers ─────────────────────────────────────────────────────────────
+
+def _swatch_line(color: str, dash: bool = False) -> str:
+    """Inline coloured swatch used in chart legends."""
+    border = "border-top: 2px dashed " + color + ";" if dash else ""
+    bg = "" if dash else "background:" + color + ";"
+    return (
+        '<span style="display:inline-block;width:22px;height:2.5px;'
+        + bg + border +
+        'border-radius:1px;vertical-align:middle;margin-right:5px"></span>'
+    )
+
+
 # ── HTML button helpers ───────────────────────────────────────────────────────
 
 def _range_buttons_html(div_id: str, default_years=None) -> str:
@@ -531,12 +582,6 @@ def _chart_panel_html(chart: ChartSpec, df: pd.DataFrame, chart_idx: int,
     # Legend for overlay lines (only when overlays are defined)
     legend_html = ""
     if chart.overlays:
-        def _swatch_line(color: str) -> str:
-            return (
-                '<span style="display:inline-block;width:22px;height:2.5px;'
-                'background:' + color + ';border-radius:1px;vertical-align:middle;'
-                'margin-right:5px"></span>'
-            )
         legend_html = '<div class="chart-legend">'
         # Primary series legend button (always active, overlayIdx=-1 means main series)
         primary_label = chart.title.split("(")[0].strip() if "(" in chart.title else chart.title
@@ -714,13 +759,6 @@ def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
     controls = (
         '<div class="chart-controls">' + _range_buttons_html(div_id, default_years=chart.default_years) + '</div>'
     )
-
-    def _swatch_line(color: str) -> str:
-        return (
-            '<span style="display:inline-block;width:22px;height:2.5px;'
-            'background:' + color + ';border-radius:1px;vertical-align:middle;'
-            'margin-right:5px"></span>'
-        )
 
     swatch_range = (
         '<span style="display:inline-block;width:22px;height:11px;'
@@ -993,15 +1031,6 @@ def _build_wage_panel(chart: "WageSpec", data: dict,
     )
 
     controls = '<div class="chart-controls">' + _range_buttons_html(div_id, default_years=chart.default_years) + '</div>'
-
-    def _swatch_line(color: str, dash: bool = False) -> str:
-        border = "border-top: 2px dashed " + color + ";" if dash else ""
-        bg = "" if dash else "background:" + color + ";"
-        return (
-            '<span style="display:inline-block;width:22px;height:2.5px;'
-            + bg + border +
-            'border-radius:1px;vertical-align:middle;margin-right:5px"></span>'
-        )
 
     swatch_range = (
         '<span style="display:inline-block;width:22px;height:11px;'
@@ -2398,60 +2427,6 @@ def _dd_section(heading: str, intro: str, stub: str, real: bool = False) -> str:
     )
 
 
-def _dd_iframe_section(heading: str, intro: str, src: str) -> str:
-    tag = '<span class="dd-tag dd-tag-real">live</span>'
-    intro_html = ('<p>' + intro + '</p>') if intro else ''
-    return (
-        '<div class="dd-section">'
-        '<h2>' + heading + tag + '</h2>'
-        + intro_html +
-        '<div class="dd-iframe-wrap"><iframe src="' + src + '" loading="lazy"></iframe></div>'
-        '</div>\n'
-    )
-
-
-def _assemble_deep_dive_page(title: str, tagline: str, output_file: str,
-                              intro: str, body_html: str, last_updated: str) -> str:
-    nav = _build_nav_html(output_file)
-    header = (
-        '<div class="site-header">'
-        "<h1>" + title + "</h1>"
-        '<p class="tagline">' + tagline + "</p>"
-        '<p class="updated">Last updated: ' + last_updated + "</p>"
-        "</div>\n"
-    )
-    banner = (
-        '<div class="dd-banner">'
-        '<strong>Draft / under construction.</strong> '
-        'Most content here is placeholder scaffolding. The page exists so the multi-page architecture works end-to-end; '
-        'real charts and analysis migrate in over time. See the labour Beveridge curve for an example of a real chart in this layout.'
-        '</div>\n'
-    )
-    intro_html = '<p class="dd-intro">' + intro + '</p>\n'
-    about = (
-        '<div class="about">'
-        "<strong>About this dashboard</strong> &mdash; "
-        'Built by <a href="https://github.com/' + AUTHOR_DISPLAY_NAME + '">'
-        + AUTHOR_DISPLAY_NAME + "</a> using public data from "
-        '<a href="https://www150.statcan.gc.ca">Statistics Canada</a>, the '
-        '<a href="https://www.bankofcanada.ca/valet/docs">Bank of Canada Valet API</a>, '
-        'the <a href="https://fred.stlouisfed.org">Federal Reserve (FRED)</a>, '
-        'and the <a href="https://economicdashboard.alberta.ca">Alberta Economic Dashboard</a>. '
-        '<em>Deep-dive pages are work-in-progress scaffolding.</em>'
-        "</div>\n"
-    )
-    return (
-        "<!DOCTYPE html>\n<html>\n<head>\n"
-        '<meta charset="utf-8">\n'
-        '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
-        "<title>" + title + "</title>\n"
-        "<style>\n" + _CSS + "</style>\n"
-        "</head>\n<body>\n"
-        + header + nav + banner + intro_html + body_html + about
-        + "</body>\n</html>\n"
-    )
-
-
 # ── Native deep-dive chart builders ─────────────────────────────────────────
 #
 # These generate self-contained Plotly chart HTML for embedding in the
@@ -2923,13 +2898,6 @@ def _build_core_inflation_individual_panel(data: dict, chart_idx: int,
         '</div>'
     )
 
-    def _swatch_line(color: str) -> str:
-        return (
-            '<span style="display:inline-block;width:22px;height:2.5px;'
-            'background:' + color + ';border-radius:1px;vertical-align:middle;'
-            'margin-right:5px"></span>'
-        )
-
     legend_html = (
         '<div class="chart-legend">'
         + ''.join(
@@ -3080,46 +3048,6 @@ def _build_wcs_wti_panel(data: dict, chart_idx: int,
 
 DEEP_DIVES = [
     {
-        "title": "Inflation — deep dive",
-        "tagline": "Component-level decomposition and persistence detail",
-        "output_file": "inflation.html",
-        "intro": (
-            "The overview page reads inflation at the headline-and-core level. The deep-dive goes into "
-            "component-level drivers, persistence diagnostics, and cleaner versions of metrics that matter "
-            "for distinguishing transitory from sticky inflation."
-        ),
-        "body_fn": lambda data: (
-            '<div class="dd-section">'
-            '<h2>Core Inflation — Individual Measures'
-            '<span class="dd-tag dd-tag-real">live</span></h2>'
-            '<p>Five BoC core measures on individual lines. CPI-trim is the primary read; '
-            'toggle others to see where measures agree or diverge at turning points. '
-            'CPI-common is the smoothest measure and tends to lag trim and median at inflection points.</p>'
-            + _build_core_inflation_individual_panel(data, 0, include_plotlyjs=True)
-            + '</div>\n'
-            + _dd_section(
-                "Headline + ex-indirect-taxes overlay",
-                "Strips out tax-policy effects (carbon tax changes, GST/HST shifts).",
-                "[Coming soon] Headline CPI Y/Y next to a CPI ex-indirect-taxes series. The carbon-tax repeal in early 2025 carved roughly 0.6 pp out of headline; this overlay shows the underlying inflation impulse independent of policy moves.",
-            )
-            + _dd_section(
-                "Sub-component decomposition",
-                "60-component decomposition with per-component contribution.",
-                "[Coming soon] Show top contributors to headline Y/Y week-over-week. Rotation matters: shelter has dominated 2023-2024; transportation took over in early 2025.",
-            )
-            + _dd_section(
-                "Persistence and breadth detail",
-                "Beyond the four-state breadth typology — distributional view.",
-                "[Coming soon] Histogram of component Y/Y by month. Width and skew change in different cyclical phases. Pre-COVID typical cluster was 1-2.5%; 2022 distribution had a tail extending past 10%.",
-            )
-            + _dd_section(
-                "Inflation-expectations decomposition",
-                "Consumer 1y, 5y, 30y; BOS 2y; long-run anchor.",
-                "[Coming soon] Track 30-year break-even from real-return bonds (for long-run anchor) alongside CSCE consumer measures and BOS firm distribution. Long-run anchor slippage would be the most consequential signal — historically very sticky."
-            )
-        ),
-    },
-    {
         "title": "GDP & Activity — deep dive",
         "tagline": "Productivity, capacity, and the output gap",
         "output_file": "gdp.html",
@@ -3155,112 +3083,6 @@ DEEP_DIVES = [
                 "Trend labour input × trend labour productivity (the official decomposition).",
                 "[Coming soon] Per SAN 2025-14: potential output decomposes into trend labour input (TLI) and trend labour productivity (TLP). TLI captures demographic/immigration effects; TLP captures the productivity story. Plotting both lets you see which channel is moving over time.",
             )
-        ),
-    },
-    {
-        "title": "Labour Market — deep dive",
-        "tagline": "Direct-indicator triangulation, demographic decomposition, the Beveridge curve",
-        "output_file": "labour.html",
-        "intro": (
-            "The overview reads the joint move of employment and participation as a starting hypothesis "
-            "for layoff vs labour-force-exit dynamics. This page goes into direct indicators that confirm "
-            "or refute those reads, plus demographic and regional detail the overview can't show. "
-            "The Beveridge curve is the structural-shift visual; everything else is scaffolding for now."
-        ),
-        "body_fn": lambda data: (
-            '<div class="dd-section">'
-            '<h2>Beveridge Curve (Canada, 2015–present)'
-            '<span class="dd-tag dd-tag-real">live</span></h2>'
-            '<p>Vacancy rate vs unemployment rate, both 3M MA, period-coloured. '
-            'The post-COVID outward shift is the structural-matching-efficiency story '
-            "the overview's V/U-bands caveat references.</p>"
-            + _build_beveridge_curve_panel(data, 0, include_plotlyjs=True)
-            + '</div>\n'
-            + _dd_section(
-                "LFS reason for unemployment",
-                "Job-loser share, the direct layoff signal.",
-                "[Coming soon] StatsCan Table 14-10-0125 — share of unemployed citing job loss vs. job leaving / re-entering / first-time. A rising job-loser share is the cleanest layoff signal; 2024 saw the share climb materially. Resolves the joint-move ambiguity from the overview's utilization decoder.",
-            )
-            + _dd_section(
-                "LFS R-indicators (R3, R7, R8)",
-                "Broader unemployment / discouragement / part-time-for-economic-reasons.",
-                "[Coming soon] R3 (official + waiting), R7 (+ marginally attached), R8 (+ involuntary part-time). Gap between R8 and R3 widens when slack is opening on margins the headline rate doesn't see.",
-            )
-            + _dd_section(
-                "Long-term unemployment share",
-                "Persons unemployed 27 weeks or longer.",
-                "[Coming soon] Long-term-unemployment share rises late in slack episodes. A direct persistent-slack signal that complements the unemployment rate level.",
-            )
-            + _dd_section(
-                "EI claims and beneficiaries",
-                "Real-time labour-loss read (StatsCan Table 14-10-0010 family).",
-                "[Coming soon] EI initial claims is the highest-frequency real-time labour signal available. Beneficiaries lag claims by ~2 weeks but are noisier.",
-            )
-            + _dd_section(
-                "Hours worked",
-                "Aggregate and average hours; deferred from May 2026 overview pass.",
-                "[Coming soon] Hours worked is NSA-only monthly; 12M MA on the LFS series gives a usable trend. Falling hours with stable employment can mean slack opening on the intensive margin.",
-            )
-            + _dd_section(
-                "Demographic decomposition",
-                "Newcomer vs Canadian-born; youth (15-24) vs prime-age (25-54).",
-                "[Coming soon] Per Macklem June 2024 speech: newcomer unemployment is rising faster than overall; youth unemployment is well above 2019 levels. Both are direct BoC-tracked channels not captured in the headline rate.",
-            )
-            + _dd_section(
-                "Regional decomposition",
-                "Provincial unemployment dispersion; CMA-level patterns.",
-                "[Coming soon] StatsCan provincial labour-market data. Gap between strongest and weakest province widens during slack episodes. Toronto and Vancouver labour markets often diverge from national averages.",
-            )
-            + _dd_section(
-                "Indeed Job Postings Index",
-                "Daily / monthly Canadian postings index, baseline Feb 1 2020 = 100.",
-                "[Coming soon] Indeed Hiring Lab Canada postings. Already pulled into data/ (indeed_postings_ca.csv); chart-spec wiring deferred until MultiLineSpec supports a secondary y-axis (since Indeed's index unit doesn't share with the JVWS rate). Covers the JVWS COVID gap (Apr-Sep 2020) where StatsCan has no data.",
-            )
-        ),
-    },
-    {
-        "title": "Financial Conditions — deep dive",
-        "tagline": "Multilateral CAD, credit spreads, FX risk premium, terms-of-trade",
-        "output_file": "financial.html",
-        "intro": (
-            "The overview tracks oil and bilateral USDCAD as the financial-conditions backbone. The deep-dive opens "
-            "up the multilateral CAD picture (CEER), credit spreads, equity-market signals, and the FX-risk-premium "
-            "decomposition the BoC has been emphasising in recent MPRs."
-        ),
-        "body_fn": lambda data: (
-            _dd_section(
-                "CEER (multilateral CAD index)",
-                "BoC trade-weighted CAD index — the relevant FX measure for CPI pass-through.",
-                "[Coming soon] CEER is methodologically the right index for FX pass-through (FX-to-CPI runs off the multilateral, not bilateral). USDCAD and CEER can diverge materially — in some 2025 episodes USDCAD weakened while CEER was roughly flat. Track CEER alongside USDCAD to spot the divergence.",
-            )
-            + _dd_section(
-                "Credit spreads",
-                "Investment-grade and high-yield Canadian corporate spreads.",
-                "[Coming soon] BoC tracks credit spreads as a financial-conditions signal in MPR Current Conditions. Widening = stress; narrowing = risk-on. Cross-check with US IG / HY spreads for global vs. domestic component.",
-            )
-            + _dd_section(
-                "Equity markets",
-                "TSX composite + sector decomposition.",
-                "[Coming soon] TSX is heavily weighted toward financials, energy, and materials. Performance gap vs S&P 500 reflects sectoral mix more than relative growth fundamentals; useful as a wealth-effect signal for consumption.",
-            )
-            + _dd_section(
-                "FX risk premium (standalone)",
-                "Per BoC SAN 2025-2 — the dominant CAD driver in 2024-2025.",
-                "[Coming soon] Decompose CAD moves into rate-differential, FX-risk-premium, and other components. Per SAN 2025-2, FX risk premium was \"a little more than three-quarters\" of the August-December 2024 CAD weakness — the headline rate differential channel was the smaller share.",
-            )
-            + _dd_section(
-                "Terms of trade",
-                "Export prices vs import prices.",
-                "[Coming soon] Terms of trade (export price index ÷ import price index) is a real-income signal partially distinct from FX. Improving terms of trade = real-income transfer to Canada from rest of world; deteriorating = transfer out.",
-            )
-            + '<div class="dd-section">'
-            '<h2>WTI − WCS Differential'
-            '<span class="dd-tag dd-tag-real">live</span></h2>'
-            '<p>Monthly WTI (Alberta Economic Dashboard) minus WCS (CAPP/Alberta). '
-            'Pipeline take-away capacity is the dominant driver; the TMX opening in May 2024 '
-            'materially compressed the spread from the 2018–2023 elevated range.</p>'
-            + _build_wcs_wti_panel(data, 0, include_plotlyjs=False)
-            + '</div>\n'
         ),
     },
     {
@@ -3821,6 +3643,331 @@ PAGES = [
             ),
         ],
     ),
+    PageSpec(
+        title="Inflation — Deep Dive",
+        tagline="Component-level decomposition and persistence detail",
+        output_file="inflation.html",
+        is_deep_dive=True,
+        sections={
+            1: "inflation_dd_core",
+            2: "inflation_dd_contrib",
+        },
+        charts=[
+            # Chart 1 placeholder
+            MultiLineSpec(
+                title="Headline vs Ex-Indirect-Taxes",
+                lines=[
+                    LineConfig("cpi_all_items", "Headline", "#1565c0"),
+                ],
+                ticksuffix="%",
+                default_years=10,
+                footnote="[Coming soon] Headline CPI Y/Y next to a CPI ex-indirect-taxes series. The carbon-tax repeal in early 2025 carved roughly 0.6 pp out of headline; this overlay shows the underlying inflation impulse independent of policy moves.",
+            ),
+            # Chart 2: Live
+            MultiLineSpec(
+                title="Core Inflation — Individual Measures",
+                lines=[
+                    LineConfig("cpi_trim",    "CPI-trim",    "#1565c0"),
+                    LineConfig("cpi_median",  "CPI-median",  "#546e7a", visible=False),
+                    LineConfig("cpi_common",  "CPI-common",  "#78909c", visible=False),
+                    LineConfig("cpix",        "CPIX",        "#ef6c00", visible=False),
+                    LineConfig("cpixfet",     "CPIXFET",     "#00897b", visible=False),
+                ],
+                ticksuffix="%",
+                default_years=10,
+                footnote="CPI-trim and CPI-median are BoC staff measures published monthly. CPI-common is estimated via common-component extraction and is the smoothest of the three; it tends to lag turning points relative to trim and median.",
+            ),
+            # Chart 3: Contributions (Requires custom builder or data prep)
+            MultiLineSpec(
+                title="CPI Component Contributions",
+                lines=[], # Needs implementation
+                footnote="[Coming soon] 60-component decomposition with per-component contribution. Rotation matters: shelter has dominated 2023-2024; transportation took over in early 2025.",
+            ),
+        ],
+    ),
+    PageSpec(
+        title="Labour Market — Deep Dive",
+        tagline="Direct-indicator triangulation, demographic decomposition, the Beveridge curve",
+        output_file="labour.html",
+        is_deep_dive=True,
+        sections={
+            0: "labour_dd_tightness",
+            1: "labour_dd_layoffs",
+            2: "labour_dd_r_indicators",
+            3: "labour_dd_ei",
+            4: "labour_dd_demographics",
+            7: "labour_dd_postings",
+        },
+        charts=[
+            # Chart 0: Unemployment by Age — tightness section
+            MultiLineSpec(
+                title="Unemployment by Age",
+                lines=[
+                    LineConfig("youth_unemployment_rate",     "Youth (15–24)",    "#c62828"),
+                    LineConfig("prime_age_unemployment_rate", "Prime-age (25–54)", "#1565c0"),
+                    LineConfig("unemployment_rate",           "Total (15+)",       "#546e7a", visible=False),
+                ],
+                ticksuffix="%",
+                default_years=10,
+                footnote="StatsCan Table 14-10-0287, monthly SA. Youth unemployment is highly cyclical and has risen faster than prime-age during the 2024–2025 cooling. Tracking the gap identifies where slack is most acute.",
+            ),
+            # Chart 1: Beveridge Curve — phase-space scatter, custom builder
+            NativeChartSpec(
+                builder=_build_beveridge_curve_panel,
+                data_keys=["unemployment_rate", "job_vacancy_rate"],
+            ),
+            # Chart 2: LFS R-Indicators — r_indicators section (placeholder)
+            MultiLineSpec(
+                title="LFS R-Indicators",
+                lines=[
+                    LineConfig("unemployment_rate", "R3 (Official + Waiting)", "#1565c0"),
+                ],
+                ticksuffix="%",
+                default_years=10,
+                footnote="[Coming soon] StatsCan Table 14-10-0074. R3 (official + waiting), R7 (+ marginally attached), R8 (+ involuntary part-time). Gap between R8 and R3 widens when underutilization grows on margins the headline rate misses.",
+            ),
+            # Chart 3: EI Regular Beneficiaries — ei section
+            ChartSpec(
+                series="ei_regular_beneficiaries_k",
+                title="EI Regular Beneficiaries",
+                frequency="monthly",
+                color="#e65100",
+                default_transform="level",
+                default_years=10,
+                hover_decimals=0,
+                unit_label="thousands (persons)",
+                transform_unit_labels={
+                    "level": "thousands (persons)",
+                    "mom":   "%",
+                    "yoy":   "%",
+                },
+                footnote="Statistics Canada Table 14-10-0010, monthly SA. EI regular beneficiaries (persons receiving regular benefits). A high-frequency, real-time signal of labour demand deterioration — beneficiary counts rise 2–4 weeks after initial claims surge, providing an early read ahead of the LFS unemployment rate.",
+            ),
+            # Chart 4: Prime-age labour market — demographics section
+            MultiLineSpec(
+                title="Prime-Age Labour Market (25–54)",
+                lines=[
+                    LineConfig("lf_participation_prime", "Participation rate", "#1565c0"),
+                    LineConfig("lf_employment_prime",    "Employment rate",    "#2e7d32"),
+                    LineConfig("prime_age_unemployment_rate", "Unemployment rate", "#c62828"),
+                ],
+                ticksuffix="%",
+                hoverformat=".1f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %Y",
+                unit_label="%",
+                footnote="Statistics Canada Table 14-10-0287, monthly SA. Prime-age (25–54) participation, employment, and unemployment rates. The prime-age cohort is the BoC's preferred measure of labour market slack — less sensitive to retirement and school-enrollment trends than the headline 15+ rates. Divergence between participation and employment rates signals discouraged-worker effects.",
+            ),
+            # Chart 5: Youth labour market
+            MultiLineSpec(
+                title="Youth Labour Market (15–24)",
+                lines=[
+                    LineConfig("lf_participation_youth", "Participation rate", "#1565c0"),
+                    LineConfig("lf_employment_youth",    "Employment rate",    "#2e7d32"),
+                    LineConfig("youth_unemployment_rate", "Unemployment rate", "#c62828"),
+                ],
+                ticksuffix="%",
+                hoverformat=".1f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %Y",
+                unit_label="%",
+                footnote="Statistics Canada Table 14-10-0287, monthly SA. Youth (15–24) participation, employment, and unemployment rates. Youth labour is more cyclically volatile and more exposed to structural shifts (gig work, education transitions). Youth unemployment running above 14% as of early 2026 signals demand weakness concentrated in this cohort.",
+            ),
+            # Chart 6: Overall participation and employment (aggregate complement)
+            MultiLineSpec(
+                title="Aggregate Participation and Employment",
+                lines=[
+                    LineConfig("participation_rate", "Participation rate (15+)", "#1565c0"),
+                    LineConfig("employment_rate",    "Employment rate (15+)",    "#2e7d32"),
+                ],
+                ticksuffix="%",
+                hoverformat=".1f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %Y",
+                unit_label="%",
+                footnote="Statistics Canada Table 14-10-0287, monthly SA. Total (15+) participation and employment rates. Provides aggregate context for the prime-age and youth cohort charts above. Post-pandemic participation recovery has stalled, partly reflecting population aging; employment rate decline since 2023 reflects demand-side weakness.",
+            ),
+            # Chart 7: Indeed Job Postings placeholder — postings section
+            MultiLineSpec(
+                title="Indeed Job Postings Index",
+                lines=[
+                    LineConfig("job_vacancy_rate", "StatsCan Vacancy Rate", "#00897b"),
+                ],
+                ticksuffix="%",
+                default_years=None,
+                footnote="[Coming soon] Indeed Hiring Lab Canada postings (baseline Feb 1 2020 = 100). Secondary Y-axis support in build.py will allow overlaying this index with the official vacancy rate.",
+            ),
+        ],
+    ),
+    PageSpec(
+        title="GDP & Activity — Deep Dive",
+        tagline="Productivity, capacity, and the output gap",
+        output_file="gdp.html",
+        is_deep_dive=True,
+        sections={
+            0: "gdp_dd_gap",
+            2: "gdp_dd_productivity",
+            3: "gdp_dd_capacity",
+        },
+        charts=[
+            NativeChartSpec(
+                builder=_build_gdp_potential_panel,
+                data_keys=["gdp_monthly"],
+            ),
+            NativeChartSpec(
+                builder=_build_output_gap_panel,
+                data_keys=["gdp_monthly"],
+            ),
+            MultiLineSpec(
+                title="Productivity Decomposition",
+                lines=[], # Placeholder
+                footnote="[Coming soon] Real GDP per hour worked. Canadian productivity has been structurally weak since 2015; trend divergence vs US is a key BoC concern.",
+            ),
+            MultiLineSpec(
+                title="Industrial Capacity Utilization",
+                lines=[
+                    LineConfig("capacity_util_total", "Total industry", "#1565c0"),
+                    LineConfig("capacity_util_mfg",   "Manufacturing",  "#c62828"),
+                ],
+                ticksuffix="%",
+                hoverformat=".1f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%Y",
+                unit_label="%",
+                footnote="Statistics Canada Table 16-10-0004: capacity utilization rates, quarterly, seasonally adjusted. Total industry and manufacturing sub-index. Values above the historical mean indicate demand outpacing productive capacity; below-average readings point to economic slack. The BoC treats capacity pressure as a leading indicator of core inflation.",
+                # TODO: gdp_dd_hours section placeholder — hours-worked series not yet fetched
+            ),
+        ],
+    ),
+    PageSpec(
+        title="Financial Conditions — Deep Dive",
+        tagline="Multilateral CAD, credit spreads, FX risk premium, terms-of-trade",
+        output_file="financial.html",
+        is_deep_dive=True,
+        sections={
+            1: "financial_dd_ceer",
+            2: "financial_dd_spreads",
+            3: "financial_dd_equity",
+            4: "financial_dd_fx_risk",
+            6: "financial_dd_wcs",
+        },
+        charts=[
+            ChartSpec(
+                series="usdcad",
+                title="USD/CAD (Bilateral)",
+                frequency="daily",
+                color="#1565c0",
+                default_years=10,
+                unit_label="CAD per USD",
+                footnote="Bilateral exchange rate. Higher = weaker CAD.",
+            ),
+            MultiLineSpec(
+                title="CEER (Trade-Weighted CAD)",
+                lines=[], # Placeholder
+                footnote="[Coming soon] BoC's Canadian-Dollar Effective Exchange Rate. Methodologically better for inflation pass-through than bilateral USDCAD.",
+            ),
+            NativeChartSpec(
+                builder=_build_wcs_wti_panel,
+                data_keys=["wcs", "wti"],
+            ),
+        ],
+    ),
+    PageSpec(
+        title="Trade & External Sector — Deep Dive",
+        tagline="Canada's trade exposure, bilateral flows, and terms-of-trade conditions",
+        output_file="trade.html",
+        is_deep_dive=True,
+        sections={
+            0: "trade_dd_us",
+            1: "trade_dd_total",
+        },
+        charts=[
+            # Chart 0: Canada–US bilateral trade — us section
+            MultiLineSpec(
+                title="Canada–US Bilateral Trade",
+                lines=[
+                    LineConfig("trade_exports_us_b", "Exports to US",  "#1565c0"),
+                    LineConfig("trade_imports_us_b", "Imports from US", "#c62828"),
+                    LineConfig("trade_balance_us_b", "Trade balance",   "#2e7d32"),
+                ],
+                ticksuffix="",
+                hoverformat=".1f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %Y",
+                unit_label="C$ billions",
+                footnote="Statistics Canada Table 12-10-0121 (BoC Valet), monthly SA. Canada–US goods trade in C$ billions. Exports to the US represent approximately 75% of Canada's total goods exports; this bilateral channel is the primary transmission mechanism for US tariff shocks. A negative balance indicates a Canadian surplus (exports exceed imports) — Canada has historically run a goods surplus with the US.",
+            ),
+            # Chart 1: Total merchandise trade — total section
+            MultiLineSpec(
+                title="Total Merchandise Trade",
+                lines=[
+                    LineConfig("trade_exports_total_b", "Total exports",  "#1565c0"),
+                    LineConfig("trade_imports_total_b", "Total imports",  "#c62828"),
+                    LineConfig("trade_balance_total_b", "Trade balance",  "#2e7d32"),
+                ],
+                ticksuffix="",
+                hoverformat=".1f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %Y",
+                unit_label="C$ billions",
+                footnote="Statistics Canada Table 12-10-0121 (BoC Valet), monthly SA. Total Canadian goods exports and imports in C$ billions, all partner countries. The overall balance reflects terms-of-trade conditions, commodity cycle exposure, and CAD competitiveness effects.",
+                # TODO: goods exports by category (energy, automotive, ag, etc.) — not yet fetched; StatsCan Table 12-10-0011
+            ),
+        ],
+    ),
+    PageSpec(
+        title="Demographics & Labour Supply — Deep Dive",
+        tagline="Population dynamics, immigration, and structural capacity constraints",
+        output_file="demographics.html",
+        is_deep_dive=True,
+        sections={
+            0: "demographics_dd_migration",
+            1: "demographics_dd_age",
+        },
+        charts=[
+            # Chart 0: Population migration components — migration section
+            MultiLineSpec(
+                title="International Migration Components",
+                lines=[
+                    LineConfig("pop_immigrants",    "Immigrants",     "#1565c0"),
+                    LineConfig("pop_npr_inflows",   "NPR inflows",    "#e65100"),
+                    LineConfig("pop_emigrants",     "Emigrants",      "#c62828"),
+                    LineConfig("pop_net_emigration","Net emigration", "#7b1fa2"),
+                    LineConfig("pop_net_npr",       "Net NPR",        "#00897b"),
+                ],
+                ticksuffix="",
+                hoverformat=".0f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%Y",
+                unit_label="persons (quarterly)",
+                footnote="Statistics Canada Table 17-10-0040, quarterly SA. Quarterly population flows in persons. Immigrants and NPR (non-permanent residents) inflows are the dominant positive contributors to population growth; net NPR swung sharply negative in 2024–2025 as the government caps temporary resident levels. The BoC monitors these flows as a key input to potential labour supply and longer-run inflation pressure.",
+                # TODO: natural_increase quarterly — not available from StatsCan quarterly tables; annual only (17100008)
+            ),
+            # Chart 1: Age-group unemployment — age section
+            MultiLineSpec(
+                title="Labour Force by Age Group",
+                lines=[
+                    LineConfig("youth_unemployment_rate",     "Youth unemployment (15–24)",     "#c62828"),
+                    LineConfig("prime_age_unemployment_rate", "Prime-age unemployment (25–54)", "#1565c0"),
+                ],
+                ticksuffix="%",
+                hoverformat=".1f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %Y",
+                unit_label="%",
+                footnote="Statistics Canada Table 14-10-0287, monthly SA. Age-group unemployment rates shown here for demographic context. See the Labour Market deep-dive for full participation + employment + unemployment decompositions by cohort.",
+                # TODO: pop_by_age_group quarterly — not available; annual only (17100005)
+            ),
+        ],
+    ),
 ]
 
 
@@ -3848,6 +3995,15 @@ _DERIVED_SERIES_SOURCES: dict[str, list[str]] = {
     "real_2yr_monthly":      ["yield_2yr", "cpi_all_items_nsa"],
     # Housing deep-dive derived series
     "mortgage_5yr_goc_5yr_spread": ["mortgage_rate_5yr", "yield_5yr"],
+    # Labour deep-dive derived series
+    "ei_regular_beneficiaries_k": ["ei_regular_beneficiaries"],
+    # Trade deep-dive derived series (C$M source → C$B display)
+    "trade_exports_us_b":     ["trade_exports_us"],
+    "trade_imports_us_b":     ["trade_imports_us"],
+    "trade_balance_us_b":     ["trade_balance_us"],
+    "trade_exports_total_b":  ["trade_exports_total"],
+    "trade_imports_total_b":  ["trade_imports_total"],
+    "trade_balance_total_b":  ["trade_balance_total"],
 }
 
 
@@ -4001,6 +4157,30 @@ def _add_derived_series(data: dict[str, pd.DataFrame]) -> None:
                 "value": merged2["value"] - merged2["cpi_yoy"],
             }).dropna().reset_index(drop=True)
 
+    # Labour deep-dive: EI regular beneficiaries scaled to thousands for legibility
+    if "ei_regular_beneficiaries" in data:
+        df = data["ei_regular_beneficiaries"].sort_values("date").reset_index(drop=True)
+        data["ei_regular_beneficiaries_k"] = pd.DataFrame({
+            "date":  df["date"],
+            "value": df["value"] / 1_000.0,
+        }).dropna().reset_index(drop=True)
+
+    # Trade deep-dive: source CSVs are in C$ millions; display in C$ billions (÷ 1000)
+    for _src, _dst in [
+        ("trade_exports_us",    "trade_exports_us_b"),
+        ("trade_imports_us",    "trade_imports_us_b"),
+        ("trade_balance_us",    "trade_balance_us_b"),
+        ("trade_exports_total", "trade_exports_total_b"),
+        ("trade_imports_total", "trade_imports_total_b"),
+        ("trade_balance_total", "trade_balance_total_b"),
+    ]:
+        if _src in data:
+            df = data[_src].sort_values("date").reset_index(drop=True)
+            data[_dst] = pd.DataFrame({
+                "date":  df["date"],
+                "value": df["value"] / 1_000.0,
+            }).dropna().reset_index(drop=True)
+
     # Housing deep-dive: 5Y conventional mortgage minus 5Y GoC yield spread (weekly aligned)
     if "mortgage_rate_5yr" in data and "yield_5yr" in data:
         mtg = data["mortgage_rate_5yr"].sort_values("date").reset_index(drop=True)
@@ -4034,6 +4214,8 @@ def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
             panels.append(_build_stackedbar_panel(chart, data, i, i == 0))
         elif isinstance(chart, MortgageShockSpec):
             panels.append(_build_mortgage_shock_panel(chart, i, i == 0))
+        elif isinstance(chart, NativeChartSpec):
+            panels.append(chart.builder(data, i, i == 0))
         else:
             df = data[chart.series]
             panels.append(_chart_panel_html(chart, df, i, include_plotlyjs=(i == 0), data=data))
@@ -4087,6 +4269,8 @@ def main():
                         print(f"  Warning: {line.series}.csv missing — run fetch.py. Line will be skipped.")
             elif isinstance(chart, MortgageShockSpec):
                 pass  # hardcoded data — no CSV needed
+            elif isinstance(chart, NativeChartSpec):
+                all_series.update(chart.data_keys)
             else:
                 # ChartSpec: series may be raw (CSV exists) or derived.
                 if (DATA_DIR / f"{chart.series}.csv").exists():
@@ -4119,27 +4303,6 @@ def main():
     print("Building pages...")
     for page in PAGES:
         build_page(page, data)
-
-    print("Building deep-dive scaffolding...")
-    last_updated = datetime.now(timezone.utc).strftime("%B %d, %Y at %H:%M UTC")
-    for dd in DEEP_DIVES:
-        # body_fn(data) generates body HTML at build time (used for native charts);
-        # body is a pre-computed string (used for pure placeholder pages).
-        if "body_fn" in dd:
-            body_html = dd["body_fn"](data)
-        else:
-            body_html = dd["body"]
-        html = _assemble_deep_dive_page(
-            title=dd["title"],
-            tagline=dd["tagline"],
-            output_file=dd["output_file"],
-            intro=dd["intro"],
-            body_html=body_html,
-            last_updated=last_updated,
-        )
-        with open(dd["output_file"], "w", encoding="utf-8") as f:
-            f.write(html)
-        print(f"  -> {dd['output_file']}")
 
     print("Done.")
 
