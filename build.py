@@ -150,7 +150,7 @@ class PageSpec:
     title: str
     tagline: str
     output_file: str
-    charts: list  # ChartSpec | CoreInflationSpec | ...
+    charts: list  # ChartSpec | BandSpec | MultiLineSpec | ...
     # Map chart-index -> section_id; renders a heading + blurb above that chart.
     sections: dict = field(default_factory=dict)
     # When True, _assemble_page adds the "under construction" deep-dive banner.
@@ -158,12 +158,19 @@ class PageSpec:
 
 
 @dataclass
-class CoreInflationSpec:
-    """One-off composite chart: headline CPI + core measures range + individual toggles."""
+class BandSpec:
+    """Range-band chart: N measures form a shaded envelope; an optional featured band-member
+    line is shown by default; one or more external comparator lines render on top with their
+    own styling.
+    Use cases: core inflation (5 core measures + headline comparator + 2% reference);
+    wage growth (4 wage measures + LFS All featured + services CPI comparator + 0 reference)."""
     title: str
+    band_lines: list   # list[LineConfig] — measures forming the envelope
+    comparators: list  # list[LineConfig] — external lines drawn on top (may be empty)
+    featured: object = None   # LineConfig | None — one band member highlighted as default-visible
+    reference_y: float = None
     footnote: str = ""
-    default_years: int | None = None
-    SERIES = ["cpi_all_items", "cpi_trim", "cpi_median", "cpi_common", "cpix", "cpixfet"]
+    default_years: int = None
 
 
 @dataclass
@@ -175,21 +182,17 @@ class CpiBreadthSpec:
 
 @dataclass
 class LineConfig:
-    series: str          # CSV filename without .csv
+    series: str          # CSV filename without .csv, OR a virtual name when formula is set
     label: str           # legend label
     color: str           # hex color
     visible: bool = True
     smooth: bool = True  # False = keep raw data in smooth mode (e.g. monthly series on a daily chart)
     secondary_y: bool = False
+    dash: bool = False   # render as dotted/dashed line (used by BandSpec comparators)
+    formula: object = None  # Optional[Callable[[dict], pd.Series]]. If set, compute series at build time.
+    formula_deps: list = field(default_factory=list)  # raw CSV series names the formula depends on
 
 
-@dataclass
-class WageSpec:
-    """Composite chart: range band across wage measures + individual toggles + Services CPI overlay."""
-    title: str
-    footnote: str = ""
-    default_years: int | None = 10
-    SERIES = ["lfs_wages_all", "lfs_wages_permanent", "seph_earnings", "lfs_micro", "cpi_services"]
 
 
 @dataclass
@@ -648,105 +651,124 @@ def _chart_panel_html(chart: ChartSpec, df: pd.DataFrame, chart_idx: int,
     )
 
 
-# ── Core inflation one-off chart ─────────────────────────────────────────────
+# ── Band chart (unified core-inflation / wage-growth builder) ─────────────────
 
-def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
-                                chart_idx: int, include_plotlyjs: bool) -> str:
+def _resolve_band_series(line: "LineConfig", data: dict) -> "pd.Series":
+    """Return a date-indexed pd.Series for a LineConfig, applying formula if set."""
+    if line.formula is not None:
+        return line.formula(data)
+    return data[line.series].set_index("date")["value"]
+
+
+def _build_band_panel(chart: "BandSpec", data: dict,
+                      chart_idx: int, include_plotlyjs: bool) -> str:
+    """Unified band-chart builder used for Core Inflation and Wage Growth.
+
+    Trace layout:
+      0       : range lower (invisible anchor for tonexty fill)
+      1       : range upper (fills down to trace 0 = shaded envelope)
+      2       : featured band member (visible by default) OR None
+      3..N+1  : remaining band members (hidden by default)
+      N+2..   : comparators (default visible; dash style if line.dash=True)
+
+    When chart.featured is None, trace 2 is omitted and band members start
+    at trace 2 directly (all hidden by default).
+    """
     div_id = "chart-" + str(chart_idx)
 
-    headline_yoy = (
-        data["cpi_all_items"].set_index("date")["value"]
-        .pct_change(12) * 100
-    )
-    trim    = data["cpi_trim"].set_index("date")["value"]
-    median  = data["cpi_median"].set_index("date")["value"]
-    common  = data["cpi_common"].set_index("date")["value"]
-    cpix    = data["cpix"].set_index("date")["value"]
-    cpixfet = data["cpixfet"].set_index("date")["value"]
+    # Resolve all series
+    band_series = [_resolve_band_series(bl, data) for bl in chart.band_lines]
+    comp_series = [_resolve_band_series(cl, data) for cl in chart.comparators]
 
-    core_df  = pd.concat([trim, median, common, cpix, cpixfet], axis=1)
-    range_max = core_df.max(axis=1).dropna()
-    range_min = core_df.min(axis=1).dropna()
+    # Clip comparators to the earliest date any band member has valid data
+    if band_series:
+        band_start = min(
+            (s.first_valid_index() for s in band_series if s.first_valid_index() is not None),
+            default=None,
+        )
+        if band_start is not None:
+            comp_series = [s[s.index >= band_start] for s in comp_series]
+
+    # Range band across all band members
+    band_df   = pd.concat(band_series, axis=1, sort=True)
+    range_max = band_df.max(axis=1).dropna()
+    range_min = band_df.min(axis=1).dropna()
+
+    # Determine which band line is "featured" (shown by default)
+    # featured is matched by series name
+    featured_series_name = chart.featured.series if chart.featured is not None else None
 
     fig = go.Figure()
 
-    # Trace 0: range lower (no fill, invisible line)
+    # Trace 0: range lower anchor
     fig.add_trace(go.Scatter(
         x=range_min.index, y=range_min.values,
         line=dict(width=0), fill=None,
         showlegend=False, hoverinfo="skip", visible=True,
     ))
-    # Trace 1: range upper (fill to lower = shaded band)
+    # Trace 1: range upper (fills tonexty)
     fig.add_trace(go.Scatter(
         x=range_max.index, y=range_max.values,
         fill="tonexty", fillcolor="rgba(180,180,180,0.35)",
         line=dict(width=0),
         showlegend=False, hoverinfo="skip", visible=True,
     ))
-    # Trace 2: headline CPI Y/Y (always visible)
-    fig.add_trace(go.Scatter(
-        x=headline_yoy.index, y=headline_yoy.values,
-        line=dict(color="#1565c0", width=2),
-        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>Total CPI</extra>",
-        showlegend=False, visible=True,
-    ))
-    # Trace 3: CPI-trim (hidden by default)
-    fig.add_trace(go.Scatter(
-        x=trim.index, y=trim.values,
-        line=dict(color="#546e7a", width=1.5),
-        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>CPI-trim</extra>",
-        showlegend=False, visible=False,
-    ))
-    # Trace 4: CPI-median (hidden by default)
-    fig.add_trace(go.Scatter(
-        x=median.index, y=median.values,
-        line=dict(color="#78909c", width=1.5),
-        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>CPI-median</extra>",
-        showlegend=False, visible=False,
-    ))
-    # Trace 5: CPI-common (hidden by default)
-    fig.add_trace(go.Scatter(
-        x=common.index, y=common.values,
-        line=dict(color="#00897b", width=1.5),
-        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>CPI-common</extra>",
-        showlegend=False, visible=False,
-    ))
-    # Trace 6: CPIX (hidden by default)
-    fig.add_trace(go.Scatter(
-        x=cpix.index, y=cpix.values,
-        line=dict(color="#6d4c41", width=1.5),
-        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>CPIX</extra>",
-        showlegend=False, visible=False,
-    ))
-    # Trace 7: CPIXFET (hidden by default)
-    fig.add_trace(go.Scatter(
-        x=cpixfet.index, y=cpixfet.values,
-        line=dict(color="#8e24aa", width=1.5),
-        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>CPIXFET</extra>",
-        showlegend=False, visible=False,
-    ))
 
-    fig.add_hline(y=2, line_color="#555", line_width=1)
+    # Traces 2+: band member lines
+    # featured member uses width=2 and primary color; others use width=1.5
+    for bl, bs in zip(chart.band_lines, band_series):
+        is_featured = (featured_series_name is not None and bl.series == featured_series_name)
+        fig.add_trace(go.Scatter(
+            x=bs.index, y=bs.values,
+            line=dict(color=bl.color, width=2 if is_featured else 1.5),
+            hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>" + bl.label + "</extra>",
+            showlegend=False,
+            visible=is_featured,
+        ))
+
+    # Comparator traces
+    for cl, cs in zip(chart.comparators, comp_series):
+        line_style = dict(color=cl.color, width=1.5)
+        if cl.dash:
+            line_style["dash"] = "dot"
+        fig.add_trace(go.Scatter(
+            x=cs.index, y=cs.values,
+            line=line_style,
+            hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>" + cl.label + "</extra>",
+            showlegend=False,
+            visible=cl.visible,
+        ))
+
+    # Reference line
+    if chart.reference_y is not None:
+        ref_color = "#555" if chart.reference_y != 0 else "#aaa"
+        fig.add_hline(y=chart.reference_y, line_color=ref_color, line_width=1)
+
     fig.update_layout(
         height=_CHART_HEIGHT, showlegend=False,
         paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
         margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
     )
     fig.update_xaxes(showgrid=False, zeroline=False)
-    _ci_today = pd.Timestamp.now().normalize()
-    _ci_cutoff = _ci_today - pd.DateOffset(years=chart.default_years or 10)
-    _ci_all = pd.concat([headline_yoy.rename("a"), trim.rename("b"), median.rename("c"),
-                         common.rename("d"), cpix.rename("e"), cpixfet.rename("f")], axis=1)
-    _ci_ref = _ci_all[_ci_all.index >= _ci_cutoff].stack().dropna()
-    if not _ci_ref.empty:
-        _ci_min, _ci_max = float(_ci_ref.min()), float(_ci_ref.max())
-        _ci_pad = max((_ci_max - _ci_min) * 0.08, 0.1)
-        _ci_dtick = _nice_dtick(_ci_min - _ci_pad, _ci_max + _ci_pad)
-        _ci_tickfmt = _dtick_format(_ci_dtick)
+
+    # Y-axis: compute dtick over the default window
+    _bp_today  = pd.Timestamp.now().normalize()
+    _bp_cutoff = _bp_today - pd.DateOffset(years=chart.default_years or 10)
+    _bp_all_series = band_series + comp_series
+    _bp_ref = pd.concat(
+        [s.rename(str(i)) for i, s in enumerate(_bp_all_series)], axis=1, sort=True
+    )
+    _bp_ref = _bp_ref[_bp_ref.index >= _bp_cutoff].stack().dropna()
+    if not _bp_ref.empty:
+        _bp_min = float(_bp_ref.min())
+        _bp_max = float(_bp_ref.max())
+        _bp_pad = max((_bp_max - _bp_min) * 0.08, 0.1)
+        _bp_dtick  = _nice_dtick(_bp_min - _bp_pad, _bp_max + _bp_pad)
+        _bp_tickfmt = _dtick_format(_bp_dtick)
     else:
-        _ci_dtick, _ci_tickfmt = 1.0, ".0f"
+        _bp_dtick, _bp_tickfmt = 1.0, ".0f"
     fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False,
-                     tick0=0, dtick=_ci_dtick, tickformat=_ci_tickfmt)
+                     tick0=0, dtick=_bp_dtick, tickformat=_bp_tickfmt)
 
     _compact_x_dates(fig)
     plotly_frag = fig.to_html(
@@ -757,40 +779,53 @@ def _build_core_inflation_panel(chart: "CoreInflationSpec", data: dict,
     )
 
     controls = (
-        '<div class="chart-controls">' + _range_buttons_html(div_id, default_years=chart.default_years) + '</div>'
+        '<div class="chart-controls">'
+        + _range_buttons_html(div_id, default_years=chart.default_years)
+        + '</div>'
     )
 
+    # Build legend
+    # Trace index for each band member starts at 2
     swatch_range = (
         '<span style="display:inline-block;width:22px;height:11px;'
         'background:rgba(180,180,180,0.45);border-radius:2px;vertical-align:middle;'
         'margin-right:5px"></span>'
     )
 
-    legend = (
-        '<div class="chart-legend">'
-        + '<button class="legend-item active"'
-        + ' onclick="toggleTrace(this,\'' + div_id + '\',[2])">'
-        + _swatch_line("#1565c0") + 'Total CPI</button>'
-        + '<button class="legend-item"'
-        + ' onclick="toggleTrace(this,\'' + div_id + '\',[3])">'
-        + _swatch_line("#546e7a") + 'CPI-trim</button>'
-        + '<button class="legend-item"'
-        + ' onclick="toggleTrace(this,\'' + div_id + '\',[4])">'
-        + _swatch_line("#78909c") + 'CPI-median</button>'
-        + '<button class="legend-item"'
-        + ' onclick="toggleTrace(this,\'' + div_id + '\',[5])">'
-        + _swatch_line("#00897b") + 'CPI-common</button>'
-        + '<button class="legend-item"'
-        + ' onclick="toggleTrace(this,\'' + div_id + '\',[6])">'
-        + _swatch_line("#6d4c41") + 'CPIX</button>'
-        + '<button class="legend-item"'
-        + ' onclick="toggleTrace(this,\'' + div_id + '\',[7])">'
-        + _swatch_line("#8e24aa") + 'CPIXFET</button>'
-        + '<button class="legend-item active"'
-        + ' onclick="toggleTrace(this,\'' + div_id + '\',[0,1])">'
-        + swatch_range + 'Range of core measures</button>'
-        + '</div>'
+    legend_parts = ['<div class="chart-legend">']
+
+    # Comparator legend buttons (at the end of the trace list)
+    n_band = len(chart.band_lines)
+    comp_start_idx = 2 + n_band  # traces 0 and 1 are the band fill
+    for ci, cl in enumerate(chart.comparators):
+        trace_idx = comp_start_idx + ci
+        active_cls = " active" if cl.visible else ""
+        legend_parts.append(
+            '<button class="legend-item' + active_cls + '"'
+            ' onclick="toggleTrace(this,\'' + div_id + '\',[' + str(trace_idx) + '])">'
+            + _swatch_line(cl.color, dash=cl.dash) + cl.label + '</button>'
+        )
+
+    # Band member legend buttons
+    for bi, bl in enumerate(chart.band_lines):
+        trace_idx = 2 + bi
+        is_featured = (featured_series_name is not None and bl.series == featured_series_name)
+        active_cls = " active" if is_featured else ""
+        legend_parts.append(
+            '<button class="legend-item' + active_cls + '"'
+            ' onclick="toggleTrace(this,\'' + div_id + '\',[' + str(trace_idx) + '])">'
+            + _swatch_line(bl.color) + bl.label + '</button>'
+        )
+
+    # Range toggle button (always active — toggles traces 0 and 1)
+    legend_parts.append(
+        '<button class="legend-item active"'
+        ' onclick="toggleTrace(this,\'' + div_id + '\',[0,1])">'
+        + swatch_range + 'Range</button>'
     )
+
+    legend_parts.append('</div>')
+    legend = "".join(legend_parts)
 
     footnote_html = (
         '<div class="chart-footnote">' + chart.footnote + '</div>'
@@ -923,159 +958,6 @@ def _build_cpi_breadth_panel(chart: "CpiBreadthSpec", data: dict,
 
     return html
 
-
-# ── Wage growth chart ────────────────────────────────────────────────────────
-
-def _build_wage_panel(chart: "WageSpec", data: dict,
-                      chart_idx: int, include_plotlyjs: bool) -> str:
-    div_id = "chart-" + str(chart_idx)
-
-    # Y/Y % for level series; lfs_micro is already Y/Y from BoC Valet
-    lfs_all   = data["lfs_wages_all"].set_index("date")["value"].pct_change(12) * 100
-    lfs_perm  = data["lfs_wages_permanent"].set_index("date")["value"].pct_change(12) * 100
-    seph      = data["seph_earnings"].set_index("date")["value"].pct_change(12) * 100
-    lfs_micro = data["lfs_micro"].set_index("date")["value"]
-    svc_cpi   = data["cpi_services"].set_index("date")["value"].pct_change(12) * 100
-
-    # Clip Services CPI to the earliest date any wage measure has valid data
-    wage_start = min(
-        s.first_valid_index()
-        for s in [lfs_all, lfs_perm, seph, lfs_micro]
-        if s.first_valid_index() is not None
-    )
-    svc_cpi = svc_cpi[svc_cpi.index >= wage_start]
-
-    # Range band: min/max across the four wage measures (NaN-tolerant)
-    wage_df   = pd.concat([lfs_all, lfs_perm, seph, lfs_micro], axis=1, sort=True)
-    range_max = wage_df.max(axis=1).dropna()
-    range_min = wage_df.min(axis=1).dropna()
-
-    fig = go.Figure()
-    # Trace 0: range lower (no fill)
-    fig.add_trace(go.Scatter(
-        x=range_min.index, y=range_min.values,
-        line=dict(width=0), fill=None,
-        showlegend=False, hoverinfo="skip", visible=True,
-    ))
-    # Trace 1: range upper (fills to trace 0)
-    fig.add_trace(go.Scatter(
-        x=range_max.index, y=range_max.values,
-        fill="tonexty", fillcolor="rgba(180,180,180,0.35)",
-        line=dict(width=0),
-        showlegend=False, hoverinfo="skip", visible=True,
-    ))
-    # Trace 2: LFS all employees (visible)
-    fig.add_trace(go.Scatter(
-        x=lfs_all.index, y=lfs_all.values,
-        line=dict(color="#1565c0", width=2),
-        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>LFS All Employees</extra>",
-        showlegend=False, visible=True,
-    ))
-    # Trace 3: LFS permanent employees (hidden)
-    fig.add_trace(go.Scatter(
-        x=lfs_perm.index, y=lfs_perm.values,
-        line=dict(color="#546e7a", width=1.5),
-        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>LFS Permanent</extra>",
-        showlegend=False, visible=False,
-    ))
-    # Trace 4: SEPH average weekly earnings (hidden)
-    fig.add_trace(go.Scatter(
-        x=seph.index, y=seph.values,
-        line=dict(color="#78909c", width=1.5),
-        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>SEPH Weekly Earnings</extra>",
-        showlegend=False, visible=False,
-    ))
-    # Trace 5: LFS-Micro composition-adjusted (hidden)
-    fig.add_trace(go.Scatter(
-        x=lfs_micro.index, y=lfs_micro.values,
-        line=dict(color="#4a148c", width=1.5),
-        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>LFS-Micro (BoC)</extra>",
-        showlegend=False, visible=False,
-    ))
-    # Trace 6: Services CPI Y/Y (visible by default — overlay for wage-price context)
-    fig.add_trace(go.Scatter(
-        x=svc_cpi.index, y=svc_cpi.values,
-        line=dict(color="#c62828", width=1.5, dash="dot"),
-        hovertemplate="%{x|%b %Y}<br>%{y:.1f}%<extra>Services CPI</extra>",
-        showlegend=False, visible=True,
-    ))
-
-    fig.add_hline(y=0, line_color="#aaa", line_width=1)
-    fig.update_layout(
-        height=_CHART_HEIGHT, showlegend=False,
-        paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
-        margin=_CHART_MARGINS, font=dict(family=_FONT_STACK),
-    )
-    fig.update_xaxes(showgrid=False, zeroline=False)
-    _wg_today = pd.Timestamp.now().normalize()
-    _wg_cutoff = _wg_today - pd.DateOffset(years=chart.default_years or 10)
-    _wg_ref = pd.concat([lfs_all.rename("a"), lfs_perm.rename("b"), seph.rename("c"),
-                         lfs_micro.rename("d"), svc_cpi.rename("e")], axis=1, sort=True)
-    _wg_ref = _wg_ref[_wg_ref.index >= _wg_cutoff].stack().dropna()
-    if not _wg_ref.empty:
-        _wg_min, _wg_max = float(_wg_ref.min()), float(_wg_ref.max())
-        _wg_pad = max((_wg_max - _wg_min) * 0.08, 0.1)
-        _wg_dtick = _nice_dtick(_wg_min - _wg_pad, _wg_max + _wg_pad)
-        _wg_tickfmt = _dtick_format(_wg_dtick)
-    else:
-        _wg_dtick, _wg_tickfmt = 1.0, ".0f"
-    fig.update_yaxes(showgrid=True, gridcolor="#ebebeb", zeroline=False,
-                     tick0=0, dtick=_wg_dtick, tickformat=_wg_tickfmt)
-
-    _compact_x_dates(fig)
-    plotly_frag = fig.to_html(
-        full_html=False,
-        include_plotlyjs="cdn" if include_plotlyjs else False,
-        div_id=div_id,
-        config={"displayModeBar": False},
-    )
-
-    controls = '<div class="chart-controls">' + _range_buttons_html(div_id, default_years=chart.default_years) + '</div>'
-
-    swatch_range = (
-        '<span style="display:inline-block;width:22px;height:11px;'
-        'background:rgba(180,180,180,0.45);border-radius:2px;vertical-align:middle;'
-        'margin-right:5px"></span>'
-    )
-
-    legend = (
-        '<div class="chart-legend">'
-        + '<button class="legend-item active"'
-        + ' onclick="toggleTrace(this,\'' + div_id + '\',[2])">'
-        + _swatch_line("#1565c0") + 'LFS All Employees</button>'
-        + '<button class="legend-item"'
-        + ' onclick="toggleTrace(this,\'' + div_id + '\',[3])">'
-        + _swatch_line("#546e7a") + 'LFS Permanent</button>'
-        + '<button class="legend-item"'
-        + ' onclick="toggleTrace(this,\'' + div_id + '\',[4])">'
-        + _swatch_line("#78909c") + 'SEPH Weekly Earnings</button>'
-        + '<button class="legend-item"'
-        + ' onclick="toggleTrace(this,\'' + div_id + '\',[5])">'
-        + _swatch_line("#4a148c") + 'LFS-Micro (BoC)</button>'
-        + '<button class="legend-item active"'
-        + ' onclick="toggleTrace(this,\'' + div_id + '\',[6])">'
-        + _swatch_line("#c62828", dash=True) + 'Services CPI</button>'
-        + '<button class="legend-item active"'
-        + ' onclick="toggleTrace(this,\'' + div_id + '\',[0,1])">'
-        + swatch_range + 'Range</button>'
-        + '</div>'
-    )
-
-    footnote_html = (
-        '<div class="chart-footnote">' + chart.footnote + '</div>'
-        if chart.footnote else ""
-    )
-    html = (
-        '<div class="chart-panel">'
-        '<div class="chart-header">'
-        + _title_block_html(chart.title, "%", div_id)
-        + controls + '</div>'
-        + plotly_frag
-        + legend
-        + footnote_html + '</div>\n'
-    )
-
-    return html
 
 
 # ── CPI All Items chart (SA + NSA, transforms + legend toggle) ───────────────
@@ -1887,7 +1769,7 @@ function cpiLineToggle(btn, chartId, lineIdx) {
 def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
                            chart_idx: int, include_plotlyjs: bool) -> str:
     div_id = "chart-" + str(chart_idx)
-    lines = [line for line in chart.lines if line.series in data]
+    lines = [line for line in chart.lines if line.formula is not None or line.series in data]
     n = len(lines)
     has_smooth = chart.smooth_window is not None and n > 0
     has_alt = bool(chart.alt_lines) and n > 0
@@ -1912,15 +1794,25 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
     # Primary traces (indices 0..n-1).
     # When default_alt is True, primary traces are hidden by default.
     for line in lines:
-        df = data[line.series]
+        if line.formula is not None:
+            _s = line.formula(data)
+            _x = _s.index.strftime("%Y-%m-%d").tolist() if hasattr(_s.index, "strftime") else _s.index.tolist()
+            _y = _s.values.tolist()
+        else:
+            df = data[line.series]
+            _x = df["date"]
+            _y = df["value"]
         if default_alt:
             initial_visible = False
         else:
             initial_visible = True if line.visible else "legendonly"
+        _line_style = dict(color=line.color, width=2)
+        if line.dash:
+            _line_style["dash"] = "dash"
         fig.add_trace(go.Scatter(
-            x=df["date"], y=df["value"],
+            x=_x, y=_y,
             name=line.label,
-            line=dict(color=line.color, width=2),
+            line=_line_style,
             line_shape=chart.line_shape,
             visible=initial_visible,
             hovertemplate="%{x|" + chart.date_fmt + "}<br>%{y:" + chart.hoverformat + "}" + chart.ticksuffix + "<extra>" + line.label + "</extra>",
@@ -1989,14 +1881,23 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
     # When default_alt is True, the initial visible series is the alt set, not the primary.
     _ref_lines = chart.alt_lines if default_alt else lines
     for _line in _ref_lines:
-        if _line is None or _line.series not in data:
+        if _line is None:
             continue
-        _df = data[_line.series]
-        if chart.default_years:
-            _cutoff = _fmt_today - pd.DateOffset(years=chart.default_years)
-            _fmt_vals.append(_df["value"][_df["date"] >= _cutoff])
+        if _line.formula is not None:
+            _s = _line.formula(data)
+            if chart.default_years:
+                _cutoff = _fmt_today - pd.DateOffset(years=chart.default_years)
+                _s = _s[_s.index >= _cutoff]
+            _fmt_vals.append(_s)
+        elif _line.series not in data:
+            continue
         else:
-            _fmt_vals.append(_df["value"])
+            _df = data[_line.series]
+            if chart.default_years:
+                _cutoff = _fmt_today - pd.DateOffset(years=chart.default_years)
+                _fmt_vals.append(_df["value"][_df["date"] >= _cutoff])
+            else:
+                _fmt_vals.append(_df["value"])
     ref_vals = pd.concat(_fmt_vals).dropna() if _fmt_vals else pd.Series(dtype=float)
     ymin_floor = chart.ymin if chart.ymin is not None else float("-inf")
     if not ref_vals.empty:
@@ -2056,7 +1957,13 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
     else:
         controls = '<div class="chart-controls">' + range_btns + '</div>'
 
-    def _swatch(color: str) -> str:
+    def _swatch(color: str, dash: bool = False) -> str:
+        if dash:
+            return (
+                '<span style="display:inline-block;width:22px;height:0;'
+                'border-top:2px dashed ' + color + ';vertical-align:middle;'
+                'margin-right:5px"></span>'
+            )
         return (
             '<span style="display:inline-block;width:22px;height:2.5px;'
             'background:' + color + ';border-radius:1px;vertical-align:middle;'
@@ -2073,7 +1980,7 @@ def _build_multiline_panel(chart: "MultiLineSpec", data: dict,
         legend_items.append(
             '<button class="legend-item' + active + '"'
             ' onclick="' + handler + '">'
-            + _swatch(line.color) + line.label + '</button>'
+            + _swatch(line.color, dash=line.dash) + line.label + '</button>'
         )
     legend = '<div class="chart-legend" id="leg-' + div_id + '">' + "".join(legend_items) + '</div>'
 
@@ -2610,120 +2517,6 @@ def _build_beveridge_curve_panel(data: dict, chart_idx: int,
     )
 
 
-def _build_gdp_potential_panel(data: dict, chart_idx: int,
-                                include_plotlyjs: bool) -> str:
-    """Actual vs HP-filter potential GDP. Level only (C$ trillions). 10Y default window."""
-    div_id = "chart-" + str(chart_idx)
-
-    gdp_df = data.get("gdp_monthly")
-    if gdp_df is None or gdp_df.empty:
-        return ""
-
-    gdp = gdp_df.sort_values("date").set_index("date")["value"].dropna()
-    trend = _hp_filter(gdp, lamb=129600)
-
-    today = pd.Timestamp.now().normalize()
-    x_start = (today - pd.DateOffset(years=10)).strftime("%Y-%m-%d")
-
-    fig = go.Figure()
-
-    fig.add_trace(go.Scatter(
-        x=gdp.index.strftime("%Y-%m-%d").tolist(),
-        y=gdp.values.tolist(),
-        name="Real GDP",
-        line=dict(color="#1565c0", width=2),
-        hovertemplate="%{x|%b %Y}<br>%{y:.3f} C$ T<extra>Real GDP</extra>",
-        showlegend=False,
-    ))
-    fig.add_trace(go.Scatter(
-        x=trend.index.strftime("%Y-%m-%d").tolist(),
-        y=trend.values.tolist(),
-        name="Potential GDP (HP)",
-        line=dict(color="#546e7a", width=1.5, dash="dash"),
-        hovertemplate="%{x|%b %Y}<br>%{y:.3f} C$ T<extra>Potential (HP)</extra>",
-        showlegend=False,
-    ))
-
-    # Compute y-axis range for the 10Y window
-    cutoff = today - pd.DateOffset(years=10)
-    mask = gdp.index >= cutoff
-    combined_10y = pd.concat([gdp[mask], trend[mask]])
-    if not combined_10y.empty:
-        ymin_10y = float(combined_10y.min())
-        ymax_10y = float(combined_10y.max())
-        pad = max((ymax_10y - ymin_10y) * 0.08, 0.01)
-        dtick = _nice_dtick(ymin_10y - pad, ymax_10y + pad)
-        tickfmt = _dtick_format(dtick)
-    else:
-        dtick, tickfmt = 0.1, ".1f"
-
-    fig.update_layout(
-        height=_CHART_HEIGHT,
-        showlegend=False,
-        paper_bgcolor="#ffffff",
-        plot_bgcolor="#fafafa",
-        margin=_CHART_MARGINS,
-        font=dict(family=_FONT_STACK),
-        xaxis=dict(range=[x_start, today.strftime("%Y-%m-%d")],
-                   showgrid=False, zeroline=False),
-        yaxis=dict(showgrid=True, gridcolor="#ebebeb", zeroline=False,
-                   tick0=0, dtick=dtick, tickformat=tickfmt),
-    )
-
-    plotly_frag = fig.to_html(
-        full_html=False,
-        include_plotlyjs="cdn" if include_plotlyjs else False,
-        div_id=div_id,
-        config={"displayModeBar": False},
-    )
-
-    # Unit label top-left (style guide §2)
-    unit_annotation = (
-        '<div style="position:relative;">'
-        '<span style="position:absolute;top:6px;left:52px;'
-        'font-size:0.72rem;color:#888;z-index:1;pointer-events:none;">'
-        'C$ trillions</span>'
-        + plotly_frag +
-        '</div>'
-    )
-
-    title_html = (
-        '<div class="chart-title-block">'
-        '<div class="chart-title">Real GDP vs Potential GDP (HP Filter)</div>'
-        '</div>'
-    )
-
-    # Legend swatches
-    def _swatch(color, dash=False):
-        border = "border-top: 2px dashed " + color + ";" if dash else "background:" + color + ";"
-        return (
-            '<span style="display:inline-block;width:22px;height:' +
-            ("0" if dash else "2.5px") + ';' + border +
-            'vertical-align:middle;margin-right:5px"></span>'
-        )
-
-    legend_html = (
-        '<div class="chart-legend">'
-        '<span class="legend-item active" style="cursor:default;">'
-        + _swatch("#1565c0") + 'Real GDP</span>'
-        '<span class="legend-item active" style="cursor:default;">'
-        + _swatch("#546e7a", dash=True) + 'Potential GDP (HP)</span>'
-        '</div>'
-    )
-
-    footnote = (
-        "Potential GDP estimated via HP filter (λ=129,600). "
-        "HP filter is trend-only — it does not incorporate BoC’s structural model estimates."
-    )
-
-    return (
-        '<div class="chart-panel">'
-        '<div class="chart-header">' + title_html + '</div>'
-        + unit_annotation
-        + legend_html
-        + '<div class="chart-footnote">' + footnote + '</div>'
-        + '</div>\n'
-    )
 
 
 def _build_output_gap_panel(data: dict, chart_idx: int,
@@ -3186,12 +2979,48 @@ PAGES = [
                 hband=(2.25, 3.25),
                 footnote="BoC overnight rate target; Fed funds midpoint of target range. Shaded band: BoC's estimated neutral-rate range, 2.25–3.25%.",
             ),
-            CoreInflationSpec(
+            BandSpec(
                 title="Core Inflation",
+                band_lines=[
+                    LineConfig("cpi_trim",    "CPI-trim",    "#546e7a"),
+                    LineConfig("cpi_median",  "CPI-median",  "#78909c"),
+                    LineConfig("cpi_common",  "CPI-common",  "#00897b"),
+                    LineConfig("cpix",        "CPIX",        "#6d4c41"),
+                    LineConfig("cpixfet",     "CPIXFET",     "#8e24aa"),
+                ],
+                comparators=[
+                    LineConfig(
+                        "cpi_all_items_yoy", "Total CPI", "#1565c0",
+                        formula=lambda d: d["cpi_all_items"].set_index("date")["value"].pct_change(12) * 100,
+                        formula_deps=["cpi_all_items"],
+                    ),
+                ],
+                featured=None,
+                reference_y=2.0,
                 footnote="Year-over-year %. Shaded band shows range across BoC core measures (trim, median, common, CPIX, CPIXFET).",
                 default_years=10,
             ),
-            NativeChartSpec(builder=_build_gdp_potential_panel, data_keys=["gdp_monthly"]),
+            MultiLineSpec(
+                title="Real GDP",
+                lines=[
+                    LineConfig("gdp_monthly", "Real GDP", "#1565c0"),
+                    LineConfig(
+                        "gdp_potential_hp",
+                        "Potential GDP (HP)",
+                        "#546e7a",
+                        dash=True,
+                        formula=lambda d: _hp_filter(d["gdp_monthly"].set_index("date")["value"], lamb=129600),
+                        formula_deps=["gdp_monthly"],
+                    ),
+                ],
+                ticksuffix="",
+                hoverformat=".3f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %Y",
+                unit_label="C$ trillions",
+                footnote="Statistics Canada Table 36-10-0434: monthly real GDP, chained 2017 dollars, SAAR. Potential output is an HP-filter trend (lambda=129600, the standard for monthly data). See the GDP deep-dive for the output-gap panel.",
+            ),
             MultiLineSpec(
                 title="Unemployment & Job Vacancies",
                 lines=[
@@ -3217,9 +3046,41 @@ PAGES = [
                 alt_unit_label="millions of persons",
                 footnote="Beveridge tightness pair. Unemployment: StatsCan Table 14-10-0287, monthly SA, 15+. Vacancies: StatsCan Table 14-10-0371, monthly NSA (no SA series exists), total economy; series begins 2015. Vacancies displayed as a 12M moving average by default to denoise the seasonal Sep-peak/Dec-trough; raw NSA available as a legend toggle. Rate view shares % units; Level view shares millions of persons (both natively in persons/thousands and scaled at fetch). High vacancies with low unemployment = tight labour market; the V/U ratio is the BoC's preferred composite tightness read.",
             ),
-            WageSpec(
+            BandSpec(
                 title="Wage Growth",
+                band_lines=[
+                    LineConfig(
+                        "lfs_wages_all_yoy", "LFS All Employees", "#1565c0",
+                        formula=lambda d: d["lfs_wages_all"].set_index("date")["value"].pct_change(12) * 100,
+                        formula_deps=["lfs_wages_all"],
+                    ),
+                    LineConfig(
+                        "lfs_wages_permanent_yoy", "LFS Permanent", "#546e7a",
+                        formula=lambda d: d["lfs_wages_permanent"].set_index("date")["value"].pct_change(12) * 100,
+                        formula_deps=["lfs_wages_permanent"],
+                    ),
+                    LineConfig(
+                        "seph_earnings_yoy", "SEPH Weekly Earnings", "#78909c",
+                        formula=lambda d: d["seph_earnings"].set_index("date")["value"].pct_change(12) * 100,
+                        formula_deps=["seph_earnings"],
+                    ),
+                    LineConfig("lfs_micro", "LFS-Micro (BoC)", "#4a148c"),
+                ],
+                comparators=[
+                    LineConfig(
+                        "cpi_services_yoy", "Services CPI", "#c62828", dash=True,
+                        formula=lambda d: d["cpi_services"].set_index("date")["value"].pct_change(12) * 100,
+                        formula_deps=["cpi_services"],
+                    ),
+                ],
+                featured=LineConfig(
+                    "lfs_wages_all_yoy", "LFS All Employees", "#1565c0",
+                    formula=lambda d: d["lfs_wages_all"].set_index("date")["value"].pct_change(12) * 100,
+                    formula_deps=["lfs_wages_all"],
+                ),
+                reference_y=0.0,
                 footnote="Year-over-year %. LFS: average hourly wages. SEPH: average weekly earnings, all industries. LFS-Micro: BoC composition-adjusted measure. Services CPI overlay for wage-price context.",
+                default_years=10,
             ),
         ],
     ),
@@ -3686,9 +3547,26 @@ PAGES = [
             3: "gdp_dd_capacity",
         },
         charts=[
-            NativeChartSpec(
-                builder=_build_gdp_potential_panel,
-                data_keys=["gdp_monthly"],
+            MultiLineSpec(
+                title="Real GDP",
+                lines=[
+                    LineConfig("gdp_monthly", "Real GDP", "#1565c0"),
+                    LineConfig(
+                        "gdp_potential_hp",
+                        "Potential GDP (HP)",
+                        "#546e7a",
+                        dash=True,
+                        formula=lambda d: _hp_filter(d["gdp_monthly"].set_index("date")["value"], lamb=129600),
+                        formula_deps=["gdp_monthly"],
+                    ),
+                ],
+                ticksuffix="",
+                hoverformat=".3f",
+                default_years=10,
+                line_shape="linear",
+                date_fmt="%b %Y",
+                unit_label="C$ trillions",
+                footnote="Statistics Canada Table 36-10-0434: monthly real GDP, chained 2017 dollars, SAAR. Potential output is an HP-filter trend (lambda=129600, the standard for monthly data). The output-gap panel on this page shows the level vs trend gap explicitly.",
             ),
             NativeChartSpec(
                 builder=_build_output_gap_panel,
@@ -4144,12 +4022,10 @@ def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
     for i, chart in enumerate(page.charts):
         if i in page.sections:
             panels.append(_render_section(page.sections[i], blurbs))
-        if isinstance(chart, CoreInflationSpec):
-            panels.append(_build_core_inflation_panel(chart, data, i, i == 0))
+        if isinstance(chart, BandSpec):
+            panels.append(_build_band_panel(chart, data, i, i == 0))
         elif isinstance(chart, CpiBreadthSpec):
             panels.append(_build_cpi_breadth_panel(chart, data, i, i == 0))
-        elif isinstance(chart, WageSpec):
-            panels.append(_build_wage_panel(chart, data, i, i == 0))
         elif isinstance(chart, CpiSpec):
             panels.append(_build_cpi_panel(chart, data, i, i == 0))
         elif isinstance(chart, MultiLineSpec):
@@ -4170,7 +4046,7 @@ def build_page(page: PageSpec, data: dict[str, pd.DataFrame]) -> None:
         cid = "chart-" + str(i)
         if isinstance(chart, CpiBreadthSpec):
             default_ranges[cid] = 10
-        elif isinstance(chart, (ChartSpec, MultiLineSpec, StackedBarSpec, WageSpec, CoreInflationSpec, CpiSpec)) and chart.default_years is not None:
+        elif isinstance(chart, (ChartSpec, MultiLineSpec, StackedBarSpec, BandSpec, CpiSpec)) and chart.default_years is not None:
             default_ranges[cid] = chart.default_years
         if isinstance(chart, MultiLineSpec) and chart.ymin is not None:
             y_floors[cid] = chart.ymin
@@ -4189,10 +4065,12 @@ def main():
     has_breadth = False
     for page in PAGES:
         for chart in page.charts:
-            if isinstance(chart, CoreInflationSpec):
-                all_series.update(CoreInflationSpec.SERIES)
-            elif isinstance(chart, WageSpec):
-                all_series.update(WageSpec.SERIES)
+            if isinstance(chart, BandSpec):
+                for bl in list(chart.band_lines) + list(chart.comparators):
+                    if bl.formula is not None:
+                        all_series.update(bl.formula_deps)
+                    else:
+                        all_series.add(bl.series)
             elif isinstance(chart, CpiSpec):
                 all_series.update(chart.SERIES)
             elif isinstance(chart, CpiBreadthSpec):
@@ -4204,7 +4082,10 @@ def main():
                 if isinstance(chart, StackedBarSpec) and chart.overlay is not None:
                     _line_iter.append(chart.overlay)
                 for line in _line_iter:
-                    if (DATA_DIR / f"{line.series}.csv").exists():
+                    if line.formula is not None:
+                        # Formula-computed virtual series: collect its declared deps.
+                        all_series.update(line.formula_deps)
+                    elif (DATA_DIR / f"{line.series}.csv").exists():
                         all_series.add(line.series)
                     elif line.series in _DERIVED_SERIES_SOURCES:
                         # Derived series: load source CSVs; _add_derived_series will compute it.
