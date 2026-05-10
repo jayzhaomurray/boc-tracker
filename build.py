@@ -2507,11 +2507,9 @@ def _build_beveridge_curve_panel(data: dict, chart_idx: int,
         '</div>'
     )
     footnote = (
-        "Vacancy rate: StatsCan Table 14-10-0371 (monthly NSA), 3M MA. "
-        "Unemployment rate: StatsCan Table 14-10-0287 (monthly SA), 3M MA. "
-        "Vacancy data begins April 2015. "
-        "Post-COVID outward shift reflects reduced matching efficiency — "
-        "likely structural (immigration-driven labour-force composition, skill mismatch)."
+        "Source: Statistics Canada. "
+        "Unemployment rate: monthly SA, 15+, 3M MA. "
+        "Vacancy rate: monthly NSA, 3M MA; series begins April 2015."
     )
 
     script_block = (
@@ -2614,9 +2612,9 @@ def _build_output_gap_panel(data: dict, chart_idx: int,
     )
 
     footnote = (
-        "HP-filter-based estimate only. "
-        "BoC publishes its own output gap estimates quarterly in MPR Appendix; "
-        "this is a mechanical approximation."
+        "Source: Statistics Canada (GDP data). "
+        "HP-filter estimate (lambda=129600). "
+        "BoC publishes its own gap range quarterly in the MPR."
     )
 
     return (
@@ -2720,11 +2718,11 @@ def _build_core_inflation_individual_panel(data: dict, chart_idx: int,
     )
 
     footnote = (
-        "CPI-trim and CPI-median are BoC staff measures published monthly. "
-        "CPI-common is estimated via common-component extraction and is the smoothest of the three; "
-        "it tends to lag turning points relative to trim and median. "
+        "Source: Bank of Canada; Statistics Canada. "
+        "CPI-trim, -median, -common: BoC staff measures, monthly. "
+        "CPI-common uses common-component extraction; tends to lag turning points. "
         "CPIX (ex-8 volatile + indirect taxes) and CPIXFET (ex-food, energy, indirect taxes) "
-        "are older BoC measures, superseded by the current preferred trio but still published for continuity."
+        "are older BoC measures, still published."
     )
 
     return (
@@ -2835,11 +2833,10 @@ def _build_wcs_wti_panel(data: dict, chart_idx: int,
     )
 
     footnote = (
-        "WTI monthly mean (Alberta Economic Dashboard) minus WCS monthly (CAPP/Alberta). "
-        "Normal range ($10–15/bbl) reflects pre-2018 average differential before pipeline constraints. "
-        "Differentials above $20 historically coincide with pipeline take-away binding; "
-        "Trans Mountain Expansion (TMX) opening in May 2024 added ~590,000 bbl/d capacity and "
-        "materially compressed the spread. Alberta royalties scale with realized WCS price."
+        "Source: Alberta Economic Dashboard; CAPP. "
+        "WTI monthly mean minus WCS monthly price, USD/barrel. "
+        "Reference band $10–15/bbl: pre-2018 average differential. "
+        "Dashed line at $20: pipeline-constrained threshold."
     )
 
     return (
@@ -2995,7 +2992,7 @@ PAGES = [
                 default_years=10,
                 line_shape="hv",
                 hband=(2.25, 3.25),
-                footnote="BoC overnight rate target; Fed funds midpoint of target range. Shaded band: BoC's estimated neutral-rate range, 2.25–3.25%.",
+                footnote="Source: Bank of Canada; Federal Reserve. BoC overnight rate and Fed funds midpoint, daily. Shaded band: BoC estimated neutral-rate range, 2.25–3.25%.",
             ),
             BandSpec(
                 title="Core Inflation",
@@ -3015,7 +3012,7 @@ PAGES = [
                 ],
                 featured=None,
                 reference_y=2.0,
-                footnote="Year-over-year %. Shaded band shows range across BoC core measures (trim, median, common, CPIX, CPIXFET).",
+                footnote="Source: Bank of Canada; Statistics Canada. Year-over-year %. Band spans BoC core measures: CPI-trim, -median, -common, CPIX, CPIXFET.",
                 default_years=10,
             ),
             MultiLineSpec(
@@ -3037,7 +3034,7 @@ PAGES = [
                 line_shape="linear",
                 date_fmt="%b %Y",
                 unit_label="C$ trillions",
-                footnote="Statistics Canada Table 36-10-0434: monthly real GDP, chained 2017 dollars, SAAR. Potential output is an HP-filter trend (lambda=129600, the standard for monthly data). See the GDP deep-dive for the output-gap panel.",
+                footnote="Source: Statistics Canada. Monthly real GDP by industry, chained 2017 dollars, SAAR. Potential output is an HP-filter trend (lambda=129600).",
             ),
             MultiLineSpec(
                 title="Unemployment & Job Vacancies",
@@ -3062,7 +3059,7 @@ PAGES = [
                 date_fmt="%b %Y",
                 unit_label="%",
                 alt_unit_label="millions of persons",
-                footnote="Beveridge tightness pair. Unemployment: StatsCan Table 14-10-0287, monthly SA, 15+. Vacancies: StatsCan Table 14-10-0371, monthly NSA (no SA series exists), total economy; series begins 2015. Vacancies displayed as a 12M moving average by default to denoise the seasonal Sep-peak/Dec-trough; raw NSA available as a legend toggle. Rate view shares % units; Level view shares millions of persons (both natively in persons/thousands and scaled at fetch). High vacancies with low unemployment = tight labour market; the V/U ratio is the BoC's preferred composite tightness read.",
+                footnote="Source: Statistics Canada. Unemployment: monthly SA, 15+. Vacancies: monthly NSA, total economy; series begins 2015. Vacancies shown as 12-month moving average.",
             ),
             BandSpec(
                 title="Wage Growth",
@@ -3093,7 +3090,7 @@ PAGES = [
                 ],
                 featured=LineConfig("lfs_micro", "LFS-Micro (BoC)", "#1565c0"),
                 reference_y=0.0,
-                footnote="Year-over-year %. LFS: average hourly wages. SEPH: average weekly earnings, all industries. LFS-Micro: BoC composition-adjusted measure. Services CPI overlay for wage-price context.",
+                footnote="Source: Statistics Canada. Year-over-year %. LFS: average hourly wages, monthly SA. SEPH: average weekly earnings, all industries, monthly SA. LFS-Micro: BoC composition-adjusted measure.",
                 default_years=10,
             ),
         ],
@@ -3123,7 +3120,7 @@ PAGES = [
                 ticksuffix="%",
                 smooth_window=20,
                 default_years=10,
-                footnote="GoC benchmark bond yields. Source: Bank of Canada Valet.",
+                footnote="Source: Bank of Canada. GoC benchmark bond yields, daily.",
             ),
             MultiLineSpec(
                 title="2Y–10Y Spread",
@@ -3133,7 +3130,7 @@ PAGES = [
                 ticksuffix="%",
                 smooth_window=20,
                 default_years=10,
-                footnote="10-year minus 2-year GoC yield. Negative (inverted) has historically preceded Canadian recessions.",
+                footnote="Source: Bank of Canada. 10-year minus 2-year GoC benchmark yield spread, daily.",
             ),
             MultiLineSpec(
                 title="Real Policy Rates (ex-post)",
@@ -3143,7 +3140,7 @@ PAGES = [
                 ],
                 ticksuffix="%",
                 default_years=10,
-                footnote="Nominal rate minus trailing headline CPI Y/Y. Ex-post measure; reflects backward-looking realized inflation, not forward expectations.",
+                footnote="Source: Bank of Canada; Statistics Canada. Overnight rate and 2-year GoC yield minus trailing headline CPI Y/Y, monthly. Ex-post real rates.",
             ),
             MultiLineSpec(
                 title="CORRA vs Overnight Rate Target",
@@ -3154,7 +3151,7 @@ PAGES = [
                 ticksuffix="%",
                 smooth_window=20,
                 default_years=2,
-                footnote="CORRA (Canadian Overnight Repo Rate Average) vs the BoC overnight rate target. Under the floor system (April 2022–), CORRA trades at or just above the deposit rate.",
+                footnote="Source: Bank of Canada. CORRA (Canadian Overnight Repo Rate Average) vs overnight rate target, daily. Floor system in effect since April 2022.",
             ),
             MultiLineSpec(
                 title="BoC Assets",
@@ -3165,7 +3162,7 @@ PAGES = [
                 ticksuffix="",
                 hoverformat=".0f",
                 default_years=10,
-                footnote="C$ billions. Source: Bank of Canada Statement of Financial Position, weekly.",
+                footnote="Source: Bank of Canada. Total assets and GoC bonds held, weekly, C$ billions.",
             ),
             MultiLineSpec(
                 title="BoC Liabilities — Settlement Balances",
@@ -3175,7 +3172,7 @@ PAGES = [
                 ticksuffix="",
                 hoverformat=".0f",
                 default_years=10,
-                footnote="C$ billions. Cash banks hold overnight at the BoC. Post-QT steady-state target: $20–60B (Gravelle, March 2024).",
+                footnote="Source: Bank of Canada. Settlement balances held overnight at the BoC, weekly, C$ billions.",
             ),
             MultiLineSpec(
                 title="Peer Central Bank Policy Rates",
@@ -3190,7 +3187,7 @@ PAGES = [
                 line_shape="hv",
                 default_years=10,
                 date_fmt="%b %Y",
-                footnote="BoC overnight rate; Fed funds target midpoint; ECB deposit facility rate (FRED ECBDFR); BoE Bank Rate and RBA cash rate (OECD/FRED monthly series).",
+                footnote="Source: Bank of Canada; Federal Reserve; ECB; Bank of England; RBA (via FRED/OECD). Policy rates: BoC overnight, Fed funds midpoint, ECB deposit facility, BoE Bank Rate, RBA cash rate. Monthly.",
             ),
         ],
     ),
@@ -3219,7 +3216,7 @@ PAGES = [
                 line_shape="linear",
                 date_fmt="%b %Y",
                 unit_label="",
-                footnote="CREA/BoC FVI. SNLR: above 65 = seller's market; below 45 = buyer's market; 45–65 = balanced. Resales Index: 2019 = 100 (different scale from SNLR — toggle to view alongside tightness).",
+                footnote="Source: CREA; Bank of Canada FVI. Sales-to-new-listings ratio (SNLR) and resales index (2019 = 100), monthly.",
             ),
             MultiLineSpec(
                 title="5-Year Mortgage Rate vs 5-Year GoC Bond",
@@ -3234,7 +3231,7 @@ PAGES = [
                 default_years=10,
                 date_fmt="%b %d, %Y",
                 unit_label="%",
-                footnote="5-year conventional mortgage rate (BoC Valet V80691335, weekly) vs 5-year GoC benchmark bond yield (daily). Toggle spread to see the lender risk premium — typically 150–200 bp. Spread compression or widening reflects lender credit conditions and pass-through of GoC yield moves into mortgage pricing.",
+                footnote="Source: Bank of Canada. 5-year conventional mortgage rate (weekly) vs 5-year GoC benchmark yield (daily). Spread shown as optional toggle.",
             ),
             ChartSpec(
                 series="units_under_construction",
@@ -3245,7 +3242,7 @@ PAGES = [
                 default_years=10,
                 hover_decimals=0,
                 unit_label="thousands",
-                footnote="CMHC housing units under construction, Canada total, SAAR (thousands) — StatsCan Table 34-10-0158. Distinct from starts: measures the active construction stock at a point in time. Post-2020 surge reflects apartment-heavy starts mix (longer build timelines vs single-detached). Vector v52300170: Tier 2 — inferred from value magnitude matching CMHC data; getSeriesInfoFromVector API unavailable.",
+                footnote="Source: CMHC; Statistics Canada. Housing units under construction, Canada total, SAAR, monthly, thousands.",
             ),
             MultiLineSpec(
                 title="Resale Activity by CMA",
@@ -3260,7 +3257,7 @@ PAGES = [
                 line_shape="linear",
                 date_fmt="%b %Y",
                 unit_label="units (12M rolling)",
-                footnote="CREA/BoC FVI: 12-month rolling resale counts by CMA (units). Toronto and Vancouver account for the majority of Canada's supply gap; Calgary has outperformed since 2022 on in-migration and relative affordability.",
+                footnote="Source: CREA; Bank of Canada FVI. 12-month rolling resale counts by CMA, monthly, units.",
             ),
             MultiLineSpec(
                 title="Housing Starts — CMHC Supply Target Context",
@@ -3274,11 +3271,11 @@ PAGES = [
                 default_years=10,
                 date_fmt="%b %Y",
                 unit_label="thousands SAAR",
-                footnote="CMHC housing starts, Canada total, SAAR (thousands). CMHC's June 2025 Housing Supply Report targets 430,000–480,000 starts per year through 2035 to restore affordability (4.8M units needed). Current pace of ~235k is roughly half the target. Long-run average since 1977: ~194k.",
+                footnote="Source: CMHC; Statistics Canada. Housing starts, Canada total, SAAR, monthly, thousands.",
             ),
             MortgageShockSpec(
                 title="Mortgage Renewal Payment Shock",
-                footnote="BoC SAN 2025-21 (May 2025). ~15–20% of 5-year fixed holders face payment increases above 20% at renewal. Variable-rate fixed-payment holders already absorbed rate increases through extended amortization; the 54% figure is the share facing a contractual reset. Median payment increase of ~34% applies to mortgages originated 2020–2022 renewing through 2027.",
+                footnote="Source: Bank of Canada SAN 2025-21. Estimated mortgage renewal payment increases for holders originated 2020–2022, renewing through 2027.",
             ),
             MultiLineSpec(
                 title="Housing Prices",
@@ -3304,7 +3301,7 @@ PAGES = [
                 date_fmt="%b %Y",
                 unit_label="Y/Y %",
                 alt_unit_label="Index, Jan 2020 = 100",
-                footnote="Y/Y: year-over-year % change in the underlying index. Index: each series rebased to Jan 2020 = 100 so the level paths are directly comparable. NHPI: StatsCan contractor-reported prices, new single-family homes, 27 CMAs (native base Dec 2016 = 100). CREA MLS HPI: BoC Financial Vulnerability Indicators, resale-dominant hedonic (native base 2019 = 100; available from 2014). Re-indexing happens at build time; source CSVs are unmodified.",
+                footnote="Source: Statistics Canada; CREA; Bank of Canada FVI. NHPI: contractor-reported new single-family home prices, 27 CMAs, monthly. CREA MLS HPI: resale hedonic index. Index view rebases both to Jan 2020 = 100 at build time.",
             ),
             ChartSpec(
                 series="residential_permits_b",
@@ -3315,7 +3312,7 @@ PAGES = [
                 default_years=None,  # Max — series only starts Jan 2018, so a 10Y window wastes space
                 hover_decimals=1,
                 unit_label="C$ billions",
-                footnote="StatsCan Table 34-10-0292: total residential building permits, current C$ billions, seasonally adjusted. Source CSV is in $thousands; displayed in $B at build time for legibility. Leading indicator for housing construction: blended lag ~9–15 months (type-dependent — single-detached 2–10 months, multi-unit/high-rise 9–15+ months per CMHC Spring 2026). Series begins Jan 2018; default range is Max because the series only has ~8 years of history.",
+                footnote="Source: Statistics Canada. Total residential building permits, current C$ billions, monthly SA. Series begins Jan 2018.",
             ),
             ChartSpec(
                 series="housing_affordability",
@@ -3326,7 +3323,7 @@ PAGES = [
                 default_years=10,
                 hover_decimals=3,
                 unit_label="ratio",
-                footnote="BoC housing affordability index (INDINF_AFFORD_Q): ratio of mortgage payment to household income. Higher = less affordable. Historical range 2000–2025: 0.28 (most affordable, 2002) to 0.55 (least affordable, Q3 2023). Incorporates MLS resale prices, qualifying mortgage rates, and NIAE income data.",
+                footnote="Source: Bank of Canada. Housing affordability index: ratio of qualifying mortgage payment to household income, quarterly.",
             ),
         ],
     ),
@@ -3348,7 +3345,7 @@ PAGES = [
                 ],
                 ticksuffix="%",
                 default_years=10,
-                footnote="[Coming soon] Headline CPI Y/Y next to a CPI ex-indirect-taxes series. The carbon-tax repeal in early 2025 carved roughly 0.6 pp out of headline; this overlay shows the underlying inflation impulse independent of policy moves.",
+                footnote="[Coming soon] Source: Statistics Canada. Headline CPI Y/Y alongside CPI ex-indirect-taxes, monthly SA.",
             ),
             # Chart 2: Live
             MultiLineSpec(
@@ -3362,13 +3359,13 @@ PAGES = [
                 ],
                 ticksuffix="%",
                 default_years=10,
-                footnote="CPI-trim and CPI-median are BoC staff measures published monthly. CPI-common is estimated via common-component extraction and is the smoothest of the three; it tends to lag turning points relative to trim and median.",
+                footnote="Source: Bank of Canada; Statistics Canada. CPI-trim and CPI-median: BoC staff measures, monthly. CPI-common uses common-component extraction; tends to lag turning points.",
             ),
             # Chart 3: Contributions (Requires custom builder or data prep)
             MultiLineSpec(
                 title="CPI Component Contributions",
                 lines=[], # Needs implementation
-                footnote="[Coming soon] 60-component decomposition with per-component contribution. Rotation matters: shelter has dominated 2023-2024; transportation took over in early 2025.",
+                footnote="[Coming soon] Source: Statistics Canada. 60-component CPI decomposition with per-component contributions, monthly.",
             ),
             CpiSpec(
                 title="CPI Components",
@@ -3383,11 +3380,11 @@ PAGES = [
                 ],
                 default_transform="yoy",
                 default_years=10,
-                footnote="Canada CPI by category.",
+                footnote="Source: Statistics Canada. Canada CPI by major category, monthly.",
             ),
             CpiBreadthSpec(
                 title="CPI Breadth",
-                footnote="Deviation from 1996–2019 average. Weighted share of 60 basket components with year-over-year change above 3% or below 1%.",
+                footnote="Source: Statistics Canada. Deviation from 1996–2019 average. Weighted share of 60 basket components with Y/Y change above 3% or below 1%, monthly.",
             ),
             MultiLineSpec(
                 title="Consumer Inflation Expectations",
@@ -3398,7 +3395,7 @@ PAGES = [
                 default_years=10,
                 line_shape="linear",
                 date_fmt="%b %Y",
-                footnote="Bank of Canada Survey of Consumer Expectations (CSCE), mean expected inflation 1 year and 5 years ahead. Quarterly. The 2% inflation target is the policy anchor; material drift in 5-year-ahead expectations would signal anchor slippage.",
+                footnote="Source: Bank of Canada CSCE. Mean expected CPI inflation 1 year and 5 years ahead, quarterly.",
             ),
             MultiLineSpec(
                 title="Business Inflation Expectations",
@@ -3412,7 +3409,7 @@ PAGES = [
                 default_years=10,
                 line_shape="linear",
                 date_fmt="%b %Y",
-                footnote="Bank of Canada Business Outlook Survey: share of firms expecting CPI inflation to fall in each band over the next two years. The four buckets sum to ~100%. The 2–3% band is target-consistent; sustained mass in >3% signals anchoring stress on the upside. \"Most-current vintage\" is the same >3% concept but published faster than the vintage-aligned distribution; off by default.",
+                footnote="Source: Bank of Canada BOS. Share of firms expecting CPI inflation in each band over the next two years, quarterly. Buckets sum to ~100%.",
             ),
         ],
     ),
@@ -3440,7 +3437,7 @@ PAGES = [
                 ],
                 ticksuffix="%",
                 default_years=10,
-                footnote="StatsCan Table 14-10-0287, monthly SA. Youth unemployment is highly cyclical and has risen faster than prime-age during the 2024–2025 cooling. Tracking the gap identifies where slack is most acute.",
+                footnote="Source: Statistics Canada. Youth (15–24) and prime-age (25–54) unemployment rates, monthly SA.",
             ),
             # Chart 1: Beveridge Curve — phase-space scatter, custom builder
             NativeChartSpec(
@@ -3455,7 +3452,7 @@ PAGES = [
                 ],
                 ticksuffix="%",
                 default_years=10,
-                footnote="[Coming soon] StatsCan Table 14-10-0074. R3 (official + waiting), R7 (+ marginally attached), R8 (+ involuntary part-time). Gap between R8 and R3 widens when underutilization grows on margins the headline rate misses.",
+                footnote="[Coming soon] Source: Statistics Canada. R3 (official + waiting), R7 (+ marginally attached), R8 (+ involuntary part-time), monthly SA.",
             ),
             # Chart 3: EI Regular Beneficiaries — ei section
             ChartSpec(
@@ -3472,7 +3469,7 @@ PAGES = [
                     "mom":   "%",
                     "yoy":   "%",
                 },
-                footnote="Statistics Canada Table 14-10-0010, monthly SA. EI regular beneficiaries (persons receiving regular benefits). A high-frequency, real-time signal of labour demand deterioration — beneficiary counts rise 2–4 weeks after initial claims surge, providing an early read ahead of the LFS unemployment rate.",
+                footnote="Source: Statistics Canada. EI regular beneficiaries (persons receiving regular benefits), monthly SA, thousands.",
             ),
             # Chart 4: Prime-age labour market — demographics section
             MultiLineSpec(
@@ -3488,7 +3485,7 @@ PAGES = [
                 line_shape="linear",
                 date_fmt="%b %Y",
                 unit_label="%",
-                footnote="Statistics Canada Table 14-10-0287, monthly SA. Prime-age (25–54) participation, employment, and unemployment rates. The prime-age cohort is the BoC's preferred measure of labour market slack — less sensitive to retirement and school-enrollment trends than the headline 15+ rates. Divergence between participation and employment rates signals discouraged-worker effects.",
+                footnote="Source: Statistics Canada. Prime-age (25–54) participation, employment, and unemployment rates, monthly SA.",
             ),
             # Chart 5: Youth labour market
             MultiLineSpec(
@@ -3504,7 +3501,7 @@ PAGES = [
                 line_shape="linear",
                 date_fmt="%b %Y",
                 unit_label="%",
-                footnote="Statistics Canada Table 14-10-0287, monthly SA. Youth (15–24) participation, employment, and unemployment rates. Youth labour is more cyclically volatile and more exposed to structural shifts (gig work, education transitions). Youth unemployment running above 14% as of early 2026 signals demand weakness concentrated in this cohort.",
+                footnote="Source: Statistics Canada. Youth (15–24) participation, employment, and unemployment rates, monthly SA.",
             ),
             # Chart 6: Overall participation and employment (aggregate complement)
             MultiLineSpec(
@@ -3519,7 +3516,7 @@ PAGES = [
                 line_shape="linear",
                 date_fmt="%b %Y",
                 unit_label="%",
-                footnote="Statistics Canada Table 14-10-0287, monthly SA. Total (15+) participation and employment rates. Provides aggregate context for the prime-age and youth cohort charts above. Post-pandemic participation recovery has stalled, partly reflecting population aging; employment rate decline since 2023 reflects demand-side weakness.",
+                footnote="Source: Statistics Canada. Total (15+) participation and employment rates, monthly SA.",
             ),
             # Chart 7: Indeed Job Postings placeholder — postings section
             MultiLineSpec(
@@ -3529,7 +3526,7 @@ PAGES = [
                 ],
                 ticksuffix="%",
                 default_years=None,
-                footnote="[Coming soon] Indeed Hiring Lab Canada postings (baseline Feb 1 2020 = 100). Secondary Y-axis support in build.py will allow overlaying this index with the official vacancy rate.",
+                footnote="[Coming soon] Source: Indeed Hiring Lab. Canada job postings index, baseline Feb 1 2020 = 100.",
             ),
             ChartSpec(
                 series="unit_labour_cost",
@@ -3546,7 +3543,7 @@ PAGES = [
                     "qoq_ar": "%",
                     "yoy":    "%",
                 },
-                footnote="Statistics Canada Table 36-10-0206: Unit labour costs, business sector, Canada, quarterly seasonally adjusted (index, 2017=100). ULC = nominal labour compensation per unit of real output, i.e. wage growth net of productivity. The identity wage growth − productivity = ULC growth means ULC growth is a more direct read on whether labour costs are consistent with the 2% inflation target — sustained ULC growth materially above 2% with stable margins points toward goods/services price pressure. Default view is Y/Y; level is the underlying index.",
+                footnote="Source: Statistics Canada. Unit labour costs, business sector, quarterly SA, index 2017=100. ULC = nominal labour compensation per unit of real output (wage growth net of productivity).",
             ),
         ],
     ),
@@ -3580,7 +3577,7 @@ PAGES = [
                 line_shape="linear",
                 date_fmt="%b %Y",
                 unit_label="C$ trillions",
-                footnote="Statistics Canada Table 36-10-0434: monthly real GDP, chained 2017 dollars, SAAR. Potential output is an HP-filter trend (lambda=129600, the standard for monthly data). The output-gap panel on this page shows the level vs trend gap explicitly.",
+                footnote="Source: Statistics Canada. Monthly real GDP by industry, chained 2017 dollars, SAAR. Potential output is an HP-filter trend (lambda=129600).",
             ),
             NativeChartSpec(
                 builder=_build_output_gap_panel,
@@ -3589,7 +3586,7 @@ PAGES = [
             MultiLineSpec(
                 title="Productivity Decomposition",
                 lines=[], # Placeholder
-                footnote="[Coming soon] Real GDP per hour worked. Canadian productivity has been structurally weak since 2015; trend divergence vs US is a key BoC concern.",
+                footnote="[Coming soon] Source: Statistics Canada. Real GDP per hour worked, monthly.",
             ),
             MultiLineSpec(
                 title="Industrial Capacity Utilization",
@@ -3603,7 +3600,7 @@ PAGES = [
                 line_shape="linear",
                 date_fmt="%Y",
                 unit_label="%",
-                footnote="Statistics Canada Table 16-10-0004: capacity utilization rates, quarterly, seasonally adjusted. Total industry and manufacturing sub-index. Values above the historical mean indicate demand outpacing productive capacity; below-average readings point to economic slack. The BoC treats capacity pressure as a leading indicator of core inflation.",
+                footnote="Source: Statistics Canada. Capacity utilization rates, total industry and manufacturing, quarterly SA.",
                 # TODO: gdp_dd_hours section placeholder — hours-worked series not yet fetched
             ),
             ChartSpec(
@@ -3621,7 +3618,7 @@ PAGES = [
                     "ar_3m": "%",
                     "yoy":   "%",
                 },
-                footnote="Statistics Canada Table 36-10-0434: Monthly real GDP at basic prices, all industries, chained 2017 dollars, SAAR. Released roughly two months after the reference month with significant subsequent revisions. Industry overlays (off by default): toggle via legend.",
+                footnote="Source: Statistics Canada. Monthly real GDP at basic prices, all industries, chained 2017 dollars, SAAR.",
                 overlays=[
                     OverlayConfig("gdp_industry_goods",        "Goods-producing",  "#388e3c"),
                     OverlayConfig("gdp_industry_services",     "Services-producing", "#00897b"),
@@ -3646,7 +3643,7 @@ PAGES = [
                 date_fmt="%b %Y",
                 ticksuffix="pp",
                 unit_label="Percentage-point contributions to annualized Q/Q growth",
-                footnote="Statistics Canada Table 36-10-0104. Bars are component contributions to annualized Q/Q real GDP growth; 'Less: imports' is sign-flipped so positive = imports fell. Headline GDP line is the published total contribution (vector 79448580). The StatsCan daily release reports non-annualized Q/Q (≈ AR ÷ 4). The small gap between the bar sum and the headline is non-profits plus statistical discrepancy, which this dashboard does not break out.",
+                footnote="Source: Statistics Canada. Component contributions to annualized Q/Q real GDP growth, quarterly. 'Less: imports' is sign-flipped so positive = imports fell. Bar sum may not equal headline due to non-profits and statistical discrepancy.",
             ),
         ],
     ),
@@ -3670,12 +3667,12 @@ PAGES = [
                 color="#1565c0",
                 default_years=10,
                 unit_label="CAD per USD",
-                footnote="Bilateral exchange rate. Higher = weaker CAD.",
+                footnote="Source: Bank of Canada. USD/CAD bilateral exchange rate, daily.",
             ),
             MultiLineSpec(
                 title="CEER (Trade-Weighted CAD)",
                 lines=[], # Placeholder
-                footnote="[Coming soon] BoC's Canadian-Dollar Effective Exchange Rate. Methodologically better for inflation pass-through than bilateral USDCAD.",
+                footnote="[Coming soon] Source: Bank of Canada. Canadian-Dollar Effective Exchange Rate (CEER), trade-weighted.",
             ),
             NativeChartSpec(
                 builder=_build_wcs_wti_panel,
@@ -3692,7 +3689,7 @@ PAGES = [
                 default_years=10,
                 smooth_window=20,
                 date_fmt="%b %d, %Y",
-                footnote="2-year benchmark government bond yields. Toggle 'Canada 2Y − Overnight' for a <em>directional</em> read of the market-implied BoC path — negative = pricing net cuts, positive = pricing hold or hikes. The 2Y embeds a term premium, so this is directional only; not a precise basis-point forecast. Treat with extra caution during QE/QT transitions or stress regimes when premium movements distort the signal. See the BoC's <a href=\"https://www.bankofcanada.ca/rates/indicators/financial-stability-indicators/\" target=\"_blank\" rel=\"noopener\">Financial Stability Indicators</a> for model-decomposed estimates. 'Canada 2Y − US 2Y' is the cross-country differential (negative = Canadian rates lower than US, broadly CAD-negative).",
+                footnote="Source: Bank of Canada; Federal Reserve. Canada and US 2-year benchmark bond yields, daily. See the BoC's <a href=\"https://www.bankofcanada.ca/rates/indicators/financial-stability-indicators/\" target=\"_blank\" rel=\"noopener\">Financial Stability Indicators</a> for model-decomposed term premium estimates.",
             ),
             MultiLineSpec(
                 title="Oil Prices",
@@ -3708,7 +3705,7 @@ PAGES = [
                 date_fmt="%b %d, %Y",
                 ymin=0,
                 unit_label="USD/barrel",
-                footnote="Crude oil prices, USD per barrel. WTI and Brent are daily; WCS (Western Canada Select) is monthly. WTI briefly traded negative in April 2020 (futures contract anomaly); not shown.",
+                footnote="Source: FRED; CAPP. Crude oil prices, USD per barrel. WTI and Brent daily; WCS monthly.",
             ),
         ],
     ),
@@ -3736,7 +3733,7 @@ PAGES = [
                 line_shape="linear",
                 date_fmt="%b %Y",
                 unit_label="C$ billions",
-                footnote="Statistics Canada Table 12-10-0121 (BoC Valet), monthly SA. Canada–US goods trade in C$ billions. Exports to the US represent approximately 75% of Canada's total goods exports; this bilateral channel is the primary transmission mechanism for US tariff shocks. A negative balance indicates a Canadian surplus (exports exceed imports) — Canada has historically run a goods surplus with the US.",
+                footnote="Source: Statistics Canada; Bank of Canada. Canada–US goods trade, C$ billions, monthly SA.",
             ),
             # Chart 1: Total merchandise trade — total section
             MultiLineSpec(
@@ -3752,7 +3749,7 @@ PAGES = [
                 line_shape="linear",
                 date_fmt="%b %Y",
                 unit_label="C$ billions",
-                footnote="Statistics Canada Table 12-10-0121 (BoC Valet), monthly SA. Total Canadian goods exports and imports in C$ billions, all partner countries. The overall balance reflects terms-of-trade conditions, commodity cycle exposure, and CAD competitiveness effects.",
+                footnote="Source: Statistics Canada; Bank of Canada. Total Canadian goods exports and imports, C$ billions, monthly SA.",
                 # TODO: goods exports by category (energy, automotive, ag, etc.) — not yet fetched; StatsCan Table 12-10-0011
             ),
         ],
@@ -3783,7 +3780,7 @@ PAGES = [
                 line_shape="linear",
                 date_fmt="%Y",
                 unit_label="persons (quarterly)",
-                footnote="Statistics Canada Table 17-10-0040, quarterly SA. Quarterly population flows in persons. Immigrants and NPR (non-permanent residents) inflows are the dominant positive contributors to population growth; net NPR swung sharply negative in 2024–2025 as the government caps temporary resident levels. The BoC monitors these flows as a key input to potential labour supply and longer-run inflation pressure.",
+                footnote="Source: Statistics Canada. Quarterly international migration flows, persons, SA.",
                 # TODO: natural_increase quarterly — not available from StatsCan quarterly tables; annual only (17100008)
             ),
             # Chart 1: Age-group unemployment — age section
@@ -3799,7 +3796,7 @@ PAGES = [
                 line_shape="linear",
                 date_fmt="%b %Y",
                 unit_label="%",
-                footnote="Statistics Canada Table 14-10-0287, monthly SA. Age-group unemployment rates shown here for demographic context. See the Labour Market deep-dive for full participation + employment + unemployment decompositions by cohort.",
+                footnote="Source: Statistics Canada. Youth (15–24) and prime-age (25–54) unemployment rates, monthly SA.",
                 # TODO: pop_by_age_group quarterly — not available; annual only (17100005)
             ),
         ],
