@@ -14,6 +14,7 @@ import json
 import os
 import re
 import time
+import zipfile
 import requests
 import pandas as pd
 from pathlib import Path
@@ -180,10 +181,17 @@ FRED_SERIES = {
     "brent":    ("DCOILBRENTEU",     "1990-01-01"),  # Brent crude oil, USD/barrel, daily
     # Peer central bank policy rates (OECD monthly series via FRED)
     "ecb_rate": ("ECBDFR",           "1999-01-01"),  # ECB deposit facility rate, weekly
-    "boe_rate": ("IRSTCB01GBM156N",  "1990-01-01"),  # Bank of England Bank Rate, monthly (OECD/FRED)
-    "rba_rate": ("IRSTCB01AUM156N",  "1990-01-01"),  # RBA cash rate target, monthly (OECD/FRED)
+    # boe_rate and rba_rate removed from FRED — now fetched from BIS CBPOL bulk download (BIS_CBPOL_SERIES below)
 }
 # fed_funds is fetched separately as target midpoint — see fetch_fed_funds_target()
+
+# BIS Central Bank Policy Rates — bulk download (WS_CBPOL)
+# Single zip covers all central banks; download is cached in memory for the session
+# to avoid re-fetching when multiple series use this source.
+BIS_CBPOL_SERIES = {
+    "boe_rate": ("GB", "D"),  # Bank of England Bank Rate, daily
+    "rba_rate": ("AU", "D"),  # RBA cash rate target, daily
+}
 
 
 # ── Fetchers ──────────────────────────────────────────────────────────────────
@@ -368,6 +376,54 @@ def fetch_wcs() -> pd.DataFrame:
     return df.sort_values("date").reset_index(drop=True)
 
 
+# Module-level cache for the BIS CBPOL bulk download (populated on first call).
+_bis_cbpol_cache: pd.DataFrame | None = None
+
+
+def fetch_bis_cbpol(country_code: str, freq: str = "D") -> pd.DataFrame:
+    """Fetch a central bank policy rate from the BIS WS_CBPOL bulk download.
+
+    Downloads the zip once per session (cached in _bis_cbpol_cache) and filters
+    to the requested country + frequency.
+
+    Args:
+        country_code: Two-letter REF_AREA prefix (e.g. "GB" for BoE, "AU" for RBA).
+        freq: Frequency prefix to match in the FREQ column.
+              "D" matches "D: Daily", "M" matches "M: Monthly".
+
+    Returns:
+        DataFrame with columns ["date", "value"], sorted ascending.
+    """
+    global _bis_cbpol_cache
+    if _bis_cbpol_cache is None:
+        url = "https://data.bis.org/static/bulk/WS_CBPOL_csv_flat.zip"
+        r = requests.get(url, timeout=60)
+        r.raise_for_status()
+        with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+            csv_name = "WS_CBPOL_csv_flat.csv"
+            with zf.open(csv_name) as f:
+                _bis_cbpol_cache = pd.read_csv(f, low_memory=False)
+        print(f"  BIS CBPOL bulk download: {len(_bis_cbpol_cache)} rows loaded into cache.")
+
+    df = _bis_cbpol_cache.copy()
+    # BIS CSV uses compound column names "KEY:Label" — find them by prefix
+    ref_col  = next(c for c in df.columns if c.startswith("REF_AREA"))
+    freq_col = next(c for c in df.columns if c.startswith("FREQ"))
+    time_col = next(c for c in df.columns if c.startswith("TIME_PERIOD"))
+    val_col  = next(c for c in df.columns if c.startswith("OBS_VALUE"))
+    # Filter by country (REF_AREA starts with country_code) and frequency prefix
+    mask = (
+        df[ref_col].astype(str).str.startswith(country_code)
+        & df[freq_col].astype(str).str.startswith(freq + ":")
+    )
+    df = df[mask][[time_col, val_col]].copy()
+    df.columns = ["date", "value"]
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df["value"] = pd.to_numeric(df["value"], errors="coerce")
+    df = df.dropna(subset=["date", "value"])
+    return df.sort_values("date").reset_index(drop=True)
+
+
 def fetch_fad_calendar() -> list:
     """BoC Fixed Announcement Date (FAD) calendar from the Bank's iCal feed.
 
@@ -497,6 +553,15 @@ def main(wait: bool = False):
             print(f"  -> {len(df)} rows saved to {path}")
     else:
         print("Skipping FRED series (FRED_API_KEY not set).")
+
+    print("Fetching BIS CBPOL series (BoE and RBA policy rates)...")
+    for name, (country_code, freq) in BIS_CBPOL_SERIES.items():
+        df = _safe(name, fetch_bis_cbpol, country_code, freq)
+        if df is None:
+            continue
+        path = DATA_DIR / f"{name}.csv"
+        df.to_csv(path, index=False)
+        print(f"  -> {len(df)} rows saved to {path}")
 
     print("Fetching wcs (Western Canada Select) from Alberta Economic Dashboard...")
     df = _safe("wcs", fetch_wcs)
